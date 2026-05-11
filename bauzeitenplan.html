@@ -47,6 +47,10 @@
   .day-header.show{background:var(--show);}
   .day-header.abbau{background:var(--abbau);}
   .day-header.multi{background:linear-gradient(90deg,var(--aufbau) 50%,var(--show) 50%);}
+  .day-header.extra{background:#6a6a6a;}
+  .btn-add-day{background:none;border:2px dashed #ccc;color:#aaa;border-radius:5px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;width:100%;letter-spacing:1px;transition:all .15s;margin:4px 0;}
+  .btn-add-day:hover{border-color:#888;color:#555;background:#fafafa;}
+  @media print{.btn-add-day{display:none!important;}}
   .day-name{flex:1;font-size:14px;}
   .day-badge{background:rgba(255,255,255,.25);border-radius:2px;padding:2px 7px;font-size:10px;letter-spacing:1px;text-transform:uppercase;}
   .day-tag-num{font-size:10px;opacity:.8;}
@@ -199,6 +203,7 @@ let eventName = '';
 let phases    = {};
 let dayData   = {}; // { 'YYYY-MM-DD': [{von,bis,desc,gewerk,maschinen}, ...] }
 let rowCounts = {}; // per day
+let extraDays = []; // manually added days outside phase range
 
 // ── Date helpers ──
 function isoToDate(s){ return s ? new Date(s+'T00:00:00') : null; }
@@ -234,14 +239,49 @@ function getAllDays(){
     if(s) starts.push(s);
     if(e) ends.push(e);
   });
-  if(!starts.length) return [];
-  starts.sort(); ends.sort();
-  const first=starts[0], last=ends[ends.length-1];
+  if(!starts.length && !extraDays.length) return [];
   const days=[];
-  let cur=isoToDate(first);
-  const stop=isoToDate(last);
-  while(cur<=stop){ days.push(toISO(cur)); cur=addDays(cur,1); }
+  if (starts.length) {
+    starts.sort(); ends.sort();
+    let cur=isoToDate(starts[0]);
+    const stop=isoToDate(ends[ends.length-1]);
+    while(cur<=stop){ days.push(toISO(cur)); cur=addDays(cur,1); }
+  }
+  // Merge manually added days
+  extraDays.forEach(function(d){ if(!days.includes(d)) days.push(d); });
+  days.sort();
   return days;
+}
+
+// ── Add a day before the current first day ──
+function addDayBefore(){
+  const all = getAllDays();
+  const first = all.length ? all[0] : toISO(new Date());
+  const newDay = toISO(addDays(isoToDate(first), -1));
+  if (!extraDays.includes(newDay)) {
+    extraDays.push(newDay);
+    renderAll();
+    scheduleAutoSave();
+  }
+}
+
+// ── Add a day after the current last day ──
+function addDayAfter(){
+  const all = getAllDays();
+  const last = all.length ? all[all.length-1] : toISO(new Date());
+  const newDay = toISO(addDays(isoToDate(last), 1));
+  if (!extraDays.includes(newDay)) {
+    extraDays.push(newDay);
+    renderAll();
+    scheduleAutoSave();
+  }
+}
+
+// ── Remove an extra day ──
+function removeExtraDay(iso){
+  extraDays = extraDays.filter(function(d){ return d !== iso; });
+  renderAll();
+  scheduleAutoSave();
 }
 
 // ── Render all day blocks ──
@@ -253,6 +293,14 @@ function renderAll(){
     container.innerHTML = '<div style="color:#aaa;padding:20px">Keine Phasendaten vorhanden.</div>';
     return;
   }
+
+  // + Tag davor Button
+  const btnBefore = document.createElement('button');
+  btnBefore.className = 'btn-add-day no-print';
+  btnBefore.textContent = '+ Tag davor einfügen';
+  btnBefore.onclick = addDayBefore;
+  container.appendChild(btnBefore);
+
   // Phase tag counters
   const tagCount = {aufbau:0,proben:0,show:0,abbau:0};
   days.forEach(function(iso){
@@ -260,6 +308,13 @@ function renderAll(){
     ph.forEach(function(k){ tagCount[k]++; });
     renderDayBlock(container, iso, ph);
   });
+
+  // + Tag danach Button
+  const btnAfter = document.createElement('button');
+  btnAfter.className = 'btn-add-day no-print';
+  btnAfter.textContent = '+ Tag danach einfügen';
+  btnAfter.onclick = addDayAfter;
+  container.appendChild(btnAfter);
 }
 
 function renderDayBlock(container, iso, phases_for_day){
@@ -267,16 +322,22 @@ function renderDayBlock(container, iso, phases_for_day){
   block.className = 'day-block';
   block.id = 'day-'+iso;
 
-  const ph0 = phases_for_day[0] || 'aufbau';
+  const isExtra = phases_for_day.length === 0;
+  const ph0 = phases_for_day[0] || 'extra';
   const phaseClass = phases_for_day.length > 1 ? 'multi' : ph0;
+  const phaseLabel = isExtra ? 'Zusatztag'
+    : phases_for_day.map(function(k){ return k.charAt(0).toUpperCase()+k.slice(1); }).join(' + ');
 
-  const phaseLabel = phases_for_day.map(function(k){ return k.charAt(0).toUpperCase()+k.slice(1); }).join(' + ');
+  const delBtn = isExtra
+    ? '<button class="btn-add-row no-print" style="background:rgba(255,255,255,.15);margin-left:6px" onclick="removeExtraDay(\''+iso+'\')" title="Diesen Tag entfernen">✕ Entfernen</button>'
+    : '';
 
   block.innerHTML =
     '<div class="day-header '+phaseClass+'">' +
       '<span class="day-name">'+fmtDate(iso)+'</span>' +
       '<span class="day-badge">'+phaseLabel+'</span>' +
       '<button class="btn-add-row" onclick="addRow(\''+iso+'\')">+ Zeile</button>' +
+      delBtn +
     '</div>' +
     '<div class="bz-row-header">' +
       '<span>Von</span><span>Bis</span><span>Beschreibung / Tätigkeit</span><span>Gewerk</span><span>Arbeitsmaschinen</span><span></span>' +
@@ -440,7 +501,7 @@ function collectData(){
 function getSaveKey(){ return 'nw_bauzeit_save_' + (eventName||'_default'); }
 
 function saveState(manual){
-  const state = { eventName, phases, dayData: collectData(), savedAt: new Date().toISOString() };
+  const state = { eventName, phases, dayData: collectData(), extraDays, savedAt: new Date().toISOString() };
   SupaDB.set(getSaveKey(), state);
   try { localStorage.setItem(getSaveKey(), JSON.stringify(state)); } catch(e) {}
   const ind = document.getElementById('saveInd');
@@ -486,6 +547,7 @@ async function init(){
     eventName = saved.eventName || eventName;
     phases    = saved.phases;
     dayData   = saved.dayData || {};
+    extraDays = saved.extraDays || [];
     const ind = document.getElementById('saveInd');
     if (ind && saved.savedAt) {
       const t = new Date(saved.savedAt);
