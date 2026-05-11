@@ -479,6 +479,27 @@
   }
   @keyframes nwSpin { to { transform: rotate(360deg); } }
   .nw-loading-text { color: #c8a96e; font-size: 12px; letter-spacing: 3px; text-transform: uppercase; }
+
+  /* ── Kalenderansicht ── */
+  .cal-outer { padding: 0 24px 40px; }
+  .cal-topbar { display:flex; align-items:center; gap:10px; padding:18px 0 16px; }
+  .cal-month-label { font-size:14px; font-weight:700; letter-spacing:3px; text-transform:uppercase; min-width:200px; text-align:center; }
+  .cal-nav-btn { background:none; border:1px solid var(--border); padding:5px 14px; cursor:pointer; font-family:inherit; font-size:14px; color:var(--text); transition:background .15s; }
+  .cal-nav-btn:hover { background:var(--dark); color:#fff; }
+  .cal-today-btn { background:none; border:1px solid var(--border); padding:5px 12px; cursor:pointer; font-family:inherit; font-size:11px; color:#888; letter-spacing:1px; }
+  .cal-today-btn:hover { background:var(--accent); color:#000; border-color:var(--accent); }
+  .cal-scroll { overflow-x:auto; border:1px solid var(--border); border-radius:2px; max-height:calc(100vh - 160px); overflow-y:auto; }
+  .cal-sticky-header { position:sticky; top:0; z-index:20; display:flex; background:#fff; border-bottom:2px solid #ddd; }
+  .cal-name-col { width:180px; min-width:180px; position:sticky; left:0; z-index:21; background:#f8f8f8; border-right:2px solid #ddd; padding:5px 10px; font-size:9px; letter-spacing:2px; text-transform:uppercase; color:#aaa; display:flex; align-items:center; }
+  .cal-days-row { display:flex; }
+  .cal-day-th { min-width:30px; width:30px; padding:3px 0; text-align:center; font-size:9px; font-family:inherit; border-right:1px solid #f0f0f0; }
+  .cal-row { display:flex; }
+  .cal-row-name { width:180px; min-width:180px; position:sticky; left:0; z-index:10; background:#fff; border-right:1px solid #eee; display:flex; align-items:center; padding:0 10px; overflow:hidden; }
+  .cal-row-cells { display:flex; }
+  .cal-cell { min-width:30px; width:30px; border-right:1px solid #f0f0f0; flex-shrink:0; }
+  .cal-event-row .cal-row-name { background:#f9f7f4; border-right:2px solid; font-weight:700; font-size:11px; }
+  .cal-crew-row .cal-row-name { padding-left:22px; font-size:10px; color:#555; }
+  .cal-empty { padding:60px; text-align:center; color:#bbb; font-size:11px; letter-spacing:3px; text-transform:uppercase; }
 </style>
 </head>
 <body>
@@ -506,6 +527,7 @@
     <button class="btn-new-tech" onclick="openGewerkList()" style="margin-top:-4px">Gewerke verwalten</button>
     <div class="sidebar-divider" style="margin-top:8px"></div>
     <button class="btn-new-tech" onclick="showOverview()" style="background:var(--accent);color:var(--black);border-color:var(--accent);margin-top:4px;font-weight:700" id="btnOverview">📋 Personalübersicht</button>
+    <button class="btn-new-tech" onclick="showCalendar()" style="background:#2a2a2a;color:#fff;border-color:#3a3a3a;margin-top:4px;font-weight:700" id="btnCalendar">📅 Kalenderansicht</button>
   </aside>
 
   <!-- MAIN -->
@@ -2392,6 +2414,220 @@ function showOverview() {
 function toggleOvProject(id) {
   var el = document.getElementById('ovp_' + id);
   if (el) el.classList.toggle('collapsed');
+}
+
+// ── Kalenderansicht ──
+let calYear = new Date().getFullYear();
+let calMonth = new Date().getMonth(); // 0-indexed
+
+function showCalendar() {
+  activePlanungId = null;
+  document.getElementById('topbarTitle').textContent = 'Kalenderansicht';
+  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit'].forEach(function(id) {
+    document.getElementById(id).style.display = 'none';
+  });
+  renderSidebar();
+  renderCalendarView();
+}
+
+function calNav(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCalendarView();
+}
+
+function calGoToday() {
+  const now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  renderCalendarView();
+}
+
+function renderCalendarView() {
+  const MONTH_NAMES = ['Januar','Februar','März','April','Mai','Juni','Juli','August','September','Oktober','November','Dezember'];
+  const DAY_NAMES   = ['So','Mo','Di','Mi','Do','Fr','Sa'];
+  const PHASE_DEF   = [
+    { key:'aufbau', color:'#c0713a' },
+    { key:'proben', color:'#4a7fb5' },
+    { key:'show',   color:'#5a9e6f' },
+    { key:'abbau',  color:'#8a8a8a' },
+  ];
+
+  const today = new Date(); today.setHours(0,0,0,0);
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const monthStart  = new Date(calYear, calMonth, 1);
+  const monthEnd    = new Date(calYear, calMonth, daysInMonth);
+
+  // Helper: parse "YYYY-MM-DD/YYYY-MM-DD" → { s, e } as Date objects
+  function phRange(v) {
+    const s = phS(v); const e = phE(v) || s;
+    if (!s) return null;
+    const sd = new Date(s); sd.setHours(0,0,0,0);
+    const ed = new Date(e); ed.setHours(0,0,0,0);
+    return { s: sd, e: ed };
+  }
+
+  // Helper: clamp day index (0-based) to [0, daysInMonth-1]
+  function clampDay(d) { return Math.max(0, Math.min(daysInMonth - 1, d)); }
+
+  // Day offset (0-based) of a Date within this month (may be negative or > daysInMonth)
+  function dayOf(date) { return date.getDate() - 1 + (date.getFullYear() - calYear) * 365 + (date.getMonth() - calMonth) * 30; }
+  function monthDay(date) {
+    if (date < monthStart) return 0;
+    if (date > monthEnd)   return daysInMonth - 1;
+    return date.getDate() - 1;
+  }
+
+  // Planungen that overlap this month
+  const visible = planungen.filter(p => {
+    const s = phS(p.aufbau||'') || phS(p.proben||'') || phS(p.show||'');
+    const e = phE(p.abbau||'')  || phS(p.abbau||'')  || phE(p.show||'') || phS(p.show||'');
+    if (!s) return false;
+    const sd = new Date(s); const ed = new Date(e || s);
+    return sd <= monthEnd && ed >= monthStart;
+  }).sort((a,b) => {
+    const sa = phS(a.aufbau||'')||phS(a.show||'');
+    const sb = phS(b.aufbau||'')||phS(b.show||'');
+    return sa.localeCompare(sb);
+  });
+
+  // ── Day header row ──
+  let daysHtml = '';
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(calYear, calMonth, d);
+    const isToday   = dt.getTime() === today.getTime();
+    const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+    const dayName   = DAY_NAMES[dt.getDay()];
+    daysHtml += `<div class="cal-day-th" style="color:${isToday?'var(--accent)':isWeekend?'#bbb':'#999'};font-weight:${isToday?'700':'400'};background:${isWeekend?'#f9f9f9':'#fff'};border-bottom:3px solid ${isToday?'var(--accent)':'transparent'}">${dayName}<br><span style="font-size:10px;font-weight:600">${d}</span></div>`;
+  }
+
+  // ── Build event + crew rows ──
+  let rowsHtml = '';
+  const evColors = ['#c8a96e','#4a7fb5','#5a9e6f','#c0713a','#7c5cbf','#4a9fb5','#a07840'];
+
+  if (!visible.length) {
+    rowsHtml = `<div class="cal-empty" style="grid-column:1/-1">Keine Veranstaltungen in diesem Monat</div>`;
+  }
+
+  visible.forEach((p, pi) => {
+    const evColor = evColors[pi % evColors.length];
+
+    // Build per-day cells for the event bar (showing phase colors)
+    let evCells = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dt = new Date(calYear, calMonth, d);
+      const isToday   = dt.getTime() === today.getTime();
+      const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+      let bg = isWeekend ? '#f7f7f7' : '#fff';
+      let borderTop = 'none';
+      for (const ph of PHASE_DEF) {
+        const r = phRange(p[ph.key] || '');
+        if (r && dt >= r.s && dt <= r.e) {
+          bg = ph.color + '33';
+          borderTop = `3px solid ${ph.color}`;
+          break;
+        }
+      }
+      const todayBorder = isToday ? `box-shadow:inset 0 0 0 1px var(--accent);` : '';
+      evCells += `<div class="cal-cell" style="height:28px;background:${bg};border-top:${borderTop};${todayBorder}"></div>`;
+    }
+
+    // Collect all crew (skip empty names)
+    const allCrew = [];
+    GEWERKE.forEach(g => {
+      (p.crew[g.id] || []).forEach(m => { if (m.name) allCrew.push({ m, g }); });
+    });
+
+    // Event header row
+    rowsHtml += `
+      <div class="cal-row cal-event-row" style="border-bottom:1px solid #eee">
+        <div class="cal-row-name" style="color:${evColor};border-right-color:${evColor};height:28px">
+          <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(p.name)}${p.ort?'<span style="font-weight:400;color:#aaa;margin-left:6px;font-size:10px">'+esc(p.ort)+'</span>':''}</span>
+          <span style="margin-left:auto;font-size:9px;color:#bbb;font-weight:400;padding-left:4px;flex-shrink:0">${allCrew.length} Tk.</span>
+        </div>
+        <div class="cal-row-cells">${evCells}</div>
+      </div>`;
+
+    // Crew rows
+    allCrew.forEach(({ m, g }) => {
+      const phasen = m.phasen || {};
+      const hasPhasen = Object.values(phasen).some(Boolean);
+      let crewCells = '';
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dt = new Date(calYear, calMonth, d);
+        const isToday   = dt.getTime() === today.getTime();
+        const isWeekend = dt.getDay() === 0 || dt.getDay() === 6;
+        let bg = isWeekend ? '#f7f7f7' : '#fff';
+        let borderBottom = 'none';
+        const gColor = GEWERK_COLORS[g.id] || evColor;
+
+        if (!hasPhasen) {
+          // No phases set → show full event duration
+          for (const ph of PHASE_DEF) {
+            const r = phRange(p[ph.key] || '');
+            if (r && dt >= r.s && dt <= r.e) {
+              bg = gColor + '25';
+              borderBottom = `2px solid ${gColor}`;
+              break;
+            }
+          }
+        } else {
+          // Show only assigned phases
+          for (const ph of PHASE_DEF) {
+            if (!phasen[ph.key]) continue;
+            const r = phRange(p[ph.key] || '');
+            if (r && dt >= r.s && dt <= r.e) {
+              bg = gColor + '30';
+              borderBottom = `2px solid ${gColor}`;
+              break;
+            }
+          }
+        }
+        const todayBorder = isToday ? `box-shadow:inset 0 0 0 1px var(--accent);` : '';
+        crewCells += `<div class="cal-cell" style="height:22px;background:${bg};border-bottom:${borderBottom};${todayBorder}"></div>`;
+      }
+
+      const dot = `<span style="width:6px;height:6px;border-radius:50%;background:${GEWERK_COLORS[g.id]||'#ccc'};flex-shrink:0;margin-right:5px"></span>`;
+      rowsHtml += `
+        <div class="cal-row cal-crew-row" style="border-bottom:1px solid #f3f3f3">
+          <div class="cal-row-name" style="height:22px;background:#fff;gap:0">
+            ${dot}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px">${esc(m.name)}</span>
+            <span style="margin-left:4px;color:#bbb;font-size:9px;flex-shrink:0">${esc(m.funktion||g.name)}</span>
+          </div>
+          <div class="cal-row-cells">${crewCells}</div>
+        </div>`;
+    });
+
+    // Spacer between events
+    rowsHtml += `<div style="height:6px;background:#f5f5f5;border-bottom:1px solid #e8e8e8"></div>`;
+  });
+
+  // Phase legend
+  const legend = PHASE_DEF.map(ph =>
+    `<span style="display:inline-flex;align-items:center;gap:4px;margin-right:12px;font-size:10px;color:#666">
+      <span style="width:12px;height:10px;border-radius:2px;background:${ph.color}55;border-top:2px solid ${ph.color}"></span>
+      ${ph.key.charAt(0).toUpperCase()+ph.key.slice(1)}
+    </span>`
+  ).join('');
+
+  document.getElementById('mainContent').innerHTML = `
+    <div class="cal-outer">
+      <div class="cal-topbar">
+        <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
+        <span class="cal-month-label">${MONTH_NAMES[calMonth]} ${calYear}</span>
+        <button class="cal-nav-btn" onclick="calNav(1)">›</button>
+        <button class="cal-today-btn" onclick="calGoToday()">Heute</button>
+        <span style="margin-left:auto;display:flex;align-items:center">${legend}</span>
+      </div>
+      <div class="cal-scroll">
+        <div class="cal-sticky-header">
+          <div class="cal-name-col">Veranstaltung / Crew</div>
+          <div class="cal-days-row">${daysHtml}</div>
+        </div>
+        <div id="calRows">${rowsHtml || '<div class="cal-empty">Keine Veranstaltungen in diesem Monat</div>'}</div>
+      </div>
+    </div>`;
 }
 
 // ── Gewerk Management ──
