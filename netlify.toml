@@ -1,0 +1,8 @@
+# Netlify Konfiguration – NOVA WORKS App
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Supabase CORS erlauben
+    Access-Control-Allow-Origin = "*"
+    # Kein Caching für HTML-Dateien (immer frische Version)
+    Cache-Control = "no-cache, no-store, must-revalidate"

@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NOVA WORKS – Migration zu Supabase</title>
+<style>
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #0a0a0a; color: #e8e8e8;
+         display: flex; flex-direction: column; align-items: center; justify-content: center;
+         min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
+  .card { background: #1a1a1a; border: 1px solid #3a3a3a; padding: 40px 48px; max-width: 560px; width: 100%; }
+  h1 { font-size: 18px; font-weight: 300; letter-spacing: 4px; text-transform: uppercase;
+       color: #c8a96e; margin: 0 0 8px; }
+  .sub { font-size: 11px; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-bottom: 36px; }
+  .log { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 16px; font-size: 12px;
+         font-family: monospace; line-height: 1.8; min-height: 120px; margin: 20px 0;
+         max-height: 300px; overflow-y: auto; }
+  .log .ok   { color: #5a9e6f; }
+  .log .warn { color: #c8a96e; }
+  .log .err  { color: #e05a5a; }
+  .log .info { color: #4a7fb5; }
+  .btn { background: #c8a96e; color: #0a0a0a; border: none; padding: 12px 28px;
+         font-size: 12px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+         cursor: pointer; width: 100%; transition: background .15s; }
+  .btn:hover { background: #a07840; color: #fff; }
+  .btn:disabled { background: #3a3a3a; color: #555; cursor: not-allowed; }
+  .done-box { background: #0d2d1a; border: 1px solid #2d7a4f; padding: 16px; font-size: 13px;
+              color: #5a9e6f; text-align: center; display: none; margin-top: 16px; }
+  .done-box a { color: #c8a96e; }
+  .progress { height: 3px; background: #2a2a2a; margin: 16px 0; }
+  .progress-bar { height: 100%; background: #c8a96e; width: 0; transition: width .3s; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="sub">Nova Works</div>
+  <h1>Datenmigration</h1>
+  <p style="font-size:12px;color:#888;line-height:1.7;margin-bottom:24px">
+    Diese Seite liest deine bestehenden Daten aus dem lokalen Browser-Speicher
+    und überträgt sie einmalig in die Supabase-Cloud-Datenbank.<br><br>
+    <strong style="color:#c8a96e">Wichtig:</strong> Öffne diese Datei im selben Browser,
+    in dem du bisher mit der Crewplanung gearbeitet hast.
+  </p>
+
+  <div class="progress"><div class="progress-bar" id="pbar"></div></div>
+  <div class="log" id="log"><span class="info">Bereit. Klicke auf „Migration starten".</span></div>
+
+  <button class="btn" id="startBtn" onclick="runMigration()">Migration starten</button>
+
+  <div class="done-box" id="doneBox">
+    ✓ Migration abgeschlossen! Alle Daten sind jetzt in Supabase.<br><br>
+    <a href="https://nova-works-data.netlify.app" target="_blank">→ Zur App öffnen</a>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ekfuzciwjsldpkojyzgg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_53YU2qO5PwdFwhVuZSSyPg_pcdw2Dhk';
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+function setProgress(pct) {
+  document.getElementById('pbar').style.width = pct + '%';
+}
+
+async function supaSet(key, value) {
+  const r = await fetch(SUPABASE_URL + '/rest/v1/app_data', {
+    method: 'POST',
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': 'Bearer ' + SUPABASE_KEY,
+      'Content-Type': 'application/json',
+      'Prefer': 'resolution=merge-duplicates'
+    },
+    body: JSON.stringify({ key, value, updated_at: new Date().toISOString() })
+  });
+  if (!r.ok) {
+    const txt = await r.text();
+    throw new Error(`HTTP ${r.status}: ${txt}`);
+  }
+}
+
+async function runMigration() {
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  document.getElementById('log').innerHTML = '';
+  setProgress(5);
+
+  log('Suche lokale Daten …', 'info');
+
+  // Keys to migrate
+  const FIXED_KEYS = [
+    'nw_crew_planungen',
+    'nw_crew_techniker',
+    'nw_crew_gewerke',
+  ];
+
+  // Collect all dynamic keys
+  const dynKeys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && (k.startsWith('nw_hotel_save_') || k.startsWith('nw_bauzeit_save_'))) {
+      dynKeys.push(k);
+    }
+  }
+
+  const allKeys = [...FIXED_KEYS, ...dynKeys];
+  log(`Gefunden: ${allKeys.length} Einträge im lokalen Speicher`, 'info');
+
+  let uploaded = 0;
+  let skipped  = 0;
+  let errors   = 0;
+  const total  = allKeys.length;
+
+  for (let i = 0; i < allKeys.length; i++) {
+    const key = allKeys[i];
+    setProgress(5 + Math.round((i / total) * 85));
+
+    const raw = localStorage.getItem(key);
+    if (!raw) { skipped++; continue; }
+
+    let value;
+    try { value = JSON.parse(raw); }
+    catch(e) { log(`⚠ ${key}: kein gültiges JSON – übersprungen`, 'warn'); skipped++; continue; }
+
+    // Show summary
+    if (key === 'nw_crew_planungen' && Array.isArray(value)) {
+      log(`→ Projekte: ${value.length} Planungen gefunden`, 'info');
+    } else if (key === 'nw_crew_techniker' && Array.isArray(value)) {
+      log(`→ Techniker: ${value.length} eigene Einträge gefunden`, 'info');
+    } else if (key.startsWith('nw_hotel_save_')) {
+      log(`→ Hotel: ${key.replace('nw_hotel_save_', '')}`, 'info');
+    } else if (key.startsWith('nw_bauzeit_save_')) {
+      log(`→ Bauzeit: ${key.replace('nw_bauzeit_save_', '')}`, 'info');
+    }
+
+    try {
+      await supaSet(key, value);
+      log(`  ✓ ${key} hochgeladen`, 'ok');
+      uploaded++;
+    } catch(e) {
+      log(`  ✗ ${key} – Fehler: ${e.message}`, 'err');
+      errors++;
+    }
+  }
+
+  setProgress(100);
+
+  log('', '');
+  if (errors === 0) {
+    log(`Migration abgeschlossen: ${uploaded} hochgeladen, ${skipped} übersprungen.`, 'ok');
+    document.getElementById('doneBox').style.display = 'block';
+    localStorage.setItem('nw_supa_migrated', '1');
+  } else {
+    log(`Fertig mit ${errors} Fehlern. Bitte Konsole prüfen.`, 'err');
+    btn.disabled = false;
+    btn.textContent = 'Nochmal versuchen';
+  }
+}
+</script>
+</body>
+</html>
