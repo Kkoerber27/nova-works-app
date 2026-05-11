@@ -46,7 +46,7 @@
   .day-header.proben{background:var(--proben);}
   .day-header.show{background:var(--show);}
   .day-header.abbau{background:var(--abbau);}
-  .day-header.multi{background:linear-gradient(90deg,var(--aufbau) 50%,var(--show) 50%);}
+  /* .multi wird jetzt inline per JS gesetzt, abhängig von den tatsächlichen Phasen */
   .day-header.extra{background:#6a6a6a;}
   .btn-add-day{background:none;border:2px dashed #ccc;color:#aaa;border-radius:5px;padding:8px 18px;font-size:12px;font-weight:600;cursor:pointer;width:100%;letter-spacing:1px;transition:all .15s;margin:4px 0;}
   .btn-add-day:hover{border-color:#888;color:#555;background:#fafafa;}
@@ -324,16 +324,29 @@ function renderDayBlock(container, iso, phases_for_day){
 
   const isExtra = phases_for_day.length === 0;
   const ph0 = phases_for_day[0] || 'extra';
-  const phaseClass = phases_for_day.length > 1 ? 'multi' : ph0;
   const phaseLabel = isExtra ? 'Zusatztag'
     : phases_for_day.map(function(k){ return k.charAt(0).toUpperCase()+k.slice(1); }).join(' + ');
+
+  // Dynamischer Gradient basierend auf den tatsächlichen Phasen des Tages
+  const PHASE_HEX = { aufbau:'#c0713a', proben:'#4a7fb5', show:'#5a9e6f', abbau:'#8a8a8a', extra:'#6a6a6a' };
+  let headerBg;
+  if (phases_for_day.length > 1) {
+    const pct = 100 / phases_for_day.length;
+    const stops = phases_for_day.map(function(k, i){
+      const c = PHASE_HEX[k] || '#888';
+      return c+' '+(i*pct)+'%,'+c+' '+((i+1)*pct)+'%';
+    }).join(',');
+    headerBg = 'linear-gradient(90deg,'+stops+')';
+  } else {
+    headerBg = PHASE_HEX[ph0] || '#888';
+  }
 
   const delBtn = isExtra
     ? '<button class="btn-add-row no-print" style="background:rgba(255,255,255,.15);margin-left:6px" onclick="removeExtraDay(\''+iso+'\')" title="Diesen Tag entfernen">✕ Entfernen</button>'
     : '';
 
   block.innerHTML =
-    '<div class="day-header '+phaseClass+'">' +
+    '<div class="day-header" style="background:'+headerBg+'">' +
       '<span class="day-name">'+fmtDate(iso)+'</span>' +
       '<span class="day-badge">'+phaseLabel+'</span>' +
       '<button class="btn-add-row" onclick="addRow(\''+iso+'\')">+ Zeile</button>' +
@@ -545,7 +558,9 @@ async function init(){
 
   if (saved && saved.phases) {
     eventName = saved.eventName || eventName;
-    phases    = saved.phases;
+    // Immer aktuelle Phasen aus der Crewplanung verwenden (importData),
+    // damit nachträglich hinzugefügte Phasen (z.B. Abbau) automatisch erscheinen
+    phases    = (importData && importData.phases) ? importData.phases : saved.phases;
     dayData   = saved.dayData || {};
     extraDays = saved.extraDays || [];
     const ind = document.getElementById('saveInd');
