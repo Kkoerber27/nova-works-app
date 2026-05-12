@@ -772,71 +772,67 @@ function exportPDF(){
   var liveData = collectData();
   var days = getAllDays();
   if(!days.length){ alert('Keine Daten vorhanden.'); return; }
-  var printHtml = buildPrintHTML(liveData, days);
 
-  // Show loading indicator
-  var btnPdf = document.querySelector('.btn-pdf');
-  var origLabel = btnPdf ? btnPdf.textContent : '';
-  if(btnPdf){ btnPdf.textContent = '⏳ Erstelle PDF…'; btnPdf.disabled = true; }
+  var safe = (eventName||'Bauzeitenplan').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
+  var today = new Date();
+  var ds = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
+  var fname = safe + '_Bauzeitenplan_' + ds + '.pdf';
 
-  // Create off-screen iframe
-  var iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:0;width:794px;height:300px;border:none;';
-  document.body.appendChild(iframe);
+  var content = buildPrintHTML(liveData, days);
 
-  var iDoc = iframe.contentDocument || iframe.contentWindow.document;
-  iDoc.open(); iDoc.write(printHtml); iDoc.close();
+  // Toolbar + own html2canvas/jsPDF scripts embedded in the print window
+  var toolbar =
+    '<style>'
+    +'#_tb{position:fixed;bottom:0;left:0;right:0;background:#1a1a1a;padding:10px 20px;display:flex;align-items:center;gap:12px;z-index:9999;box-shadow:0 -2px 12px rgba(0,0,0,.4)}'
+    +'#_tb button{border:none;border-radius:3px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:.4px}'
+    +'</style>'
+    +'<div id="_tb">'
+      +'<span id="_st" style="color:#aaa;font-size:11px;flex:1">Vorschau bereit</span>'
+      +'<button onclick="doPDF()" style="background:#c8a96e;color:#1a1a1a">&#x1F4E5; PDF herunterladen</button>'
+      +'<button onclick="window.close()" style="background:#333;color:#ccc">&#x2715; Schließen</button>'
+    +'</div>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'
+    +'<script>'
+    +'var _fn='+JSON.stringify('FNAME_PLACEHOLDER')+';'
+    +'function doPDF(){'
+      +'var bar=document.getElementById("_tb");'
+      +'var st=document.getElementById("_st");'
+      +'st.textContent="⏳ PDF wird erstellt – bitte warten…";'
+      +'bar.querySelectorAll("button").forEach(function(b){b.disabled=true;});'
+      +'var body=document.body;'
+      +'var h=Math.max(document.documentElement.scrollHeight,body.scrollHeight);'
+      +'html2canvas(body,{'
+        +'scale:2,useCORS:true,allowTaint:true,backgroundColor:"#fff",'
+        +'ignoreElements:function(el){return el.id==="_tb";},'
+        +'windowWidth:794,windowHeight:h,width:794,height:h,'
+        +'scrollX:0,scrollY:0'
+      +'}).then(function(canvas){'
+        +'var jP=window.jspdf.jsPDF;'
+        +'var pdf=new jP({orientation:"portrait",unit:"mm",format:"a4"});'
+        +'var pW=210,pH=297,iH=(canvas.height/canvas.width)*pW;'
+        +'var img=canvas.toDataURL("image/jpeg",0.93);'
+        +'var y=0;while(y<iH){if(y>0)pdf.addPage();pdf.addImage(img,"JPEG",0,-y,pW,iH);y+=pH;}'
+        +'pdf.save(_fn);'
+        +'st.textContent="✓ PDF gespeichert";'
+        +'bar.querySelectorAll("button").forEach(function(b){b.disabled=false;});'
+      +'}).catch(function(e){'
+        +'st.textContent="Fehler: "+e.message;'
+        +'bar.querySelectorAll("button").forEach(function(b){b.disabled=false;});'
+      +'});'
+    +'}'
+    +'<\/script>';
 
-  // Wait for iframe content to render
-  setTimeout(function(){
-    var fullH = Math.max(iDoc.documentElement.scrollHeight, iDoc.body.scrollHeight);
-    iframe.style.height = fullH + 'px';
+  // Replace FNAME_PLACEHOLDER with real filename (safely escaped)
+  toolbar = toolbar.replace('"FNAME_PLACEHOLDER"', JSON.stringify(fname));
 
-    html2canvas(iDoc.body, {
-      scale: 2,
-      width: 794,
-      height: fullH,
-      useCORS: true,
-      allowTaint: true,
-      backgroundColor: '#ffffff',
-      scrollX: 0,
-      scrollY: 0,
-      windowWidth: 794,
-      windowHeight: fullH
-    }).then(function(canvas){
-      document.body.removeChild(iframe);
-      if(btnPdf){ btnPdf.textContent = origLabel; btnPdf.disabled = false; }
+  // Add toolbar before </body>
+  var fullHtml = content.replace('</body>', toolbar + '</body>');
 
-      var {jsPDF} = window.jspdf;
-      var pdf = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-      var pW = 210, pH = 297;
-      var imgH = (canvas.height / canvas.width) * pW;
-      var img = canvas.toDataURL('image/jpeg', 0.93);
-
-      var y = 0;
-      while(y < imgH){
-        if(y > 0) pdf.addPage();
-        pdf.addImage(img, 'JPEG', 0, -y, pW, imgH);
-        y += pH;
-      }
-
-      var safe = (eventName||'Bauzeitenplan').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
-      var today = new Date();
-      var dateStr = today.getFullYear()+'-'+String(today.getMonth()+1).padStart(2,'0')+'-'+String(today.getDate()).padStart(2,'0');
-      var fname = safe + '_Bauzeitenplan_' + dateStr + '.pdf';
-
-      if(window.showSaveFilePicker){
-        window.showSaveFilePicker({suggestedName:fname, types:[{description:'PDF', accept:{'application/pdf':['.pdf']}}]})
-          .then(h=>h.createWritable()).then(w=>w.write(pdf.output('blob')).then(()=>w.close()))
-          .catch(e=>{ if(e.name!=='AbortError') pdf.save(fname); });
-      } else { pdf.save(fname); }
-
-    }).catch(function(err){
-      document.body.removeChild(iframe);
-      if(btnPdf){ btnPdf.textContent = origLabel; btnPdf.disabled = false; }
-      alert('PDF-Fehler: ' + err.message);
-    });
-  }, 800);
+  var win = window.open('', '_blank', 'width=860,height=720,scrollbars=yes,resizable=yes');
+  if(!win){ alert('Bitte den Popup-Blocker für diese Seite deaktivieren.'); return; }
+  win.document.write(fullHtml);
+  win.document.close();
 }
 
 init();
