@@ -545,7 +545,26 @@ async function init(){
   }
 
   let importData = null;
-  try { const r=localStorage.getItem('nw_bauzeit_import'); if(r) importData=JSON.parse(r); } catch(e){}
+
+  // 1. URL-Parameter haben höchste Priorität (Sharing-Link)
+  const _urlP = new URLSearchParams(window.location.search);
+  const _urlE = _urlP.get('e');
+  if (_urlE) {
+    importData = {
+      veranstaltung: _urlE,
+      phases: {
+        aufbau: _urlP.get('aufbau') || '',
+        proben: _urlP.get('proben') || '',
+        show:   _urlP.get('show')   || '',
+        abbau:  _urlP.get('abbau')  || ''
+      }
+    };
+  }
+
+  // 2. localStorage als Fallback (öffnen aus Crewplanung ohne URL-Params)
+  if (!importData) {
+    try { const r=localStorage.getItem('nw_bauzeit_import'); if(r) importData=JSON.parse(r); } catch(e){}
+  }
 
   if (importData) eventName = importData.veranstaltung || '';
 

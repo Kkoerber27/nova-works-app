@@ -2302,21 +2302,40 @@ function generateBauzeitenplan() {
 
   try { localStorage.setItem('nw_bauzeit_import', JSON.stringify(data)); } catch(e) {}
 
+  // Build shareable URL with all phase data encoded
+  const baseUrl = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'bauzeitenplan.html';
+  const params = new URLSearchParams();
+  params.set('e', p.name || '');
+  if (p.aufbau) params.set('aufbau', p.aufbau);
+  if (p.proben) params.set('proben', p.proben);
+  if (p.show)   params.set('show',   p.show);
+  if (p.abbau)  params.set('abbau',  p.abbau);
+  const shareUrl = baseUrl + '?' + params.toString();
+
   const existing = document.getElementById('bauzeit-modal-overlay');
   if (existing) existing.remove();
   const overlay = document.createElement('div');
   overlay.id = 'bauzeit-modal-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML =
-    '<div style="background:#1a1a1a;border:1px solid #3a3a3a;border-radius:6px;padding:32px 36px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);">' +
+    '<div style="background:#1a1a1a;border:1px solid #3a3a3a;border-radius:6px;padding:32px 36px;max-width:480px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);">' +
       '<div style="font-size:36px;margin-bottom:12px;">🗓</div>' +
       '<div style="font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:6px;">Bauzeitenplan bereit</div>' +
-      '<div style="font-size:13px;color:#888;margin-bottom:24px;"><strong style="color:#c8a96e;">' + (p.name||'Veranstaltung') + '</strong></div>' +
-      '<a href="bauzeitenplan.html" target="_blank" rel="noopener" ' +
-        'style="display:inline-block;background:#7c5cbf;color:#fff;padding:12px 28px;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.5px;border-radius:3px;margin-bottom:16px;">' +
-        '🗓 Bauzeitenplan öffnen</a><br>' +
+      '<div style="font-size:13px;color:#888;margin-bottom:20px;"><strong style="color:#c8a96e;">' + (p.name||'Veranstaltung') + '</strong></div>' +
+      '<a href="' + shareUrl + '" target="_blank" rel="noopener" ' +
+        'style="display:inline-block;background:#7c5cbf;color:#fff;padding:12px 28px;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.5px;border-radius:3px;margin-bottom:20px;">' +
+        '🗓 Bauzeitenplan öffnen</a>' +
+      '<div style="border-top:1px solid #2a2a2a;padding-top:16px;margin-top:4px;">' +
+        '<div style="font-size:11px;color:#666;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Teilbar – nur Bauzeitenplan, kein Zugriff auf Crewplanung</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<input id="bzShareUrl" readonly value="' + shareUrl.replace(/"/g,'&quot;') + '" ' +
+            'style="flex:1;background:#111;border:1px solid #333;border-radius:3px;color:#aaa;font-size:10px;padding:7px 10px;outline:none;font-family:monospace;" />' +
+          '<button onclick="navigator.clipboard.writeText(document.getElementById(\'bzShareUrl\').value).then(()=>{this.textContent=\'✓ Kopiert\';setTimeout(()=>{this.textContent=\'Kopieren\'},2000)})" ' +
+            'style="background:#333;border:none;color:#ccc;border-radius:3px;padding:7px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">Kopieren</button>' +
+        '</div>' +
+      '</div>' +
       '<button onclick="document.getElementById(\'bauzeit-modal-overlay\').remove()" ' +
-        'style="background:none;border:none;color:#666;font-size:12px;cursor:pointer;margin-top:4px;">Abbrechen</button>' +
+        'style="background:none;border:none;color:#555;font-size:12px;cursor:pointer;margin-top:16px;">Schließen</button>' +
     '</div>';
   document.body.appendChild(overlay);
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
