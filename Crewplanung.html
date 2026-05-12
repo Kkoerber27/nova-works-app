@@ -99,6 +99,16 @@
   }
   .planung-item:hover .planung-item-del { opacity: 1; }
   .planung-item-del:hover { color: #e55; }
+  .planung-item-copy {
+    background: none; border: none; color: var(--text-dim); cursor: pointer;
+    font-size: 12px; padding: 0 0 0 6px; line-height: 1; opacity: 0;
+    transition: opacity .12s; title: 'Kopieren';
+  }
+  .planung-item:hover .planung-item-copy { opacity: 1; }
+  .planung-item-copy:hover { color: var(--accent); }
+  #copyModal .copy-shift-hint { font-size:11px; color:#888; margin-top:4px; min-height:16px; }
+  #copyModal .copy-start-row { display:flex; align-items:center; gap:12px; }
+  #copyModal .copy-divider { border:none; border-top:1px solid #2a2a2a; margin:14px 0; }
 
   /* ── Main Content ── */
   .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -605,6 +615,54 @@
   </div>
 </div>
 
+<!-- COPY PLANUNG MODAL -->
+<div class="modal-backdrop" id="copyModal">
+  <div class="modal modal-wide">
+    <h2>Projekt kopieren</h2>
+    <div style="font-size:11px;color:#888;margin-bottom:16px">Die Crew wird 1:1 übernommen. Phasen werden automatisch verschoben oder können manuell angepasst werden.</div>
+
+    <div class="modal-field">
+      <label>Neuer Projektname *</label>
+      <input type="text" id="copyName" placeholder="z.B. Firmenfeier Müller GmbH" />
+    </div>
+
+    <hr class="copy-divider">
+
+    <div class="copy-start-row modal-field">
+      <label style="font-size:11px;color:#aaa;min-width:130px">Neues Startdatum<br><span style="font-size:10px;color:#666">(verschiebt alle Phasen)</span></label>
+      <input type="date" id="copyStartDate" class="dp-date" style="flex:1" onchange="copyModalUpdateDates()" />
+    </div>
+    <div class="copy-shift-hint" id="copyShiftHint"></div>
+
+    <hr class="copy-divider">
+
+    <div style="font-size:11px;color:#aaa;margin-bottom:10px;letter-spacing:1px;text-transform:uppercase">Phasen (einzeln anpassbar)</div>
+    <div class="modal-phases-grid">
+      <div class="modal-phase-group modal-field">
+        <label style="color:#c0713a">Aufbau</label>
+        <div class="dp-range"><input type="date" id="copyAufbauS" class="dp-date"><span class="dp-sep">–</span><input type="date" id="copyAufbauE" class="dp-date"></div>
+      </div>
+      <div class="modal-phase-group modal-field">
+        <label style="color:#4a7fb5">Proben</label>
+        <div class="dp-range"><input type="date" id="copyProbenS" class="dp-date"><span class="dp-sep">–</span><input type="date" id="copyProbenE" class="dp-date"></div>
+      </div>
+      <div class="modal-phase-group modal-field">
+        <label style="color:#5a9e6f">Show</label>
+        <div class="dp-range"><input type="date" id="copyShowS" class="dp-date"><span class="dp-sep">–</span><input type="date" id="copyShowE" class="dp-date"></div>
+      </div>
+      <div class="modal-phase-group modal-field">
+        <label style="color:#8a8a8a">Abbau</label>
+        <div class="dp-range"><input type="date" id="copyAbbauS" class="dp-date"><span class="dp-sep">–</span><input type="date" id="copyAbbauE" class="dp-date"></div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeCopyModal()">Abbrechen</button>
+      <button class="btn btn-primary" onclick="executeCopy()">⎘ Kopie erstellen</button>
+    </div>
+  </div>
+</div>
+
 <!-- TECHNIKER ANLEGEN MODAL -->
 <div class="modal-backdrop" id="techModal">
   <div class="modal">
@@ -809,6 +867,7 @@ function renderSidebar() {
   list.innerHTML = planungen.map(p => `
     <div class="planung-item ${p.id === activePlanungId ? 'active' : ''}" onclick="openPlanung('${p.id}')">
       <span class="planung-item-name">${p.name}</span>
+      <button class="planung-item-copy" title="Projekt kopieren" onclick="openCopyModal(event,'${p.id}')">⎘</button>
       <button class="planung-item-del" onclick="deletePlanung(event,'${p.id}')">×</button>
     </div>
   `).join('');
@@ -1192,6 +1251,7 @@ document.getElementById('newModal').addEventListener('click', e => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') {
     closeNewModal();
+    closeCopyModal();
     closeTechModal();
     closeTechList();
   }
@@ -1237,6 +1297,113 @@ function deletePlanung(e, id) {
       </div>`;
   }
   renderSidebar();
+}
+
+// ── Copy Planung ──
+let _copySourceId = null;
+
+function openCopyModal(e, id) {
+  e.stopPropagation();
+  _copySourceId = id;
+  const src = getPlanung(id);
+  if (!src) return;
+
+  document.getElementById('copyModal').classList.add('open');
+  document.getElementById('copyName').value = 'Kopie von ' + src.name;
+  document.getElementById('copyShiftHint').textContent = '';
+
+  // Pre-fill phase dates from source
+  const phases = ['Aufbau','Proben','Show','Abbau'];
+  phases.forEach(ph => {
+    const key = ph.toLowerCase();
+    document.getElementById('copy'+ph+'S').value = phS(src[key]) || '';
+    document.getElementById('copy'+ph+'E').value = phE(src[key]) || '';
+  });
+
+  // Set start date = first aufbau date of source
+  const firstStart = _copyFirstDate(src);
+  document.getElementById('copyStartDate').value = firstStart || '';
+
+  setTimeout(() => document.getElementById('copyName').focus(), 50);
+}
+
+function closeCopyModal() {
+  document.getElementById('copyModal').classList.remove('open');
+  _copySourceId = null;
+}
+
+document.getElementById('copyModal').addEventListener('click', e => {
+  if (e.target === document.getElementById('copyModal')) closeCopyModal();
+});
+
+// Returns the earliest phase start date of a planung (as ISO string)
+function _copyFirstDate(p) {
+  const dates = ['aufbau','proben','show','abbau']
+    .map(k => phS(p[k]))
+    .filter(Boolean)
+    .sort();
+  return dates[0] || '';
+}
+
+// Shift ISO date string by n days (timezone-safe)
+function _shiftDate(iso, n) {
+  if (!iso) return '';
+  const d = new Date(iso + 'T00:00:00');
+  d.setDate(d.getDate() + n);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+function copyModalUpdateDates() {
+  const src = getPlanung(_copySourceId);
+  if (!src) return;
+  const newStart = document.getElementById('copyStartDate').value;
+  if (!newStart) return;
+
+  const origStart = _copyFirstDate(src);
+  if (!origStart) return;
+
+  const d0 = new Date(origStart + 'T00:00:00');
+  const d1 = new Date(newStart  + 'T00:00:00');
+  const offsetDays = Math.round((d1 - d0) / 86400000);
+
+  const sign = offsetDays >= 0 ? '+' : '';
+  document.getElementById('copyShiftHint').textContent =
+    offsetDays === 0 ? 'Kein Versatz — Phasen bleiben unverändert'
+    : `Alle Phasen werden um ${sign}${offsetDays} Tage verschoben`;
+
+  ['Aufbau','Proben','Show','Abbau'].forEach(ph => {
+    const key = ph.toLowerCase();
+    document.getElementById('copy'+ph+'S').value = _shiftDate(phS(src[key]), offsetDays);
+    document.getElementById('copy'+ph+'E').value = _shiftDate(phE(src[key]), offsetDays);
+  });
+}
+
+function executeCopy() {
+  const name = document.getElementById('copyName').value.trim();
+  if (!name) { document.getElementById('copyName').focus(); return; }
+  const src = getPlanung(_copySourceId);
+  if (!src) return;
+
+  const newP = {
+    id: 'p_' + Date.now(),
+    name,
+    kunde: src.kunde || '',
+    ort:   src.ort   || '',
+    aufbau: combinePhase(document.getElementById('copyAufbauS').value, document.getElementById('copyAufbauE').value),
+    proben: combinePhase(document.getElementById('copyProbenS').value, document.getElementById('copyProbenE').value),
+    show:   combinePhase(document.getElementById('copyShowS').value,   document.getElementById('copyShowE').value),
+    abbau:  combinePhase(document.getElementById('copyAbbauS').value,  document.getElementById('copyAbbauE').value),
+    datum: src.datum || '', pl: src.pl || '', notizen: src.notizen || '',
+    // Deep-copy crew positions
+    crew: JSON.parse(JSON.stringify(src.crew || {})),
+    collapsed: {}
+  };
+
+  planungen.unshift(newP);
+  save();
+  closeCopyModal();
+  renderSidebar();
+  openPlanung(newP.id);
 }
 
 // ── Export Excel ──
