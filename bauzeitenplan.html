@@ -780,6 +780,12 @@ function exportPDF(){
 
   var content = buildPrintHTML(liveData, days);
 
+  // Logo-Dimensionen (berechnet aus PNG 1407x324px, bei height:32px display)
+  // 139px breit x 32px hoch → bei 794px=210mm: 36.75mm x 8.46mm
+  var _logoData = NOVA_LOGO; // base64 data URL direkt aus Hauptfenster
+  var _logoW = 36.75;
+  var _logoH = 8.46;
+
   // Toolbar + own html2canvas/jsPDF scripts embedded in the print window
   var toolbar =
     '<style>'
@@ -794,17 +800,16 @@ function exportPDF(){
     +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
     +'<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"><\/script>'
     +'<script>'
-    +'var _fn='+JSON.stringify('FNAME_PLACEHOLDER')+';'
+    +'var _fn="FNAME_PLACEHOLDER";'
+    +'var _lw=LW_PLACEHOLDER,_lh=LH_PLACEHOLDER;'
+    +'var _logo="LOGO_PLACEHOLDER";'
     +'function doPDF(){'
       +'var bar=document.getElementById("_tb");'
       +'var st=document.getElementById("_st");'
       +'st.textContent="⏳ PDF wird erstellt – bitte warten…";'
       +'bar.querySelectorAll("button").forEach(function(b){b.disabled=true;});'
-      // Logo aus html2canvas herausnehmen, danach per jsPDF direkt einfügen
-      +'var logoEl=document.querySelector("img[alt=\'NOVA WORKS\']");'
-      +'var logoSrc=logoEl?logoEl.src:null;'
-      +'var logoW=logoEl?logoEl.offsetWidth:0;'
-      +'var logoH=logoEl?logoEl.offsetHeight:0;'
+      // Logo-Element aus html2canvas ausblenden (visibility:hidden = Layout bleibt)
+      +'var logoEl=document.querySelector(".dh-wrap img");'
       +'if(logoEl)logoEl.style.visibility="hidden";'
       +'var body=document.body;'
       +'var h=Math.max(document.documentElement.scrollHeight,body.scrollHeight);'
@@ -819,15 +824,12 @@ function exportPDF(){
         +'var pdf=new jP({orientation:"portrait",unit:"mm",format:"a4"});'
         +'var pW=210,pH=297,iH=(canvas.height/canvas.width)*pW;'
         +'var pageImg=canvas.toDataURL("image/jpeg",0.93);'
-        // px→mm: 794px = 210mm
-        +'var px2mm=210/794;'
-        +'var lW=logoW*px2mm,lH=logoH*px2mm;'
         +'var y=0;'
         +'while(y<iH){'
           +'if(y>0)pdf.addPage();'
           +'pdf.addImage(pageImg,"JPEG",0,-y,pW,iH);'
-          // Logo direkt per jsPDF auf jede Seite zeichnen
-          +'if(logoSrc&&lW>0&&lH>0)pdf.addImage(logoSrc,"PNG",2,2,lW,lH);'
+          // Logo direkt per jsPDF einzeichnen – unabhängig von html2canvas
+          +'pdf.addImage(_logo,"PNG",2,2,_lw,_lh);'
           +'y+=pH;'
         +'}'
         +'pdf.save(_fn);'
@@ -841,8 +843,12 @@ function exportPDF(){
     +'}'
     +'<\/script>';
 
-  // Replace FNAME_PLACEHOLDER with real filename (safely escaped)
-  toolbar = toolbar.replace('"FNAME_PLACEHOLDER"', JSON.stringify(fname));
+  // Platzhalter ersetzen – Logo-Daten direkt aus dem Hauptfenster einbetten
+  toolbar = toolbar
+    .replace('"FNAME_PLACEHOLDER"', JSON.stringify(fname))
+    .replace('"LOGO_PLACEHOLDER"', JSON.stringify(_logoData))
+    .replace('LW_PLACEHOLDER', _logoW)
+    .replace('LH_PLACEHOLDER', _logoH);
 
   // Add toolbar before </body>
   var fullHtml = content.replace('</body>', toolbar + '</body>');
