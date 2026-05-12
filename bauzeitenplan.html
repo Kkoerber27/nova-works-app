@@ -628,30 +628,157 @@ function exportExcel(){
 }
 
 // ── PDF Export ──
+function pEsc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function buildPrintHTML(liveData, days){
+  const PHASE_HEX = {aufbau:'#c0713a',proben:'#4a7fb5',show:'#5a9e6f',abbau:'#8a8a8a',extra:'#6a6a6a'};
+  const PHASE_LBL = {aufbau:'Aufbau',proben:'Proben',show:'Show',abbau:'Abbau'};
+  const GW = {};
+  GEWERKE_LIST.forEach(function(g){ GW[g.id]=g; });
+
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('de-DE',{day:'2-digit',month:'long',year:'numeric'});
+
+  // Phase legend
+  var legendHtml = ['aufbau','proben','show','abbau'].map(function(k){
+    return '<div class="li"><div class="ld" style="background:'+PHASE_HEX[k]+'"></div>'+PHASE_LBL[k]+'</div>';
+  }).join('');
+
+  // Day blocks
+  var daysHtml = '';
+  days.forEach(function(iso){
+    var pfd = getPhaseForDay(iso);
+    var isExtra = pfd.length===0;
+    var ph0 = pfd[0]||'extra';
+    var phLabel = isExtra ? 'Zusatztag' : pfd.map(function(k){return PHASE_LBL[k]||k;}).join(' + ');
+
+    // Header gradient or solid
+    var hBg;
+    if(pfd.length>1){
+      var pct=100/pfd.length;
+      var stops=pfd.map(function(k,i){
+        var c=PHASE_HEX[k]||'#888';
+        return c+' '+(i*pct)+'%,'+c+' '+((i+1)*pct)+'%';
+      }).join(',');
+      hBg='linear-gradient(90deg,'+stops+')';
+    } else { hBg=PHASE_HEX[ph0]||'#888'; }
+
+    // Rows
+    var rows = liveData[iso]||[];
+    var rowsHtml='';
+    if(!rows.length){
+      rowsHtml='<tr><td colspan="5" style="padding:5px 8px;font-size:9px;color:#bbb;font-style:italic;">–</td></tr>';
+    } else {
+      rows.forEach(function(r){
+        if(!r.von&&!r.bis&&!r.desc&&!r.gewerk&&!r.maschinen) return;
+        var gwHtml='';
+        if(r.gewerk){
+          r.gewerk.split(',').filter(Boolean).forEach(function(id){
+            var g=GW[id.trim()];
+            if(g) gwHtml+='<span style="display:inline-block;background:'+g.color+';color:#fff;padding:1px 5px;border-radius:2px;font-size:7.5px;font-weight:700;margin:1px 1px 1px 0;letter-spacing:.3px;">'+pEsc(g.label)+'</span>';
+          });
+        }
+        rowsHtml+='<tr>'
+          +'<td class="tc">'+pEsc(r.von||'')+'</td>'
+          +'<td class="tc">'+pEsc(r.bis||'')+'</td>'
+          +'<td>'+pEsc(r.desc||'')+'</td>'
+          +'<td>'+gwHtml+'</td>'
+          +'<td>'+pEsc(r.maschinen||'')+'</td>'
+          +'</tr>';
+      });
+      if(!rowsHtml) rowsHtml='<tr><td colspan="5" style="padding:5px 8px;font-size:9px;color:#bbb;font-style:italic;">–</td></tr>';
+    }
+
+    daysHtml+=
+      '<div class="db">'
+        +'<div class="dh" style="background:'+hBg+'">'
+          +'<span class="dn">'+fmtDate(iso)+'</span>'
+          +'<span class="dbg">'+phLabel+'</span>'
+        +'</div>'
+        +'<table class="bt">'
+          +'<thead><tr>'
+            +'<th style="width:46px">Von</th>'
+            +'<th style="width:46px">Bis</th>'
+            +'<th>Beschreibung / Tätigkeit</th>'
+            +'<th style="width:130px">Gewerk</th>'
+            +'<th style="width:120px">Arbeitsmaschinen</th>'
+          +'</tr></thead>'
+          +'<tbody>'+rowsHtml+'</tbody>'
+        +'</table>'
+      +'</div>';
+  });
+
+  return '<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8">'
+    +'<title>Bauzeitenplan – '+pEsc(eventName)+'</title>'
+    +'<style>'
+    +'@page{size:A4 portrait;margin:12mm 12mm 14mm 12mm;}'
+    +'*{box-sizing:border-box;margin:0;padding:0;}'
+    +'body{font-family:"Helvetica Neue",Arial,sans-serif;font-size:10px;color:#1a1a1a;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact;}'
+    /* Repeating header/footer via HTML table thead/tfoot trick */
+    +'table.pt{width:100%;border-collapse:collapse;}'
+    +'table.pt>thead>tr>td{padding-bottom:0;}'
+    +'table.pt>tfoot>tr>td{padding-top:0;}'
+    /* Doc header */
+    +'.dh-wrap{display:flex;align-items:flex-end;justify-content:space-between;padding-bottom:8px;border-bottom:2.5px solid #1a1a1a;margin-bottom:10px;}'
+    +'.logo{font-size:15px;font-weight:900;letter-spacing:4px;text-transform:uppercase;}'
+    +'.logo em{font-style:normal;font-weight:200;}'
+    +'.ev{text-align:center;}'
+    +'.ev-name{font-size:13px;font-weight:700;letter-spacing:.5px;}'
+    +'.ev-type{font-size:8px;letter-spacing:3px;text-transform:uppercase;color:#999;margin-top:3px;}'
+    +'.meta{text-align:right;font-size:8px;color:#999;line-height:1.6;}'
+    /* Legend */
+    +'.leg{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;}'
+    +'.li{display:flex;align-items:center;gap:4px;font-size:8px;color:#555;letter-spacing:1px;text-transform:uppercase;}'
+    +'.ld{width:9px;height:9px;border-radius:1px;flex-shrink:0;}'
+    /* Day blocks */
+    +'.db{break-inside:avoid;margin-bottom:7px;border:1px solid #ddd;border-radius:3px;overflow:hidden;}'
+    +'.dh{display:flex;align-items:center;gap:8px;padding:6px 10px;color:#fff;}'
+    +'.dn{flex:1;font-size:11px;font-weight:700;}'
+    +'.dbg{background:rgba(255,255,255,.22);border-radius:2px;padding:2px 6px;font-size:7.5px;letter-spacing:1px;text-transform:uppercase;}'
+    /* Table */
+    +'.bt{width:100%;border-collapse:collapse;}'
+    +'.bt thead tr{background:#f7f6f4;}'
+    +'.bt th{padding:4px 7px;font-size:7.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#aaa;border-bottom:1px solid #eee;border-right:1px solid #eee;text-align:left;}'
+    +'.bt th:last-child{border-right:none;}'
+    +'.bt td{padding:5px 7px;font-size:9.5px;border-bottom:1px solid #f0eeed;border-right:1px solid #f0eeed;vertical-align:top;line-height:1.45;}'
+    +'.bt td:last-child{border-right:none;}'
+    +'.bt tr:last-child td{border-bottom:none;}'
+    +'.tc{white-space:nowrap;color:#666;}'
+    /* Footer */
+    +'.foot{display:flex;justify-content:space-between;font-size:7.5px;color:#bbb;border-top:1px solid #eee;padding-top:5px;margin-top:4px;}'
+    +'</style></head><body>'
+    +'<table class="pt">'
+      +'<thead><tr><td>'
+        +'<div class="dh-wrap">'
+          +'<div class="logo">NOVA<em> </em>WORKS</div>'
+          +'<div class="ev"><div class="ev-name">'+pEsc(eventName)+'</div><div class="ev-type">Bauzeitenplan</div></div>'
+          +'<div class="meta">Erstellt: '+pEsc(dateStr)+'</div>'
+        +'</div>'
+        +'<div class="leg">'+legendHtml+'</div>'
+      +'</td></tr></thead>'
+      +'<tfoot><tr><td>'
+        +'<div class="foot">'
+          +'<span>NOVA WORKS</span>'
+          +'<span>'+pEsc(eventName)+' &nbsp;·&nbsp; Bauzeitenplan &nbsp;·&nbsp; '+pEsc(dateStr)+'</span>'
+        +'</div>'
+      +'</td></tr></tfoot>'
+      +'<tbody><tr><td style="padding-top:2px">'+daysHtml+'</td></tr></tbody>'
+    +'</table>'
+    +'</body></html>';
+}
+
 function exportPDF(){
-  const noPrint = document.querySelectorAll('.no-print,.del-btn,.btn-add-row');
-  noPrint.forEach(el=>el.style.visibility='hidden');
-  html2canvas(document.body,{scale:2,useCORS:true,backgroundColor:'#f4f3f1',scrollX:0,scrollY:0}).then(function(canvas){
-    noPrint.forEach(el=>el.style.visibility='');
-    const {jsPDF}=window.jspdf;
-    const pdf=new jsPDF({orientation:'portrait',unit:'mm',format:'a4'});
-    const img=canvas.toDataURL('image/jpeg',0.92);
-    const pW=pdf.internal.pageSize.getWidth();
-    const pH=(canvas.height*pW)/canvas.width;
-    const pgH=pdf.internal.pageSize.getHeight();
-    let y=0;
-    while(y<pH){ if(y>0)pdf.addPage(); pdf.addImage(img,'JPEG',0,-y,pW,pH); y+=pgH; }
-    const safe=(eventName||'Bauzeitenplan').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
-    const today=new Date().toISOString().slice(0,10);
-    const fname=safe+'_Bauzeitenplan_'+today+'.pdf';
-    if(window.showSaveFilePicker){
-      window.showSaveFilePicker({suggestedName:fname,types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]})
-        .then(h=>h.createWritable()).then(w=>w.write(pdf.output('blob')).then(()=>w.close()))
-        .catch(e=>{if(e.name!=='AbortError')pdf.save(fname);});
-    } else { pdf.save(fname); }
-  }).catch(function(err){
-    document.querySelectorAll('.no-print,.del-btn,.btn-add-row').forEach(el=>el.style.visibility='');
-    alert('PDF-Fehler: '+err.message);
+  var liveData = collectData();
+  var days = getAllDays();
+  if(!days.length){ alert('Keine Daten vorhanden.'); return; }
+  var html = buildPrintHTML(liveData, days);
+  var win = window.open('','_blank');
+  if(!win){ alert('Bitte den Popup-Blocker für diese Seite deaktivieren.'); return; }
+  win.document.write(html);
+  win.document.close();
+  win.addEventListener('load', function(){
+    win.focus();
+    setTimeout(function(){ win.print(); }, 400);
   });
 }
 
