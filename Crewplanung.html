@@ -539,6 +539,9 @@
     <div class="sidebar-divider" style="margin-top:8px"></div>
     <button class="btn-new-tech" onclick="showOverview()" style="background:var(--accent);color:var(--black);border-color:var(--accent);margin-top:4px;font-weight:700" id="btnOverview">📋 Personalübersicht</button>
     <button class="btn-new-tech" onclick="showCalendar()" style="background:#2a2a2a;color:#fff;border-color:#3a3a3a;margin-top:4px;font-weight:700" id="btnCalendar">📅 Kalenderansicht</button>
+    <div class="sidebar-divider" style="margin-top:8px"></div>
+    <button class="btn-new-tech" onclick="window.open('backup.html','_blank')" style="border-color:#3a5a2a;color:#5a9e6f;margin-top:4px;font-size:10px">🛡 Backup & Wiederherstellung</button>
+    <div id="backupIndicator" style="padding:8px 14px 12px;font-size:9px;color:#4a4a4a;letter-spacing:1px;text-transform:uppercase;line-height:1.6"></div>
   </aside>
 
   <!-- MAIN -->
@@ -864,6 +867,44 @@ let activePlanungId = null;
 function save() {
   SupaDB.set('nw_crew_planungen', planungen);
   syncHotelData();
+  makeBackupSnapshot();
+}
+
+// ── Automatisches Backup-System ──
+async function makeBackupSnapshot() {
+  if (!planungen.length) return;
+  const ts = new Date().toISOString();
+  const snapshot = { ts, count: planungen.length, planungen: JSON.parse(JSON.stringify(planungen)) };
+
+  // 1. Rollierender Snapshot (letzte 10 behalten)
+  let rolling = SupaDB.get('nw_backup_rolling', []);
+  if (!Array.isArray(rolling)) rolling = [];
+  rolling.unshift(snapshot);
+  if (rolling.length > 10) rolling = rolling.slice(0, 10);
+  await SupaDB.set('nw_backup_rolling', rolling);
+
+  // 2. Tägliches Backup (einmal pro Tag, separater Supabase-Key)
+  const today = ts.slice(0, 10);
+  const dailyKey = 'nw_backup_daily_' + today;
+  if (!SupaDB.get(dailyKey)) {
+    await SupaDB.set(dailyKey, snapshot);
+  }
+
+  // 3. Indikator aktualisieren
+  updateBackupIndicator(ts);
+}
+
+function updateBackupIndicator(ts) {
+  const el = document.getElementById('backupIndicator');
+  if (!el) return;
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,'0');
+  const time = pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const today = new Date().toDateString() === d.toDateString();
+  const label = today ? 'heute ' + time : d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'}) + ' ' + time;
+  el.innerHTML = '💾 gesichert: ' + label;
+  el.style.color = '#3a7a3a';
+  setTimeout(() => { if (el) el.style.color = '#4a4a4a'; }, 3000);
 }
 
 function getPlanung(id) {
@@ -2442,7 +2483,7 @@ function showLoading(v) {
 }
 async function initApp() {
   showLoading(true);
-  await SupaDB.init(['nw_crew_planungen', 'nw_crew_techniker', 'nw_crew_gewerke']);
+  await SupaDB.init(['nw_crew_planungen', 'nw_crew_techniker', 'nw_crew_gewerke', 'nw_backup_rolling']);
 
   // ── Einmal-Migration: localStorage → Supabase ──
   // Falls Supabase noch leer ist, aber localStorage Daten hat, hochladen
@@ -2484,6 +2525,13 @@ async function initApp() {
   try { localStorage.setItem('nw_crew_db_export', JSON.stringify([...DB, ...customTechniker])); } catch(e) {}
   renderSidebar();
   if (planungen.length) openPlanung(planungen[0].id);
+
+  // Letztes Backup-Datum anzeigen
+  const rolling = SupaDB.get('nw_backup_rolling', []);
+  if (rolling.length && rolling[0].ts) {
+    updateBackupIndicator(rolling[0].ts);
+  }
+
   showLoading(false);
 }
 initApp();

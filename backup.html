@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NOVA WORKS – Backup & Wiederherstellung</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #0a0a0a; color: #e8e8e8;
+         padding: 28px 32px; min-height: 100vh; }
+  h1 { font-size: 16px; font-weight: 300; letter-spacing: 4px; color: #c8a96e;
+       text-transform: uppercase; margin-bottom: 4px; }
+  .sub { font-size: 10px; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-bottom: 28px; }
+  .section { background: #1a1a1a; border: 1px solid #3a3a3a; padding: 20px 24px; margin-bottom: 16px; }
+  .section h2 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #c8a96e;
+                margin: 0 0 14px; }
+  .snapshot { border-bottom: 1px solid #2a2a2a; padding: 10px 0; display: flex; align-items: center;
+              gap: 14px; font-size: 12px; }
+  .snapshot:last-child { border-bottom: none; }
+  .snap-ts { color: #888; font-size: 11px; width: 150px; flex-shrink: 0; font-family: monospace; }
+  .snap-count { color: #c8a96e; font-size: 11px; width: 80px; flex-shrink: 0; }
+  .snap-projects { color: #aaa; flex: 1; font-size: 11px; line-height: 1.6; }
+  .btn-restore { background: #2d7a4f; color: #fff; border: none; padding: 6px 14px;
+                 font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+                 cursor: pointer; flex-shrink: 0; }
+  .btn-restore:hover { background: #1d5a3f; }
+  .btn-dl { background: #3a3a3a; color: #e8e8e8; border: none; padding: 6px 14px;
+            font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+            cursor: pointer; flex-shrink: 0; }
+  .btn-dl:hover { background: #4a4a4a; }
+  .btn-back { background: #c8a96e; color: #0a0a0a; border: none; padding: 10px 24px;
+              font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+              cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+  .btn-back:hover { background: #a07840; color: #fff; }
+  .empty { color: #555; font-style: italic; font-size: 12px; padding: 12px 0; }
+  .loading { color: #555; font-size: 12px; padding: 12px 0; }
+  .tag-daily { background: #1a3a2a; color: #5a9e6f; font-size: 9px; padding: 2px 6px;
+               font-weight: 700; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+  .tag-roll  { background: #2a2a1a; color: #c8a96e; font-size: 9px; padding: 2px 6px;
+               font-weight: 700; letter-spacing: 1px; text-transform: uppercase; flex-shrink: 0; }
+  .confirm-box { background: #1a2d1a; border: 1px solid #2d7a4f; padding: 16px 20px;
+                 margin-top: 12px; display: none; }
+  .confirm-box p { font-size: 12px; color: #aaa; margin-bottom: 12px; }
+  .confirm-box strong { color: #e8e8e8; }
+  .btn-confirm { background: #2d7a4f; color: #fff; border: none; padding: 10px 20px;
+                 font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+                 cursor: pointer; margin-right: 8px; }
+  .btn-cancel  { background: #3a3a3a; color: #aaa; border: none; padding: 10px 20px;
+                 font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+                 cursor: pointer; }
+  .log { background: #0a0a0a; border: 1px solid #2a2a2a; padding: 12px; font-size: 11px;
+         font-family: monospace; line-height: 1.8; margin-top: 12px; display: none;
+         max-height: 200px; overflow-y: auto; }
+  .ok { color: #5a9e6f; } .err { color: #e05a5a; } .info { color: #4a7fb5; }
+</style>
+</head>
+<body>
+
+<a class="btn-back" href="Crewplanung.html">← Zur Crewplanung</a>
+
+<h1>Backup & Wiederherstellung</h1>
+<div class="sub">Nova Works – Automatische Datensicherung</div>
+
+<div class="section">
+  <h2>Rollierendes Backup <span style="color:#555;font-weight:300">(letzte 10 Speicherungen)</span></h2>
+  <div id="rollingList" class="loading">Lade Backups…</div>
+</div>
+
+<div class="section">
+  <h2>Tägliche Backups <span style="color:#555;font-weight:300">(einmal pro Tag gespeichert)</span></h2>
+  <div id="dailyList" class="loading">Lade tägliche Backups…</div>
+</div>
+
+<div class="section" id="confirmSection" style="display:none">
+  <h2>Wiederherstellung bestätigen</h2>
+  <div id="confirmBox" class="confirm-box" style="display:block">
+    <p id="confirmText"></p>
+    <button class="btn-confirm" id="confirmBtn" onclick="doRestore()">✓ Jetzt wiederherstellen</button>
+    <button class="btn-cancel" onclick="cancelRestore()">Abbrechen</button>
+    <div class="log" id="restoreLog"></div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ekfuzciwjsldpkojyzgg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_53YU2qO5PwdFwhVuZSSyPg_pcdw2Dhk';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let pendingRestore = null;
+
+function fmtTs(ts) {
+  if (!ts) return '–';
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,'0');
+  return pad(d.getDate())+'.'+pad(d.getMonth()+1)+'.'+d.getFullYear()
+    + ' ' + pad(d.getHours())+':'+pad(d.getMinutes());
+}
+
+function projectNames(snap) {
+  if (!snap.planungen || !snap.planungen.length) return '(keine Projekte)';
+  return snap.planungen.map(p => p.name || p.id).join(', ');
+}
+
+function renderSnapshots(containerId, snapshots, tagLabel, tagClass) {
+  const el = document.getElementById(containerId);
+  if (!snapshots.length) {
+    el.className = 'empty';
+    el.textContent = 'Noch keine Backups vorhanden.';
+    return;
+  }
+  el.className = '';
+  el.innerHTML = snapshots.map((snap, i) =>
+    `<div class="snapshot">
+      <span class="tag ${tagClass}">${tagLabel}</span>
+      <span class="snap-ts">${fmtTs(snap.ts)}</span>
+      <span class="snap-count">${snap.count || (snap.planungen||[]).length} Projekt${(snap.count||1)!==1?'e':''}</span>
+      <span class="snap-projects">${projectNames(snap)}</span>
+      <button class="btn-dl" onclick="downloadSnapshot(${JSON.stringify(JSON.stringify(snap))}, '${fmtTs(snap.ts).replace(/[:.]/g,'-')}')">⬇ JSON</button>
+      <button class="btn-restore" onclick="askRestore(${i}, '${tagLabel === 'TÄGLICH' ? 'daily' : 'rolling'}', '${fmtTs(snap.ts)}', ${snap.count || (snap.planungen||[]).length})">↩ Wiederherstellen</button>
+    </div>`
+  ).join('');
+}
+
+let allRolling = [];
+let allDaily = [];
+
+async function loadAll() {
+  // Rolling
+  try {
+    const { data, error } = await db.from('app_data').select('value').eq('key','nw_backup_rolling').single();
+    if (!error && data && data.value) allRolling = data.value;
+  } catch(e) {}
+  renderSnapshots('rollingList', allRolling, 'ROLLING', 'tag-roll');
+
+  // Daily backups: get all keys starting with nw_backup_daily_
+  try {
+    const { data, error } = await db.from('app_data').select('key,value').like('key','nw_backup_daily_%').order('key', { ascending: false });
+    if (!error && data) allDaily = data.map(row => row.value).filter(Boolean);
+  } catch(e) {}
+  renderSnapshots('dailyList', allDaily, 'TÄGLICH', 'tag-daily');
+}
+
+function downloadSnapshot(snapJson, label) {
+  const snap = JSON.parse(snapJson);
+  const blob = new Blob([JSON.stringify(snap.planungen, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `NW_Crewplanung_Backup_${label}.json`;
+  a.click();
+}
+
+function askRestore(idx, type, tsLabel, count) {
+  pendingRestore = { idx, type, tsLabel, count };
+  document.getElementById('confirmText').innerHTML =
+    `Möchtest du wirklich den Stand vom <strong>${tsLabel}</strong> (${count} Projekt${count!==1?'e':''}) wiederherstellen?<br><br>` +
+    `<span style="color:#e05a5a">⚠ Die aktuellen Daten werden dadurch überschrieben.</span><br>` +
+    `Empfehlung: lade zuerst das aktuelle JSON-Backup herunter (Button "⬇ JSON" auf dem aktuellsten Eintrag).`;
+  document.getElementById('confirmSection').style.display = 'block';
+  document.getElementById('confirmSection').scrollIntoView({behavior:'smooth'});
+}
+
+function cancelRestore() {
+  pendingRestore = null;
+  document.getElementById('confirmSection').style.display = 'none';
+}
+
+function logR(msg, cls='') {
+  const el = document.getElementById('restoreLog');
+  el.style.display = 'block';
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+async function doRestore() {
+  if (!pendingRestore) return;
+  document.getElementById('confirmBtn').disabled = true;
+
+  const { idx, type } = pendingRestore;
+  const snap = type === 'daily' ? allDaily[idx] : allRolling[idx];
+  if (!snap || !snap.planungen) {
+    logR('✗ Snapshot nicht gefunden', 'err');
+    return;
+  }
+
+  logR('Stelle Daten wieder her…', 'info');
+  try {
+    const { error } = await db.from('app_data').upsert({
+      key: 'nw_crew_planungen',
+      value: snap.planungen,
+      updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    logR(`✓ ${snap.planungen.length} Projekt${snap.planungen.length!==1?'e':''} wiederhergestellt.`, 'ok');
+    logR('Weiterleitung zur Crewplanung…', 'info');
+    setTimeout(() => { window.location.href = 'Crewplanung.html'; }, 2000);
+  } catch(e) {
+    logR('✗ Fehler: ' + e.message, 'err');
+    document.getElementById('confirmBtn').disabled = false;
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NOVA WORKS – Daten-Wiederherstellung</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family:'Helvetica Neue',Arial,sans-serif; background:#0a0a0a; color:#e8e8e8;
+         padding:32px; margin:0; }
+  h1 { font-size:16px; font-weight:300; letter-spacing:4px; color:#c8a96e; text-transform:uppercase; margin-bottom:4px; }
+  .sub { font-size:10px; letter-spacing:2px; color:#555; text-transform:uppercase; margin-bottom:24px; }
+  .box { background:#1a1a1a; border:1px solid #3a3a3a; padding:20px 24px; margin-bottom:16px; }
+  .log { background:#0a0a0a; border:1px solid #2a2a2a; padding:12px; font-size:11px;
+         font-family:monospace; line-height:1.9; min-height:80px; margin-top:16px; max-height:360px; overflow-y:auto; }
+  .ok { color:#5a9e6f; } .err { color:#e05a5a; } .info { color:#4a7fb5; } .warn { color:#c8a96e; }
+  .btn { background:#c8a96e; color:#0a0a0a; border:none; padding:12px 28px; font-size:11px;
+         font-weight:700; letter-spacing:2px; text-transform:uppercase; cursor:pointer; width:100%; margin-top:8px; }
+  .btn:hover { background:#a07840; }
+  .btn:disabled { background:#333; color:#555; cursor:not-allowed; }
+  .done { background:#0d2d1a; border:1px solid #2d7a4f; padding:16px; color:#5a9e6f;
+          text-align:center; font-size:13px; display:none; margin-top:16px; }
+  .done a { color:#c8a96e; }
+</style>
+</head>
+<body>
+<h1>Daten-Wiederherstellung</h1>
+<div class="sub">Nova Works – Gerettete Projekte nach Supabase hochladen</div>
+
+<div class="box">
+  <p style="font-size:13px;color:#aaa;line-height:1.8;margin:0 0 12px">
+    Folgende Daten werden wiederhergestellt:<br>
+    <span style="color:#5a9e6f">✓</span> <strong>26-0021_EB – Prepp CGS</strong> – Crew aus Screenshot + Hotelplanung (7 Personen)<br>
+    <span style="color:#c8a96e">~</span> <strong>26-0021_EB – No Limits FFM</strong> – leeres Projekt (Crew neu eintragen)<br>
+    <span style="color:#c8a96e">~</span> <strong>26-0008_Oberhausen</strong> – leeres Projekt (Crew neu eintragen)<br>
+    <span style="color:#e05a5a">✗</span> <strong>80er</strong> – keine Daten gefunden, muss neu erstellt werden
+  </p>
+  <button class="btn" id="uploadBtn" onclick="doUpload()">▲ Projekte jetzt wiederherstellen</button>
+  <div class="log" id="log"></div>
+  <div class="done" id="done">
+    ✓ Wiederherstellung abgeschlossen!<br><br>
+    <a href="/Crewplanung.html">→ Zur Crewplanung</a>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ekfuzciwjsldpkojyzgg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_53YU2qO5PwdFwhVuZSSyPg_pcdw2Dhk';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function log(msg, cls='') {
+  const el = document.getElementById('log');
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+// ── Rekonstruierte Projektdaten ──
+const RESCUED_PROJECTS = [
+  {
+    id: 'p_rescued_eb_prepp',
+    name: '26-0021_EB - Prepp CGS',
+    kunde: 'Ehrlich Brothers',
+    ort: 'Denkendorf',
+    aufbau: '2026-06-01/2026-06-05',
+    proben: '2026-06-06/2026-06-11',
+    show:   '2026-06-12/2026-06-13',
+    abbau:  '2026-06-16/2026-06-19',
+    pl: 'Kilian Körber',
+    notizen: '',
+    collapsed: {},
+    crew: {
+      tl: [
+        { name:'Kilian Körber',    funktion:'Projektleiter',      tel:'+491752466769', email:'kk@nova-works.de',      status:'bestaetigt', phasen:{aufbau:true,proben:true,show:true,abbau:true} },
+        { name:'Dominique Soldner',funktion:'Technischer Leiter', tel:'01709389943',   email:'d.soldner@full-scope.de',status:'bestaetigt', phasen:{aufbau:true,proben:true,show:true,abbau:false} }
+      ],
+      licht: [
+        { name:'Daniel Natho',     funktion:'Lichttechniker', tel:'+49 163 2783694',  email:'d.natho@pradler-gruppe.de',         status:'bestaetigt', phasen:{aufbau:true,proben:false,show:false,abbau:false} },
+        { name:'Maximilian Mager', funktion:'Licht System',   tel:'01604649713',      email:'m.mager@mager-productions.de',      status:'bestaetigt', phasen:{aufbau:true,proben:false,show:false,abbau:false} },
+        { name:'Peter Bauer',      funktion:'Lichttechniker', tel:'0160 8232595',     email:'veranstaltungsdienstleistungen@googlemail.com', status:'bestaetigt', phasen:{aufbau:true,proben:false,show:false,abbau:false} },
+        { name:'Felix Rohde',      funktion:'Lichttechniker', tel:'+49 1515 7744369', email:'rvtveranstaltungstechnik@gmail.com', status:'bestaetigt', phasen:{aufbau:true,proben:false,show:false,abbau:false} },
+        { name:'Maximilian Schmidt',funktion:'IT Techniker',  tel:'004916095823084',  email:'m.schmidt@volumax.de',              status:'bestaetigt', phasen:{aufbau:false,proben:false,show:true,abbau:false} },
+        { name:'Ralf-Linus Stüve', funktion:'Lichttechniker', tel:'015141475590',     email:'ralf-linus@stueve.ms',              status:'angefragt',  phasen:{aufbau:true,proben:false,show:false,abbau:false} },
+        { name:'Marco Györi',      funktion:'Lichttechniker', tel:'01788932360',      email:'info@klangkraft-gmbh.de',           status:'angefragt',  phasen:{aufbau:true,proben:false,show:false,abbau:false} },
+        { name:'Fabian Balle',     funktion:'Lichttechniker', tel:'',                 email:'',                                  status:'angefragt',  phasen:{aufbau:true,proben:false,show:false,abbau:false} }
+      ],
+      ton: [], rigging: [], av: []
+    }
+  },
+  {
+    id: 'p_rescued_eb_nolimits',
+    name: '26-0021_EB - No Limits FFM',
+    kunde: 'Ehrlich Brothers',
+    ort: '',
+    aufbau:'', proben:'', show:'', abbau:'',
+    pl: 'Kilian Körber',
+    notizen: '⚠ Crew-Daten verloren – bitte neu eintragen',
+    collapsed: {},
+    crew: { tl:[], licht:[], ton:[], rigging:[], av:[] }
+  },
+  {
+    id: 'p_rescued_oberhausen',
+    name: '26-0008_Oberhausen',
+    kunde: '',
+    ort: 'Oberhausen',
+    aufbau:'', proben:'', show:'', abbau:'',
+    pl: 'Kilian Körber',
+    notizen: '⚠ Crew-Daten verloren – bitte neu eintragen',
+    collapsed: {},
+    crew: { tl:[], licht:[], ton:[], rigging:[], av:[] }
+  }
+];
+
+const HOTEL_EB_PREPP = {
+  eventName: '26-0021_EB - Prepp CGS',
+  savedAt: '2026-05-12T18:51:20.146Z',
+  rows: [
+    { name:'Daniel Natho',      checkin1:'2026-06-02', checkout1:'2026-06-05', checkin2:'', checkout2:'', nights:3, zimmer:'Einzelzimmer', notiz:'' },
+    { name:'Dominique Soldner', checkin1:'2026-06-01', checkout1:'2026-06-04', checkin2:'', checkout2:'', nights:3, zimmer:'Einzelzimmer', notiz:'' },
+    { name:'Felix Rohde',       checkin1:'2026-06-01', checkout1:'2026-06-05', checkin2:'', checkout2:'', nights:4, zimmer:'Einzelzimmer', notiz:'' },
+    { name:'Kilian Körber',     checkin1:'2026-06-02', checkout1:'2026-06-04', checkin2:'', checkout2:'', nights:2, zimmer:'Einzelzimmer', notiz:'' },
+    { name:'Maximilian Mager',  checkin1:'2026-06-03', checkout1:'2026-06-05', checkin2:'', checkout2:'', nights:2, zimmer:'Einzelzimmer', notiz:'' },
+    { name:'Maximilian Schmidt',checkin1:'2026-06-04', checkout1:'2026-06-05', checkin2:'', checkout2:'', nights:1, zimmer:'Einzelzimmer', notiz:'' },
+    { name:'Peter Bauer',       checkin1:'2026-06-03', checkout1:'2026-06-05', checkin2:'', checkout2:'', nights:2, zimmer:'Einzelzimmer', notiz:'' }
+  ]
+};
+
+async function doUpload() {
+  document.getElementById('uploadBtn').disabled = true;
+  log('Lade aktuelle Supabase-Daten…', 'info');
+
+  // 1. Get existing planungen from Supabase
+  let existing = [];
+  try {
+    const { data, error } = await db.from('app_data').select('value').eq('key','nw_crew_planungen').single();
+    if (!error && data) existing = data.value || [];
+    log(`  Supabase hat bereits ${existing.length} Projekte`, 'info');
+  } catch(e) { log('  Supabase leer oder Fehler: ' + e.message, 'warn'); }
+
+  // 2. Merge: add rescued projects that don't already exist (by name)
+  const existingNames = new Set(existing.map(p => p.name));
+  const toAdd = RESCUED_PROJECTS.filter(p => !existingNames.has(p.name));
+  log(`${toAdd.length} fehlende Projekte werden hinzugefügt…`, 'info');
+  toAdd.forEach(p => log(`  + ${p.name}`, 'ok'));
+
+  const merged = [...existing, ...toAdd];
+
+  // 3. Upload merged planungen
+  try {
+    const { error } = await db.from('app_data').upsert({
+      key: 'nw_crew_planungen', value: merged, updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    log('✓ Projekte in Supabase gespeichert', 'ok');
+  } catch(e) { log('✗ Fehler Projekte: ' + e.message, 'err'); return; }
+
+  // 4. Upload hotel data
+  try {
+    const { error } = await db.from('app_data').upsert({
+      key: 'nw_hotel_save_26-0021_EB - Prepp CGS',
+      value: HOTEL_EB_PREPP, updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    log('✓ Hotelplanung EB Prepp CGS gespeichert', 'ok');
+  } catch(e) { log('✗ Fehler Hotel: ' + e.message, 'err'); }
+
+  log('', '');
+  log(`Gesamt in Supabase: ${merged.length} Projekte`, 'ok');
+  log('Weiterleitung zur Crewplanung…', 'info');
+  document.getElementById('done').style.display = 'block';
+  setTimeout(() => { window.location.href = '/Crewplanung.html'; }, 3000);
+}
+</script>
+</body>
+</html>
