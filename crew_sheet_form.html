@@ -617,6 +617,7 @@
     }
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -827,30 +828,61 @@
 
 <script>
 
-// ── Supabase Helper ──
+// ── Supabase (via offiziellem SDK) ──
 const SUPABASE_URL = 'https://ekfuzciwjsldpkojyzgg.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_53YU2qO5PwdFwhVuZSSyPg_pcdw2Dhk';
+let _supaClient = null;
+function getSupaClient() {
+  if (!_supaClient) {
+    const { createClient } = window.supabase;
+    _supaClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+  }
+  return _supaClient;
+}
 const SupaDB = {
   cache: {},
   async init(keys) {
     try {
-      const r = await fetch(SUPABASE_URL+'/rest/v1/app_data?key=in.('+keys.map(k=>'"'+k+'"').join(',')+')', {
-        headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
-      });
-      const rows = await r.json();
-      if (Array.isArray(rows)) rows.forEach(row => { this.cache[row.key] = row.value; });
-    } catch(e) { console.warn('Supabase init fehler:',e); }
+      const { data, error } = await getSupaClient()
+        .from('app_data')
+        .select('key,value')
+        .in('key', keys);
+      if (error) throw error;
+      if (data) data.forEach(row => { this.cache[row.key] = row.value; });
+    } catch(e) { console.warn('Supabase init fehler:', e); }
   },
   async initPrefix(prefix) {
     try {
-      const r = await fetch(SUPABASE_URL+'/rest/v1/app_data?key=like.'+encodeURIComponent(prefix+'%'), {
-        headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
-      });
-      const rows = await r.json();
-      if (Array.isArray(rows)) rows.forEach(row => { this.cache[row.key] = row.value; });
-    } catch(e) { console.warn('Supabase prefix fehler:',e); }
+      const { data, error } = await getSupaClient()
+        .from('app_data')
+        .select('key,value')
+        .like('key', prefix + '%');
+      if (error) throw error;
+      if (data) data.forEach(row => { this.cache[row.key] = row.value; });
+    } catch(e) { console.warn('Supabase prefix fehler:', e); }
   },
-  get(key, fallback) { return (this.cache[key] !== undefined) ? this.cache[key] : (fallback !== undefined ? fallback : null); }
+  get(key, fallback) {
+    return (this.cache[key] !== undefined) ? this.cache[key] : (fallback !== undefined ? fallback : null);
+  },
+  async set(key, value) {
+    this.cache[key] = value;
+    try {
+      const { error } = await getSupaClient()
+        .from('app_data')
+        .upsert({ key, value, updated_at: new Date().toISOString() });
+      if (error) throw error;
+    } catch(e) { console.warn('Supabase set fehler:', e); }
+  },
+  async del(key) {
+    delete this.cache[key];
+    try {
+      const { error } = await getSupaClient()
+        .from('app_data')
+        .delete()
+        .eq('key', key);
+      if (error) throw error;
+    } catch(e) { console.warn('Supabase del fehler:', e); }
+  }
 };
 
 // Supabase beim Start initialisieren (TECH_DB + Hotel-Saves laden)
