@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NOVA WORKS – Daten-Rettung</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  body { font-family:'Helvetica Neue',Arial,sans-serif; background:#0a0a0a; color:#e8e8e8;
+         padding:32px; margin:0; }
+  h1 { font-size:16px; font-weight:300; letter-spacing:4px; color:#c8a96e;
+       text-transform:uppercase; margin-bottom:4px; }
+  .sub { font-size:10px; letter-spacing:2px; color:#555; text-transform:uppercase; margin-bottom:24px; }
+  .box { background:#1a1a1a; border:1px solid #3a3a3a; padding:20px 24px; margin-bottom:16px; }
+  .box h2 { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:#c8a96e; margin:0 0 12px; }
+  .row { padding:7px 0; border-bottom:1px solid #222; font-size:13px; display:flex; gap:12px; align-items:center; }
+  .row:last-child { border:none; }
+  .tag { font-size:9px; padding:2px 6px; font-weight:700; letter-spacing:1px; }
+  .tag-ls  { background:#2d4a1a; color:#5a9e6f; }
+  .tag-sb  { background:#1a2d4a; color:#4a7fb5; }
+  .tag-dup { background:#3a2a0a; color:#c8a96e; }
+  .tag-new { background:#2d4a1a; color:#5a9e6f; }
+  .empty { color:#555; font-style:italic; font-size:12px; }
+  .btn { background:#c8a96e; color:#0a0a0a; border:none; padding:11px 24px;
+         font-size:11px; font-weight:700; letter-spacing:2px; text-transform:uppercase;
+         cursor:pointer; margin-right:8px; margin-top:8px; }
+  .btn:hover { background:#a07840; }
+  .btn:disabled { background:#333; color:#555; cursor:not-allowed; }
+  .btn-green { background:#2d7a4f; color:#fff; }
+  .btn-green:hover { background:#1d5a3f; }
+  .log { background:#0a0a0a; border:1px solid #2a2a2a; padding:12px; font-size:11px;
+         font-family:monospace; line-height:1.8; min-height:60px; margin-top:12px;
+         max-height:220px; overflow-y:auto; display:none; }
+  .ok { color:#5a9e6f; } .err { color:#e05a5a; } .info { color:#4a7fb5; }
+  .count { display:inline-block; background:#2a2a2a; color:#c8a96e;
+           font-size:10px; padding:2px 8px; margin-left:8px; font-weight:700; }
+</style>
+</head>
+<body>
+<h1>Daten-Rettung</h1>
+<div class="sub">Nova Works – localStorage + Supabase zusammenführen</div>
+
+<div class="box">
+  <h2>Lokaler Speicher (diese Browser-Origin) <span class="count" id="lsCount">…</span></h2>
+  <div id="lsList"><div class="empty">Wird geladen…</div></div>
+</div>
+
+<div class="box">
+  <h2>Supabase (Cloud) <span class="count" id="sbCount">…</span></h2>
+  <div id="sbList"><div class="empty">Wird geladen…</div></div>
+</div>
+
+<div class="box" id="mergeBox" style="display:none">
+  <h2>Zusammenführen</h2>
+  <p style="font-size:12px;color:#888;margin-bottom:12px">
+    Projekte die nur im lokalen Speicher sind werden nach Supabase hochgeladen.
+    Bereits in Supabase vorhandene Projekte werden nicht überschrieben.
+  </p>
+  <button class="btn btn-green" id="mergeBtn" onclick="doMerge()">▲ Fehlende Projekte nach Supabase hochladen</button>
+  <div class="log" id="mergeLog"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://ekfuzciwjsldpkojyzgg.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_53YU2qO5PwdFwhVuZSSyPg_pcdw2Dhk';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let lsProjects = [];
+let sbProjects = [];
+let toUpload   = [];
+
+function log(msg, cls='') {
+  const el = document.getElementById('mergeLog');
+  el.style.display = 'block';
+  el.innerHTML += `<div class="${cls}">${msg}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+
+function renderList(elId, items, tag, tagCls) {
+  const el = document.getElementById(elId);
+  if (!items.length) { el.innerHTML = '<div class="empty">Keine Projekte gefunden.</div>'; return; }
+  el.innerHTML = items.map(p =>
+    `<div class="row"><span class="tag ${tagCls}">${tag}</span> ${p.name || p.id}</div>`
+  ).join('');
+}
+
+async function loadAll() {
+  // 1. localStorage
+  try {
+    const raw = localStorage.getItem('nw_crew_planungen');
+    if (raw) lsProjects = JSON.parse(raw);
+  } catch(e) {}
+  document.getElementById('lsCount').textContent = lsProjects.length;
+  renderList('lsList', lsProjects, 'LOKAL', 'tag-ls');
+
+  // 2. Supabase
+  try {
+    const { data, error } = await db.from('app_data').select('value').eq('key','nw_crew_planungen').single();
+    if (!error && data && data.value) sbProjects = data.value;
+  } catch(e) {}
+  document.getElementById('sbCount').textContent = sbProjects.length;
+  renderList('sbList', sbProjects, 'CLOUD', 'tag-sb');
+
+  // 3. Find projects only in localStorage (by id)
+  const sbIds = new Set(sbProjects.map(p => p.id));
+  toUpload = lsProjects.filter(p => !sbIds.has(p.id));
+
+  if (toUpload.length > 0) {
+    document.getElementById('mergeBox').style.display = 'block';
+    const box = document.getElementById('mergeBox');
+    box.querySelector('p').innerHTML =
+      `<strong style="color:#c8a96e">${toUpload.length} Projekt(e)</strong> sind lokal vorhanden aber noch nicht in Supabase:<br><br>` +
+      toUpload.map(p => `→ ${p.name}`).join('<br>');
+  } else if (lsProjects.length > 0) {
+    document.getElementById('mergeBox').style.display = 'block';
+    document.getElementById('mergeBox').innerHTML =
+      '<h2>Status</h2><div style="color:#5a9e6f;font-size:13px">✓ Alle lokalen Projekte sind bereits in Supabase vorhanden.</div>';
+  }
+}
+
+async function doMerge() {
+  document.getElementById('mergeBtn').disabled = true;
+  log('Starte Upload fehlender Projekte…', 'info');
+
+  // Merge: existing supabase + new local ones
+  const merged = [...sbProjects, ...toUpload];
+  log(`Gesamt nach Merge: ${merged.length} Projekte`, 'info');
+
+  try {
+    const { error } = await db.from('app_data').upsert({
+      key: 'nw_crew_planungen',
+      value: merged,
+      updated_at: new Date().toISOString()
+    });
+    if (error) throw error;
+    log('✓ Erfolgreich hochgeladen!', 'ok');
+    toUpload.forEach(p => log(`  ✓ ${p.name}`, 'ok'));
+    log('', '');
+    log('Seite neu laden und zur Crewplanung gehen:', 'info');
+    setTimeout(() => { window.location.href = '/Crewplanung.html'; }, 2500);
+  } catch(e) {
+    log('✗ Fehler: ' + e.message, 'err');
+    document.getElementById('mergeBtn').disabled = false;
+  }
+}
+
+loadAll();
+</script>
+</body>
+</html>

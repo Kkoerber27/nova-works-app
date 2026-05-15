@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<title>NOVA WORKS – Daten-Diagnose</title>
+<style>
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #0a0a0a; color: #e8e8e8;
+         padding: 32px; margin: 0; }
+  h1 { font-size: 16px; font-weight: 300; letter-spacing: 4px; color: #c8a96e;
+       text-transform: uppercase; margin-bottom: 4px; }
+  .sub { font-size: 10px; letter-spacing: 2px; color: #555; text-transform: uppercase; margin-bottom: 32px; }
+  .box { background: #1a1a1a; border: 1px solid #3a3a3a; padding: 20px 24px; margin-bottom: 16px; }
+  .box h2 { font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: #c8a96e; margin: 0 0 12px; }
+  .project { padding: 6px 0; border-bottom: 1px solid #2a2a2a; font-size: 13px; }
+  .project:last-child { border: none; }
+  .ok  { color: #5a9e6f; }
+  .warn { color: #c8a96e; }
+  .empty { color: #555; font-style: italic; font-size: 12px; }
+  .btn { background: #c8a96e; color: #0a0a0a; border: none; padding: 10px 20px;
+         font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+         cursor: pointer; margin-right: 8px; margin-top: 16px; }
+  .btn:hover { background: #a07840; }
+  .btn-blue { background: #4a7fb5; color: #fff; }
+  .origin { font-size: 10px; color: #555; margin-bottom: 16px; font-family: monospace; }
+  pre { background: #0a0a0a; padding: 12px; font-size: 11px; color: #888;
+        max-height: 200px; overflow-y: auto; border: 1px solid #2a2a2a; margin-top: 8px; }
+  .count { display: inline-block; background: #2a2a2a; color: #c8a96e; font-size: 10px;
+           padding: 2px 8px; margin-left: 8px; font-weight: 700; }
+</style>
+</head>
+<body>
+<h1>Daten-Diagnose</h1>
+<div class="sub">Nova Works – Lokaler Speicher Check</div>
+<div class="origin" id="originBox"></div>
+
+<div class="box" id="projectsBox">
+  <h2>Projekte <span class="count" id="projectCount">0</span></h2>
+  <div id="projectsList"></div>
+</div>
+
+<div class="box" id="otherBox">
+  <h2>Weitere gespeicherte Daten</h2>
+  <div id="otherList"></div>
+</div>
+
+<div>
+  <button class="btn" onclick="exportAll()">📦 Alles exportieren (JSON)</button>
+  <button class="btn btn-blue" onclick="copyConsole()">📋 In Zwischenablage kopieren</button>
+</div>
+
+<script>
+document.getElementById('originBox').textContent = 'Origin: ' + window.location.origin + ' | ' + window.location.href.substring(0, 80);
+
+// Read projects
+let planungen = [];
+try {
+  const raw = localStorage.getItem('nw_crew_planungen');
+  if (raw) planungen = JSON.parse(raw);
+} catch(e) {}
+
+const projectsList = document.getElementById('projectsList');
+document.getElementById('projectCount').textContent = planungen.length;
+
+if (planungen.length === 0) {
+  projectsList.innerHTML = '<div class="empty">Keine Projekte in diesem Browser / dieser Origin gefunden.</div>';
+} else {
+  planungen.forEach(function(p) {
+    const div = document.createElement('div');
+    div.className = 'project ok';
+    div.textContent = '✓ ' + (p.name || p.id || '(kein Name)') + (p.kunde ? ' – ' + p.kunde : '');
+    projectsList.appendChild(div);
+  });
+}
+
+// Read other keys
+const otherList = document.getElementById('otherList');
+let otherCount = 0;
+const keys = [];
+for (let i = 0; i < localStorage.length; i++) {
+  const k = localStorage.key(i);
+  if (k && k.startsWith('nw_')) keys.push(k);
+}
+
+if (keys.length === 0) {
+  otherList.innerHTML = '<div class="empty">Keine nw_-Daten gefunden.</div>';
+} else {
+  keys.forEach(function(k) {
+    if (k === 'nw_crew_planungen') return;
+    const div = document.createElement('div');
+    div.className = 'project warn';
+    let val = localStorage.getItem(k);
+    let info = '';
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed)) info = ' [' + parsed.length + ' Einträge]';
+      else if (parsed && parsed.rows) info = ' [' + parsed.rows.length + ' Zeilen]';
+    } catch(e) {}
+    div.textContent = '→ ' + k + info;
+    otherList.appendChild(div);
+    otherCount++;
+  });
+  if (otherCount === 0) {
+    otherList.innerHTML = '<div class="empty">Keine weiteren nw_-Daten.</div>';
+  }
+}
+
+function exportAll() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('nw_')) {
+      try { data[k] = JSON.parse(localStorage.getItem(k)); } catch(e) { data[k] = localStorage.getItem(k); }
+    }
+  }
+  const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'nova_works_backup_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+}
+
+function copyConsole() {
+  const data = {};
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.startsWith('nw_')) {
+      try { data[k] = JSON.parse(localStorage.getItem(k)); } catch(e) { data[k] = localStorage.getItem(k); }
+    }
+  }
+  navigator.clipboard.writeText(JSON.stringify(data)).then(function() {
+    alert('In Zwischenablage kopiert!');
+  });
+}
+</script>
+</body>
+</html>
