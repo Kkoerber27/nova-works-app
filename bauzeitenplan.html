@@ -628,6 +628,25 @@ async function init(){
     return;
   }
 
+  // ── Fallback: Phasen aus Crewplanung nachladen, falls alle leer ──
+  // Passiert wenn gespeicherter Stand keine Phasendaten hat (z.B. nach Daten-Recovery)
+  const phasesEmpty = !phases || !Object.values(phases).some(function(v){ return v && v.trim(); });
+  if (phasesEmpty && eventName) {
+    try {
+      await SupaDB.init(['nw_crew_planungen']);
+      const planungen = SupaDB.get('nw_crew_planungen', []);
+      const match = planungen.find(function(p){ return p.name === eventName; });
+      if (match) {
+        if (!phases) phases = {};
+        if (match.aufbau) phases.aufbau = match.aufbau;
+        if (match.proben) phases.proben = match.proben;
+        if (match.show)   phases.show   = match.show;
+        if (match.abbau)  phases.abbau  = match.abbau;
+        console.log('Phasen aus Crewplanung geladen:', phases);
+      }
+    } catch(e) { console.warn('Phasen-Fallback fehlgeschlagen:', e); }
+  }
+
   document.getElementById('eventLabel').textContent = eventName ? ' – '+eventName : '';
   renderAll();
 }
