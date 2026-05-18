@@ -234,6 +234,15 @@
     line-height: 1; padding: 2px 4px; transition: color .12s;
   }
   .td-del:hover { color: #e55; }
+  .td-move {
+    display: flex; flex-direction: column; gap: 1px; align-items: center;
+  }
+  .td-move button {
+    background: none; border: none; color: #ccc; cursor: pointer; font-size: 11px;
+    line-height: 1; padding: 1px 4px; transition: color .12s, background .12s; border-radius: 2px;
+  }
+  .td-move button:hover { color: #fff; background: #4a7fb5; }
+  .td-move button:disabled { color: #3a3a3a; cursor: default; background: none; }
   .add-row {
     padding: 8px 12px; display: flex; align-items: center; gap: 10px;
     background: #fafafa; border-top: 1px solid #f0f0f0;
@@ -1034,6 +1043,7 @@ function renderGewerk(p, g) {
               </th>
               <th style="min-width:100px">Notiz</th>
               <th style="width:28px"></th>
+              <th style="width:28px"></th>
             </tr>
           </thead>
           <tbody id="tbody_${g.id}">
@@ -1179,6 +1189,10 @@ function renderRow(gewerkId, m, i) {
       <td><div class="phase-dots">${PHASES.map(p2 => phaseDot(gewerkId,i,p2,ph[p2])).join('')}</div></td>
       <td><input class="td-input" value="${esc(m.notiz||'')}" oninput="updateRow('${gewerkId}',${i},'notiz',this.value)" placeholder="–" /></td>
       <td><button class="td-del" onclick="deleteRow('${gewerkId}',${i})" title="Entfernen">×</button></td>
+      <td><div class="td-move">
+        <button onclick="moveRow('${gewerkId}',${i},-1)" title="Nach oben" ${i===0?'disabled':''}>▲</button>
+        <button onclick="moveRow('${gewerkId}',${i},+1)" title="Nach unten">▼</button>
+      </div></td>
     </tr>
   `;
 }
@@ -1245,6 +1259,32 @@ function deleteRow(gid, idx) {
   p.crew[gid].splice(idx, 1);
   save();
   rerenderGewerk(p, gid);
+}
+
+function moveRow(gid, idx, dir) {
+  const p = getPlanung(activePlanungId);
+  const crew = p.crew[gid];
+  if (!crew) return;
+  const target = idx + dir;
+  if (target < 0 || target >= crew.length) return;
+  // Swap
+  const tmp = crew[idx];
+  crew[idx] = crew[target];
+  crew[target] = tmp;
+  save();
+  rerenderGewerk(p, gid);
+  // Scroll shifted row into view & briefly highlight it
+  setTimeout(() => {
+    const tbody = document.getElementById('tbody_' + gid);
+    if (!tbody) return;
+    const newRow = tbody.rows[target];
+    if (newRow) {
+      newRow.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      newRow.style.transition = 'background .15s';
+      newRow.style.background = '#e8f0ff';
+      setTimeout(() => { newRow.style.background = ''; }, 500);
+    }
+  }, 30);
 }
 
 function updateRow(gid, idx, field, val) {
