@@ -410,7 +410,7 @@ function exportExcel() {
   const rows = collectRows();
   const wsData = [
     ['Name','Check-in 1','Check-out 1','Check-in 2','Check-out 2','Nächte','Zimmer','Notizen'],
-    ...rows.map(r => [r.name, r.checkin1, r.checkout1, r.checkin2, r.checkout2, r.nights||'', r.zimmer, r.notiz])
+    ...rows.map(r => [r.name, fmtDateDE(r.checkin1), fmtDateDE(r.checkout1), fmtDateDE(r.checkin2), fmtDateDE(r.checkout2), r.nights||'', r.zimmer, r.notiz])
   ];
   const ws = XLSX.utils.aoa_to_sheet(wsData);
   ws['!cols'] = [22,12,12,12,12,8,14,22].map(w => ({wch:w}));
@@ -420,15 +420,42 @@ function exportExcel() {
   XLSX.writeFile(wb, safe + '_Hotel.xlsx');
 }
 
+// ── Datumsformat ISO → DD.MM.YYYY ──
+function fmtDateDE(iso) {
+  if (!iso) return '';
+  const p = iso.split('-');
+  return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : iso;
+}
+
 // ── PDF Export ──
 function exportPDF() {
-  // Hide only buttons/controls – logo + title stay visible
   const noPrint = document.querySelectorAll('.no-print, .add-row-btn, .del-btn');
   noPrint.forEach(el => el.style.visibility = 'hidden');
+
+  // ── Vor Screenshot: Datums-Inputs durch formatierte Texte ersetzen ──
+  // → korrektes Format DD.MM.YYYY, immer schwarz (auch 2. Check-in)
+  const dateInputs = document.querySelectorAll('#hotelBody input[type="date"]');
+  const dateRestores = [];
+  dateInputs.forEach(function(inp) {
+    const span = document.createElement('span');
+    span.textContent = fmtDateDE(inp.value) || '–';
+    span.style.cssText = 'font-size:12px;color:#1a1a1a;padding:7px 8px;display:block;white-space:nowrap;';
+    inp.parentNode.insertBefore(span, inp);
+    inp.style.display = 'none';
+    dateRestores.push({ inp, span });
+  });
+
+  function restoreDateInputs() {
+    dateRestores.forEach(function(item) {
+      item.span.remove();
+      item.inp.style.display = '';
+    });
+  }
 
   const el = document.body;
   html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#f4f3f1', scrollX:0, scrollY:0, windowWidth: el.scrollWidth }).then(function(canvas) {
     noPrint.forEach(el => el.style.visibility = '');
+    restoreDateInputs();
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
@@ -455,6 +482,7 @@ function exportPDF() {
     }
   }).catch(function(err) {
     noPrint.forEach(el => el.style.visibility = '');
+    restoreDateInputs();
     alert('PDF-Fehler: ' + err.message);
   });
 }
