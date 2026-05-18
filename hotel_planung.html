@@ -274,6 +274,9 @@ async function init() {
   if (eventName) {
     await mergeSyncFromCrewplanung(eventName);
   }
+
+  // Nächte nach vollständigem Laden nochmals berechnen (Sicherheitsnetz)
+  refreshAllNights();
 }
 
 // Liest nw_hotel_sync_[name] aus Supabase und ergänzt neue Crew-Mitglieder
@@ -356,6 +359,8 @@ function addRow(m) {
     <td><button class="del-btn" onclick="delRow(${id})" title="Zeile löschen">×</button></td>
   `;
   tbody.appendChild(tr);
+  // Nächte sofort nach dem Einfügen berechnen
+  updateNightsCell(tr);
 }
 
 function addEmptyRow() {
