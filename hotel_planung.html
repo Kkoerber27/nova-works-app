@@ -405,21 +405,6 @@ function collectRows() {
   return rows;
 }
 
-// ── Excel Export ──
-function exportExcel() {
-  const rows = collectRows();
-  const wsData = [
-    ['Name','Check-in 1','Check-out 1','Check-in 2','Check-out 2','Nächte','Zimmer','Notizen'],
-    ...rows.map(r => [r.name, fmtDateDE(r.checkin1), fmtDateDE(r.checkout1), fmtDateDE(r.checkin2), fmtDateDE(r.checkout2), r.nights||'', r.zimmer, r.notiz])
-  ];
-  const ws = XLSX.utils.aoa_to_sheet(wsData);
-  ws['!cols'] = [22,12,12,12,12,8,14,22].map(w => ({wch:w}));
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Hotelplanung');
-  const safe = (eventName||'Hotelplanung').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
-  XLSX.writeFile(wb, safe + '_Hotel.xlsx');
-}
-
 // ── Datumsformat ISO → DD.MM.YYYY ──
 function fmtDateDE(iso) {
   if (!iso) return '';
@@ -427,67 +412,228 @@ function fmtDateDE(iso) {
   return p.length === 3 ? p[2] + '.' + p[1] + '.' + p[0] : iso;
 }
 
-// ── PDF Export ──
+// ── PDF Export (programmatisch – kein html2canvas, automatische Seitenumbrüche) ──
 function exportPDF() {
-  const noPrint = document.querySelectorAll('.no-print, .add-row-btn, .del-btn');
-  noPrint.forEach(el => el.style.visibility = 'hidden');
+  const rows = collectRows();
+  const { jsPDF } = window.jspdf;
+  const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const mL = 12, mR = 12, mT = 12;
+  const cW  = pageW - mL - mR;
 
-  // ── Vor Screenshot: Datums-Inputs durch formatierte Texte ersetzen ──
-  // → korrektes Format DD.MM.YYYY, immer schwarz (auch 2. Check-in)
-  const dateInputs = document.querySelectorAll('#hotelBody input[type="date"]');
-  const dateRestores = [];
-  dateInputs.forEach(function(inp) {
-    const span = document.createElement('span');
-    span.textContent = fmtDateDE(inp.value) || '–';
-    span.style.cssText = 'font-size:12px;color:#1a1a1a;padding:7px 8px;display:block;white-space:nowrap;';
-    inp.parentNode.insertBefore(span, inp);
-    inp.style.display = 'none';
-    dateRestores.push({ inp, span });
-  });
+  // Spaltenbreiten (Summe = cW ≈ 273mm bei A4 landscape)
+  const cols = [
+    { label:'Name',         w:52 },
+    { label:'Check-in 1',  w:26 },
+    { label:'Check-out 1', w:26 },
+    { label:'Check-in 2',  w:26 },
+    { label:'Check-out 2', w:26 },
+    { label:'Nächte',      w:15 },
+    { label:'Zimmer',      w:32 },
+    { label:'Notizen',     w:70 },
+  ];
 
-  function restoreDateInputs() {
-    dateRestores.forEach(function(item) {
-      item.span.remove();
-      item.inp.style.display = '';
+  function drawHeader(y) {
+    // NOVA WORKS Banner
+    pdf.setFillColor(10,10,10);
+    pdf.rect(mL, y, cW, 13, 'F');
+    pdf.setTextColor(200,169,110);
+    pdf.setFont('helvetica','bold');
+    pdf.setFontSize(13);
+    pdf.text('NOVA WORKS', mL+5, y+8.5);
+    pdf.setTextColor(120,120,120);
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(9);
+    pdf.text('Hotelplanung', mL+5+pdf.getTextWidth('NOVA WORKS')+4, y+8.5);
+    y += 13;
+
+    // Veranstaltungsname
+    pdf.setFillColor(26,26,26);
+    pdf.rect(mL, y, cW, 9, 'F');
+    pdf.setTextColor(232,232,232);
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(10);
+    pdf.text(eventName || '', mL+5, y+6);
+    y += 9;
+
+    // Spaltenkopf
+    pdf.setFillColor(55,55,55);
+    pdf.rect(mL, y, cW, 7, 'F');
+    pdf.setTextColor(255,255,255);
+    pdf.setFont('helvetica','bold');
+    pdf.setFontSize(7.5);
+    let x = mL;
+    cols.forEach(function(c) {
+      pdf.text(c.label, x+2, y+4.8);
+      x += c.w;
     });
+    y += 7;
+    return y;
   }
 
-  const el = document.body;
-  // height + windowHeight sicherstellen dass ALLE Zeilen erfasst werden, nicht nur viewport
-  html2canvas(el, { scale:2, useCORS:true, backgroundColor:'#f4f3f1', scrollX:0, scrollY:0,
-    windowWidth: el.scrollWidth, windowHeight: el.scrollHeight,
-    height: el.scrollHeight }).then(function(canvas) {
-    noPrint.forEach(el => el.style.visibility = '');
-    restoreDateInputs();
+  function truncate(txt, maxW) {
+    if (!txt) return '';
+    while (txt.length > 1 && pdf.getTextWidth(txt) > maxW - 4) txt = txt.slice(0,-1);
+    return txt;
+  }
 
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation:'landscape', unit:'mm', format:'a4' });
-    const imgData = canvas.toDataURL('image/jpeg', 0.92);
-    const pdfW = pdf.internal.pageSize.getWidth();
-    const pdfH = (canvas.height * pdfW) / canvas.width;
-    const pageH = pdf.internal.pageSize.getHeight();
-    let posY = 0;
-    while (posY < pdfH) {
-      if (posY > 0) pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, -posY, pdfW, pdfH);
-      posY += pageH;
+  let y = mT;
+  y = drawHeader(y);
+
+  const rowH = 7.5;
+  rows.forEach(function(r, i) {
+    if (y + rowH > pageH - mT) {
+      pdf.addPage();
+      y = mT;
+      y = drawHeader(y);
     }
-    const safe = (eventName||'Hotelplanung').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
-    const today = new Date().toISOString().slice(0,10);
-    const filename = safe + '_Hotel_' + today + '.pdf';
-    if (window.showSaveFilePicker) {
-      window.showSaveFilePicker({ suggestedName: filename, types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}] })
-        .then(h => h.createWritable())
-        .then(w => w.write(pdf.output('blob')).then(() => w.close()))
-        .catch(e => { if (e.name !== 'AbortError') pdf.save(filename); });
-    } else {
-      pdf.save(filename);
-    }
-  }).catch(function(err) {
-    noPrint.forEach(el => el.style.visibility = '');
-    restoreDateInputs();
-    alert('PDF-Fehler: ' + err.message);
+    // Zebra
+    pdf.setFillColor(i % 2 === 0 ? 255 : 248, i % 2 === 0 ? 255 : 247, i % 2 === 0 ? 255 : 245);
+    pdf.rect(mL, y, cW, rowH, 'F');
+    // Trennlinie
+    pdf.setDrawColor(225,223,220);
+    pdf.line(mL, y+rowH, mL+cW, y+rowH);
+
+    const cells = [
+      r.name || '',
+      fmtDateDE(r.checkin1),
+      fmtDateDE(r.checkout1),
+      r.checkin2  ? fmtDateDE(r.checkin2)  : '–',
+      r.checkout2 ? fmtDateDE(r.checkout2) : '–',
+      r.nights > 0 ? String(r.nights) : '–',
+      r.zimmer || '',
+      r.notiz  || '',
+    ];
+
+    pdf.setFont('helvetica','normal');
+    pdf.setFontSize(8.5);
+    let rx = mL;
+    cells.forEach(function(cell, ci) {
+      if (ci === 5) { // Nächte blau+fett
+        pdf.setTextColor(0,100,200);
+        pdf.setFont('helvetica','bold');
+      } else {
+        pdf.setTextColor(26,26,26);
+        pdf.setFont('helvetica','normal');
+      }
+      pdf.text(truncate(cell, cols[ci].w), rx+2, y+5);
+      rx += cols[ci].w;
+    });
+    y += rowH;
   });
+
+  // Außenrahmen
+  pdf.setDrawColor(200,200,200);
+  pdf.rect(mL, mT, cW, y-mT);
+
+  const safe = (eventName||'Hotelplanung').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
+  const today = new Date().toISOString().slice(0,10);
+  const filename = safe + '_Hotel_' + today + '.pdf';
+  if (window.showSaveFilePicker) {
+    window.showSaveFilePicker({ suggestedName: filename, types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}] })
+      .then(h => h.createWritable())
+      .then(w => w.write(pdf.output('blob')).then(() => w.close()))
+      .catch(e => { if (e.name !== 'AbortError') pdf.save(filename); });
+  } else {
+    pdf.save(filename);
+  }
+}
+
+// ── Excel Export (ExcelJS – mit Logo-Header und Formatierung) ──
+async function exportExcel() {
+  const rows = collectRows();
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Nova Works';
+  const ws = wb.addWorksheet('Hotelplanung');
+
+  ws.columns = [
+    { width: 26 }, // Name
+    { width: 14 }, // CI1
+    { width: 14 }, // CO1
+    { width: 14 }, // CI2
+    { width: 14 }, // CO2
+    { width: 9  }, // Nächte
+    { width: 18 }, // Zimmer
+    { width: 28 }, // Notizen
+  ];
+
+  // Zeile 1: NOVA WORKS Banner
+  ws.mergeCells('A1:H1');
+  const r1 = ws.getRow(1);
+  r1.height = 30;
+  const c1 = r1.getCell(1);
+  c1.value = 'NOVA WORKS – Hotelplanung';
+  c1.font   = { name:'Calibri', bold:true, size:16, color:{ argb:'FFC8A96E' } };
+  c1.fill   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF0A0A0A' } };
+  c1.alignment = { vertical:'middle', horizontal:'left', indent:1 };
+
+  // Zeile 2: Veranstaltungsname
+  ws.mergeCells('A2:H2');
+  const r2 = ws.getRow(2);
+  r2.height = 22;
+  const c2 = r2.getCell(1);
+  c2.value = eventName || '';
+  c2.font   = { name:'Calibri', size:13, color:{ argb:'FFE8E8E8' } };
+  c2.fill   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF1A1A1A' } };
+  c2.alignment = { vertical:'middle', horizontal:'left', indent:1 };
+
+  // Zeile 3: Erstelldatum
+  ws.mergeCells('A3:H3');
+  const r3 = ws.getRow(3);
+  r3.height = 14;
+  const c3 = r3.getCell(1);
+  c3.value = 'Erstellt: ' + new Date().toLocaleDateString('de-DE');
+  c3.font   = { name:'Calibri', size:9, color:{ argb:'FF888888' } };
+  c3.fill   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF2A2A2A' } };
+  c3.alignment = { vertical:'middle', horizontal:'left', indent:1 };
+
+  // Zeile 4: Leer
+  ws.addRow([]);
+
+  // Zeile 5: Spaltenköpfe
+  const headers = ['Name','Check-in 1','Check-out 1','Check-in 2','Check-out 2','Nächte','Zimmer','Notizen'];
+  const hRow = ws.addRow(headers);
+  hRow.height = 18;
+  hRow.eachCell(function(cell) {
+    cell.font   = { name:'Calibri', bold:true, size:10, color:{ argb:'FFFFFFFF' } };
+    cell.fill   = { type:'pattern', pattern:'solid', fgColor:{ argb:'FF3A3A3A' } };
+    cell.alignment = { vertical:'middle', horizontal:'left' };
+    cell.border = { bottom:{ style:'thin', color:{ argb:'FF555555' } } };
+  });
+
+  // Datenzeilen
+  rows.forEach(function(r, i) {
+    const dRow = ws.addRow([
+      r.name,
+      fmtDateDE(r.checkin1),
+      fmtDateDE(r.checkout1),
+      fmtDateDE(r.checkin2),
+      fmtDateDE(r.checkout2),
+      r.nights > 0 ? r.nights : '',
+      r.zimmer,
+      r.notiz,
+    ]);
+    dRow.height = 17;
+    const bg = i % 2 === 0 ? 'FFFFFFFF' : 'FFF7F6F4';
+    dRow.eachCell({ includeEmpty: true }, function(cell) {
+      cell.fill = { type:'pattern', pattern:'solid', fgColor:{ argb: bg } };
+      cell.alignment = { vertical:'middle' };
+      cell.border = { bottom:{ style:'hair', color:{ argb:'FFE0DEDD' } } };
+    });
+    // Nächte-Zelle blau+fett
+    const nc = dRow.getCell(6);
+    nc.font = { name:'Calibri', bold:true, color:{ argb:'FF0064C8' } };
+    nc.alignment = { vertical:'middle', horizontal:'center' };
+  });
+
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  const safe = (eventName||'Hotelplanung').replace(/[^a-zA-Z0-9äöüÄÖÜß\-_ ]/g,'').trim();
+  a.download = safe + '_Hotel.xlsx';
+  a.click();
 }
 
 // ── Speichern / Laden ──
