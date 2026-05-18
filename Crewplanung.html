@@ -2391,7 +2391,19 @@ function generateHotelPlanung() {
 
   try { localStorage.setItem('nw_hotel_import', JSON.stringify(hotelData)); } catch(e) {}
 
-  // Modal – Safari-kompatibel
+  // Sofort in Supabase schreiben damit externe Nutzer die Daten laden können
+  const saveKey = 'nw_hotel_save_' + p.name;
+  SupaDB.get(saveKey) || SupaDB.set(saveKey, {
+    eventName: p.name, rows: crew, savedAt: new Date().toISOString()
+  });
+  // Sync-Daten ebenfalls sofort schreiben
+  syncHotelData();
+
+  // Shareable URL mit ?e=Projektname
+  const hotelBase = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'hotel_planung.html';
+  const shareUrl  = hotelBase + '?e=' + encodeURIComponent(p.name);
+
+  // Modal
   const existing = document.getElementById('hotel-modal-overlay');
   if (existing) existing.remove();
 
@@ -2399,19 +2411,29 @@ function generateHotelPlanung() {
   overlay.id = 'hotel-modal-overlay';
   overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
   overlay.innerHTML =
-    '<div style="background:#1a1a1a;border:1px solid #3a3a3a;border-radius:6px;padding:32px 36px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);">' +
-      '<div style="font-size:36px;margin-bottom:12px;">🏨</div>' +
-      '<div style="font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:6px;">Hotelplanung bereit</div>' +
-      '<div style="font-size:13px;color:#888;margin-bottom:24px;">' +
-        '<strong style="color:#c8a96e;">' + (p.name || 'Veranstaltung') + '</strong><br>' +
-        crew.length + ' Crew-Mitglied' + (crew.length !== 1 ? 'er' : '') +
+    '<div style="background:#1a1a1a;border:1px solid #3a3a3a;border-radius:6px;padding:28px 32px;max-width:520px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);">' +
+      '<div style="font-size:32px;margin-bottom:10px;">🏨</div>' +
+      '<div style="font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:4px;">Hotelplanung</div>' +
+      '<div style="font-size:12px;color:#888;margin-bottom:20px;">' +
+        '<strong style="color:#c8a96e;">' + (p.name || 'Veranstaltung') + '</strong> · ' +
+        crew.length + ' Personen' +
       '</div>' +
-      '<a href="hotel_planung.html" target="_blank" rel="noopener" ' +
-        'style="display:inline-block;background:#0078d4;color:#fff;padding:12px 28px;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.5px;border-radius:3px;margin-bottom:16px;">' +
+      '<a href="' + shareUrl + '" target="_blank" rel="noopener" ' +
+        'style="display:inline-block;background:#0078d4;color:#fff;padding:11px 24px;font-size:13px;font-weight:700;text-decoration:none;letter-spacing:.5px;border-radius:3px;margin-bottom:14px;">' +
         '🏨 Hotelplanung öffnen' +
-      '</a><br>' +
+      '</a>' +
+      '<div style="margin-bottom:14px;">' +
+        '<div style="font-size:10px;color:#666;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">Externer Link (für Hotels / Kollegen)</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<input id="hotelShareUrl" readonly value="' + shareUrl + '" ' +
+            'style="flex:1;background:#0a0a0a;border:1px solid #3a3a3a;color:#aaa;padding:7px 10px;font-size:11px;font-family:monospace;border-radius:3px;outline:none;">' +
+          '<button onclick="var u=document.getElementById(\'hotelShareUrl\');u.select();navigator.clipboard.writeText(u.value).then(function(){var b=document.getElementById(\'hotelCopyBtn\');b.textContent=\'✓ Kopiert\';b.style.background=\'#2d7a4f\';setTimeout(function(){b.textContent=\'Kopieren\';b.style.background=\'#3a3a3a\';},2000);})" ' +
+            'id="hotelCopyBtn" style="background:#3a3a3a;color:#e8e8e8;border:none;padding:7px 14px;font-size:11px;font-weight:700;border-radius:3px;cursor:pointer;white-space:nowrap;">Kopieren</button>' +
+        '</div>' +
+        '<div style="font-size:10px;color:#4a4a4a;margin-top:6px;">Externe können den Stand speichern – Änderungen sind sofort für alle sichtbar.</div>' +
+      '</div>' +
       '<button onclick="document.getElementById(\'hotel-modal-overlay\').remove()" ' +
-        'style="background:none;border:none;color:#666;font-size:12px;cursor:pointer;margin-top:4px;">Abbrechen</button>' +
+        'style="background:none;border:none;color:#555;font-size:11px;cursor:pointer;">Schließen</button>' +
     '</div>';
   document.body.appendChild(overlay);
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });

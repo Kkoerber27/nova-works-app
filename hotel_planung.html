@@ -34,6 +34,7 @@
   .btn-add   { background: var(--mid); color: var(--text-light); }
   .btn-back  { background: none; border: 1px solid #ccc; color: var(--ink2); }
   .btn-save  { background: #2d7a4f; color: #fff; }
+  .btn-link  { background: #4a7fb5; color: #fff; }
   .no-print  {}
 
   /* Main */
@@ -121,6 +122,7 @@
   <span id="saveIndicator" style="font-size:11px;color:#aaa;margin-right:6px;transition:color .3s"></span>
   <button class="btn btn-add no-print" onclick="addEmptyRow()">+ Zeile</button>
   <button class="btn btn-save no-print" onclick="saveState(true)">💾 Speichern</button>
+  <button class="btn btn-link no-print" id="copyLinkBtn" onclick="copyLink()">🔗 Link kopieren</button>
   <button class="btn btn-excel no-print" onclick="exportExcel()">📊 Excel</button>
   <button class="btn btn-pdf no-print" onclick="exportPDF()">🖨 PDF</button>
   <button class="btn btn-back no-print" onclick="history.back()">← Zurück</button>
@@ -661,6 +663,20 @@ async function exportExcel() {
 // ── Speichern / Laden ──
 function getSaveKey() {
   return 'nw_hotel_save_' + (eventName || '_default');
+}
+
+function copyLink() {
+  const base = window.location.origin + window.location.pathname;
+  const url = eventName ? base + '?e=' + encodeURIComponent(eventName) : window.location.href;
+  navigator.clipboard.writeText(url).then(() => {
+    const btn = document.getElementById('copyLinkBtn');
+    const orig = btn.textContent;
+    btn.textContent = '✓ Link kopiert!';
+    btn.style.background = '#2d7a4f';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 2500);
+  }).catch(() => {
+    prompt('Link zum Kopieren:', url);
+  });
 }
 
 function saveState(manual) {
