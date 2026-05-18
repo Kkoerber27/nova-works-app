@@ -90,6 +90,30 @@
   }
   .del-btn:hover { color: #e55; }
 
+  /* Änderungsmarkierung */
+  .change-cell { text-align: center; width: 32px; }
+  .change-cb {
+    appearance: none; -webkit-appearance: none;
+    width: 16px; height: 16px; border: 2px solid #ccc; border-radius: 3px;
+    cursor: pointer; display: inline-block; vertical-align: middle;
+    transition: background .15s, border-color .15s;
+  }
+  .change-cb:checked {
+    background: #e85c2a; border-color: #e85c2a;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath fill='white' d='M2 6l3 3 5-5' stroke='white' stroke-width='1.8' fill='none'/%3E%3C/svg%3E");
+    background-size: 11px; background-repeat: no-repeat; background-position: center;
+  }
+  .hotel-table tr.row-changed td {
+    background: #fff3ee !important;
+    border-bottom: 1px solid #f5c4af !important;
+  }
+  .hotel-table tr.row-changed td:first-child {
+    border-left: 3px solid #e85c2a;
+  }
+  .hotel-table tr.row-changed .name-cell input {
+    color: #c0390a; font-weight: 700;
+  }
+
   .add-row-btn {
     margin-top: 10px; display: flex; align-items: center; gap: 8px;
     color: var(--text-dim); font-size: 12px;
@@ -143,6 +167,7 @@
         <th class="center">Nächte</th>
         <th>Zimmer</th>
         <th>Notizen</th>
+        <th class="center no-print" style="width:36px" title="Änderung markieren">⚑</th>
         <th style="width:32px"></th>
       </tr>
     </thead>
@@ -362,11 +387,14 @@ function addRow(m) {
     <td class="nights-cell" style="text-align:center;font-weight:700;color:#0078d4;min-width:52px"></td>
     <td><select>${zimmerOpts}</select></td>
     <td><input type="text" class="notiz" value="${esc(m.notiz||'')}" placeholder="–"></td>
+    <td class="change-cell no-print"><input type="checkbox" class="change-cb" title="Änderung markieren" ${m.changed?'checked':''} onchange="toggleChanged(this)"></td>
     <td><button class="del-btn" onclick="delRow(${id})" title="Zeile löschen">×</button></td>
   `;
   tbody.appendChild(tr);
   // Nächte sofort nach dem Einfügen berechnen
   updateNightsCell(tr);
+  // Änderungsmarkierung wiederherstellen
+  if (m.changed) tr.classList.add('row-changed');
 }
 
 function addEmptyRow() {
@@ -397,6 +425,7 @@ function collectRows() {
   const rows = [];
   document.querySelectorAll('#hotelBody tr').forEach(function(tr) {
     const inputs = tr.querySelectorAll('input, select');
+    const cb = tr.querySelector('.change-cb');
     rows.push({
       name:     inputs[0]?.value || '',
       checkin1: inputs[1]?.value || '',
@@ -405,10 +434,20 @@ function collectRows() {
       checkout2:inputs[4]?.value || '',
       nights:   calcNights(inputs[1]?.value,inputs[2]?.value,inputs[3]?.value,inputs[4]?.value),
       zimmer:   inputs[5]?.value || 'Einzelzimmer',
-      notiz:    inputs[6]?.value || ''
+      notiz:    inputs[6]?.value || '',
+      changed:  cb ? cb.checked : false
     });
   });
   return rows;
+}
+
+function toggleChanged(cb) {
+  const tr = cb.closest('tr');
+  if (cb.checked) {
+    tr.classList.add('row-changed');
+  } else {
+    tr.classList.remove('row-changed');
+  }
 }
 
 // ── Datumsformat ISO → DD.MM.YYYY ──
