@@ -129,6 +129,7 @@
     <label>Von <input type="date" id="rangeFrom"></label>
     <label>Bis <input type="date" id="rangeTo"></label>
     <button class="btn-gen" onclick="generateFromRange()">Tage anlegen</button>
+    <button class="btn-gen" style="background:#888;margin-left:4px" onclick="resetAndRebuild()">↺ Neu aufbauen</button>
   </div>
   <div id="planContainer"></div>
   <button class="btn-add-day no-print" onclick="addExtraDay()">+ Weiteren Tag hinzufügen</button>
@@ -178,9 +179,9 @@ function getSaveKey() { return 'nw_schichtplan_' + (eventName || '_default'); }
 function phS(s) { return s ? s.split('/')[0].trim() : ''; }
 function phE(s) { return s && s.includes('/') ? s.split('/')[1].trim() : ''; }
 function isoDate(s) { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
-function addDays(iso, n) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); }
+function addDays(iso, n) { const p = iso.split('-'); const d = new Date(Date.UTC(+p[0], +p[1]-1, +p[2]+n)); return d.toISOString().slice(0,10); }
 function fmtDateDE(iso) { if (!iso) return ''; const [y,m,d] = iso.split('-'); return d+'.'+m+'.'+y; }
-function dayOfWeekDE(iso) { return ['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(iso+'T00:00:00').getDay()]; }
+function dayOfWeekDE(iso) { const p = iso.split('-'); return ['So','Mo','Di','Mi','Do','Fr','Sa'][new Date(Date.UTC(+p[0],+p[1]-1,+p[2])).getUTCDay()]; }
 
 function getPhaseForDate(iso) {
   const phases_order = ['aufbau','proben','show','abbau'];
@@ -374,7 +375,7 @@ function addExtraDay() {
   // Find last day and add next day
   const lastDate = days.length ? days[days.length-1].date : new Date().toISOString().slice(0,10);
   const newDate = addDays(lastDate, 1);
-  days.push({ date: newDate, phase: getPhaseForDate(newDate), rows: [], collapsed: false });
+  days.push({ date: newDate, phase: getPhaseForDate(newDate), rows: buildDefaultRowsForDay(newDate), collapsed: false });
   renderAll();
   saveState(false);
   // Scroll to new block
@@ -637,6 +638,19 @@ async function exportExcel() {
 }
 
 // ── Manual date range ──
+function resetAndRebuild() {
+  if (!confirm('Gespeicherten Stand löschen und Tage neu aus Phasen aufbauen?')) return;
+  days = [];
+  SupaDB.set(getSaveKey(), null);
+  const dateRange = buildDayRange();
+  if (dateRange.length) {
+    days = dateRange.map(date => ({
+      date, phase: getPhaseForDate(date), rows: buildDefaultRowsForDay(date), collapsed: false
+    }));
+  }
+  renderAll();
+}
+
 function generateFromRange() {
   const from = document.getElementById('rangeFrom').value;
   const to   = document.getElementById('rangeTo').value;
@@ -680,9 +694,15 @@ async function init() {
   await SupaDB.init([getSaveKey()]);
   const saved = SupaDB.get(getSaveKey());
   if (saved && saved.days && saved.days.length) {
-    days = saved.days;
-    if (saved.phases) Object.assign(phases, saved.phases);
-  } else {
+    // Detect invalid state: all days same date (timezone bug artifact)
+    const uniqueDates = new Set(saved.days.map(d => d.date));
+    const isInvalid = saved.days.length > 1 && uniqueDates.size === 1;
+    if (!isInvalid) {
+      days = saved.days;
+      if (saved.phases) Object.assign(phases, saved.phases);
+    }
+  }
+  if (!days.length) {
     // Build from date range + crew
     const dateRange = buildDayRange();
     if (dateRange.length) {
