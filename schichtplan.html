@@ -157,8 +157,8 @@ let rowCounter = 0;
 function getSaveKey() { return 'nw_schichtplan_' + (eventName || '_default'); }
 
 // ── Date helpers ──
-function phS(s) { return s ? s.split(/[–—-]/).map(x=>x.trim())[0] : ''; }
-function phE(s) { const p = s ? s.split(/[–—-]/).map(x=>x.trim()) : []; return p.length > 1 ? p[p.length-1] : ''; }
+function phS(s) { return s ? s.split('/')[0].trim() : ''; }
+function phE(s) { return s && s.includes('/') ? s.split('/')[1].trim() : ''; }
 function isoDate(s) { const d = new Date(s + 'T00:00:00'); return isNaN(d) ? null : d; }
 function addDays(iso, n) { const d = new Date(iso + 'T00:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); }
 function fmtDateDE(iso) { if (!iso) return ''; const [y,m,d] = iso.split('-'); return d+'.'+m+'.'+y; }
