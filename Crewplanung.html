@@ -564,6 +564,7 @@
       <button class="btn" style="background:#2d7a4f;color:#fff;display:none" onclick="generateCrewSheet()" id="btnCrewSheet" title="Crewsheet mit bestätigten Crew-Mitgliedern erstellen">📄 Crewsheet erstellen</button>
       <button class="btn" style="background:#0078d4;color:#fff;display:none" onclick="generateHotelPlanung()" id="btnHotel" title="Hotelplanung erstellen">🏨 Hotelplanung</button>
       <button class="btn" style="background:#7c5cbf;color:#fff;display:none" onclick="generateBauzeitenplan()" id="btnBauzeit" title="Bauzeitenplan erstellen">🗓 Bauzeitenplan</button>
+      <button class="btn" style="background:#e07b3a;color:#fff;display:none" onclick="generateSchichtplan()" id="btnSchicht" title="Schichtplan erstellen">🕐 Schichtplan</button>
       <label class="btn btn-outline" style="cursor:pointer;display:none" id="btnLoad" title="JSON Backup laden">
         Laden <input type="file" accept=".json" style="display:none" onchange="importJSON(event)">
       </label>
@@ -942,7 +943,7 @@ function openPlanung(id) {
   renderSidebar();
   const p = getPlanung(id);
   document.getElementById('topbarTitle').textContent = p.name;
-  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit'].forEach(id => document.getElementById(id).style.display = '');
+  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit','btnSchicht'].forEach(id => document.getElementById(id).style.display = '');
   renderMain(p);
 }
 
@@ -2531,6 +2532,52 @@ function generateBauzeitenplan() {
         '</div>' +
       '</div>' +
       '<button onclick="document.getElementById(\'bauzeit-modal-overlay\').remove()" ' +
+        'style="background:none;border:none;color:#555;font-size:12px;cursor:pointer;margin-top:16px;">Schließen</button>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
+}
+
+// ── Schichtplan ──
+function generateSchichtplan() {
+  const p = getPlanung(activePlanungId);
+  if (!p) return;
+
+  const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'schichtplan.html';
+  const params = new URLSearchParams();
+  params.set('e', p.name || '');
+  if (p.aufbau) params.set('aufbau', p.aufbau);
+  if (p.proben) params.set('proben', p.proben);
+  if (p.show)   params.set('show',   p.show);
+  if (p.abbau)  params.set('abbau',  p.abbau);
+  const shareUrl = base + '?' + params.toString();
+
+  // Write crew + phases to Supabase so schichtplan.html can read it
+  SupaDB.set('nw_crew_planungen', planungen);
+
+  const existing = document.getElementById('schicht-modal-overlay');
+  if (existing) existing.remove();
+  const overlay = document.createElement('div');
+  overlay.id = 'schicht-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:#1a1a1a;border:1px solid #3a3a3a;border-radius:6px;padding:32px 36px;max-width:480px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);">' +
+      '<div style="font-size:36px;margin-bottom:12px;">🕐</div>' +
+      '<div style="font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:6px;">Schichtplan bereit</div>' +
+      '<div style="font-size:13px;color:#888;margin-bottom:20px;"><strong style="color:#e07b3a;">' + (p.name||'Veranstaltung') + '</strong></div>' +
+      '<a href="' + shareUrl + '" target="_blank" rel="noopener" ' +
+        'style="display:inline-block;background:#e07b3a;color:#fff;padding:12px 28px;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.5px;border-radius:3px;margin-bottom:20px;">' +
+        '🕐 Schichtplan öffnen</a>' +
+      '<div style="border-top:1px solid #2a2a2a;padding-top:16px;margin-top:4px;">' +
+        '<div style="font-size:11px;color:#666;margin-bottom:8px;letter-spacing:1px;text-transform:uppercase;">Link zum Teilen</div>' +
+        '<div style="display:flex;gap:6px;align-items:center;">' +
+          '<input id="spShareUrl" readonly value="' + shareUrl.replace(/"/g,'&quot;') + '" ' +
+            'style="flex:1;background:#111;border:1px solid #333;border-radius:3px;color:#aaa;font-size:10px;padding:7px 10px;outline:none;font-family:monospace;" />' +
+          '<button onclick="navigator.clipboard.writeText(document.getElementById(\'spShareUrl\').value).then(()=>{this.textContent=\'✓ Kopiert\';setTimeout(()=>{this.textContent=\'Kopieren\'},2000)})" ' +
+            'style="background:#333;border:none;color:#ccc;border-radius:3px;padding:7px 12px;font-size:11px;cursor:pointer;white-space:nowrap;">Kopieren</button>' +
+        '</div>' +
+      '</div>' +
+      '<button onclick="document.getElementById(\'schicht-modal-overlay\').remove()" ' +
         'style="background:none;border:none;color:#555;font-size:12px;cursor:pointer;margin-top:16px;">Schließen</button>' +
     '</div>';
   document.body.appendChild(overlay);
