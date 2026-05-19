@@ -82,6 +82,18 @@
   /* Gewerk-Gruppe Subheader */
   .gw-group-header{background:#f0eeed;padding:4px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);}
 
+  /* Copy-time button */
+  .sh-cell.time-cell { position: relative; }
+  .copy-time-btn {
+    display: none; position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+    background: #4a7fb5; color: #fff; border: none; border-radius: 2px;
+    font-size: 9px; font-weight: 700; padding: 2px 5px; cursor: pointer;
+    white-space: nowrap; letter-spacing: .3px; z-index: 1;
+  }
+  .sh-cell.time-cell:hover .copy-time-btn,
+  .sh-cell.time-cell:focus-within .copy-time-btn { display: block; }
+  .copy-time-btn:hover { background: #2d5a8a; }
+
   /* Date-range fallback */
   .date-setup {
     background:#fff; border:1px solid var(--border); border-radius:5px;
@@ -308,8 +320,8 @@ function renderShiftRow(row, di, ri) {
       ${GEWERKE.map(x => `<option value="${x.id}" ${x.id===row.gid?'selected':''}>${x.name}</option>`).join('')}
     </select></div>
     <div class="sh-cell"><input type="text" value="${esc(row.name)}" placeholder="Name" style="font-weight:600" oninput="updateShiftField(${di},${ri},'name',this.value)"></div>
-    <div class="sh-cell"><input type="time" value="${row.von||''}" oninput="updateShiftField(${di},${ri},'von',this.value)"></div>
-    <div class="sh-cell"><input type="time" value="${row.bis||''}" oninput="updateShiftField(${di},${ri},'bis',this.value)"></div>
+    <div class="sh-cell time-cell"><input type="time" value="${row.von||''}" oninput="updateShiftField(${di},${ri},'von',this.value)"><button class="copy-time-btn no-print" onclick="copyTimeTo(${di},'von',this.previousElementSibling.value)" title="Zeit auf alle Zeilen dieses Tages übertragen">→ alle</button></div>
+    <div class="sh-cell time-cell"><input type="time" value="${row.bis||''}" oninput="updateShiftField(${di},${ri},'bis',this.value)"><button class="copy-time-btn no-print" onclick="copyTimeTo(${di},'bis',this.previousElementSibling.value)" title="Zeit auf alle Zeilen dieses Tages übertragen">→ alle</button></div>
     <div class="sh-cell"><input type="text" value="${esc(row.notiz||'')}" placeholder="–" oninput="updateShiftField(${di},${ri},'notiz',this.value)"></div>
     <div class="sh-cell"><button class="del-btn" onclick="delShiftRow(${di},${ri})" title="Zeile löschen">×</button></div>
   </div>`;
@@ -386,6 +398,26 @@ function addExtraDay() {
 }
 
 // ── Save / Load ──
+function copyTimeTo(di, field, val) {
+  if (!val) return;
+  days[di].rows.forEach(row => { row[field] = val; });
+  rerenderDayBody(di);
+  saveState(false);
+  // Flash feedback
+  setTimeout(() => {
+    const block = document.getElementById('dayblock_' + di);
+    if (!block) return;
+    block.querySelectorAll('.time-cell input[type="time"]').forEach(inp => {
+      if ((field === 'von' && inp === inp.parentElement.querySelector('input')) ||
+          (field === 'bis')) {
+        inp.style.transition = 'background .1s';
+        inp.style.background = '#d4edda';
+        setTimeout(() => { inp.style.background = ''; }, 600);
+      }
+    });
+  }, 20);
+}
+
 function saveState(manual) {
   SupaDB.set(getSaveKey(), { eventName, phases, days, savedAt: new Date().toISOString() });
   const ind = document.getElementById('saveInd');
