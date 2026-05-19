@@ -82,6 +82,18 @@
   /* Gewerk-Gruppe Subheader */
   .gw-group-header{background:#f0eeed;padding:4px 14px;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;color:#888;display:flex;align-items:center;gap:6px;border-bottom:1px solid var(--border);}
 
+  /* Date-range fallback */
+  .date-setup {
+    background:#fff; border:1px solid var(--border); border-radius:5px;
+    padding:24px 28px; margin-bottom:20px; box-shadow:var(--shadow);
+    display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+  }
+  .date-setup h3 { font-size:12px; font-weight:700; letter-spacing:1.5px; text-transform:uppercase; color:#888; flex-basis:100%; margin-bottom:4px; }
+  .date-setup label { font-size:12px; color:#555; display:flex; align-items:center; gap:8px; }
+  .date-setup input[type="date"] { border:1px solid #ddd; border-radius:3px; padding:6px 10px; font-size:13px; font-family:inherit; color:var(--ink); }
+  .date-setup .btn-gen { background:#e07b3a; color:#fff; padding:8px 20px; border:none; border-radius:3px; font-size:12px; font-weight:700; cursor:pointer; letter-spacing:.5px; }
+  .date-setup .btn-gen:hover { opacity:.85; }
+
   /* Print */
   @media print{
     .no-print,.btn-add-row,.btn-add-day,.del-btn{display:none!important;}
@@ -111,6 +123,12 @@
     <div class="legend-item"><div class="legend-dot" style="background:var(--proben)"></div>Proben</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--show)"></div>Show</div>
     <div class="legend-item"><div class="legend-dot" style="background:var(--abbau)"></div>Abbau</div>
+  </div>
+  <div id="dateSetup" class="date-setup no-print" style="display:none">
+    <h3>Zeitraum festlegen</h3>
+    <label>Von <input type="date" id="rangeFrom"></label>
+    <label>Bis <input type="date" id="rangeTo"></label>
+    <button class="btn-gen" onclick="generateFromRange()">Tage anlegen</button>
   </div>
   <div id="planContainer"></div>
   <button class="btn-add-day no-print" onclick="addExtraDay()">+ Weiteren Tag hinzufügen</button>
@@ -228,6 +246,9 @@ function buildDefaultRowsForDay(date) {
 function renderAll() {
   const container = document.getElementById('planContainer');
   container.innerHTML = days.map((day, di) => renderDay(day, di)).join('');
+  // Show date-range setup if no days loaded
+  const setup = document.getElementById('dateSetup');
+  if (setup) setup.style.display = days.length ? 'none' : 'flex';
 }
 
 function renderDay(day, di) {
@@ -615,6 +636,21 @@ async function exportExcel() {
   a.click();
 }
 
+// ── Manual date range ──
+function generateFromRange() {
+  const from = document.getElementById('rangeFrom').value;
+  const to   = document.getElementById('rangeTo').value;
+  if (!from || !to || from > to) { alert('Bitte gültigen Zeitraum eingeben.'); return; }
+  days = [];
+  let cur = from;
+  while (cur <= to) {
+    days.push({ date: cur, phase: getPhaseForDate(cur), rows: buildDefaultRowsForDay(cur), collapsed: false });
+    cur = addDays(cur, 1);
+  }
+  renderAll();
+  saveState(false);
+}
+
 // ── Init ──
 async function init() {
   const params = new URLSearchParams(window.location.search);
@@ -629,6 +665,16 @@ async function init() {
 
   // Load crew + phases from planungen
   await loadCrewFromPlanung();
+
+  // Pre-fill date range picker from phases
+  const rangeFrom = phS(phases.aufbau || phases.proben || phases.show || phases.abbau || '');
+  const rangeTo   = phE(phases.abbau  || phases.show   || phases.proben || phases.aufbau || '') || rangeFrom;
+  if (rangeFrom) {
+    const f = document.getElementById('rangeFrom'); if (f) f.value = rangeFrom;
+  }
+  if (rangeTo) {
+    const t = document.getElementById('rangeTo'); if (t) t.value = rangeTo;
+  }
 
   // Load saved state
   await SupaDB.init([getSaveKey()]);
