@@ -817,18 +817,25 @@ function scheduleAutoSave() {
 }
 
 async function loadSavedState() {
-  // localStorage immer bevorzugen – synchron, kein async-Race-Risiko.
-  // Supabase nur als Fallback wenn localStorage leer ist (erster Aufruf / anderes Gerät).
+  // localStorage lesen (synchron, immer aktuell)
   let lsData = null;
   try {
     const raw = localStorage.getItem(getSaveKey());
     if (raw) lsData = JSON.parse(raw);
   } catch(e) {}
-  if (lsData) return lsData;
 
-  // Kein localStorage-Eintrag → Supabase laden
+  // Supabase laden (für Cross-Device-Sync und Fallback)
   await SupaDB.init([getSaveKey()]);
-  return SupaDB.get(getSaveKey()) || null;
+  const sbData = SupaDB.get(getSaveKey());
+
+  if (lsData && sbData) {
+    // Neueste Version gewinnt – funktioniert korrekt da generateHotelPlanung()
+    // nw_hotel_save_* nicht mehr überschreibt.
+    const lsTime = new Date(lsData.savedAt || 0).getTime();
+    const sbTime = new Date(sbData.savedAt || 0).getTime();
+    return sbTime > lsTime ? sbData : lsData;
+  }
+  return lsData || sbData || null;
 }
 
 init();
