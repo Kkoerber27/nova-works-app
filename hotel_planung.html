@@ -817,16 +817,23 @@ function scheduleAutoSave() {
 }
 
 async function loadSavedState() {
-  // Supabase first (cross-device)
+  // Beide Quellen laden
   await SupaDB.init([getSaveKey()]);
   const sbData = SupaDB.get(getSaveKey());
-  if (sbData) return sbData;
-  // localStorage-Fallback (selbe Session)
+
+  let lsData = null;
   try {
     const raw = localStorage.getItem(getSaveKey());
-    if (raw) return JSON.parse(raw);
+    if (raw) lsData = JSON.parse(raw);
   } catch(e) {}
-  return null;
+
+  // Die neuere Version gewinnt (Supabase kann veraltet sein wenn Tab schnell geschlossen)
+  if (sbData && lsData) {
+    const sbTime = new Date(sbData.savedAt || 0).getTime();
+    const lsTime = new Date(lsData.savedAt || 0).getTime();
+    return lsTime > sbTime ? lsData : sbData;
+  }
+  return sbData || lsData || null;
 }
 
 init();
