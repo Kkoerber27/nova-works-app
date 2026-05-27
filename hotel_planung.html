@@ -427,11 +427,16 @@ function addRow(m) {
   // Nächte sofort nach dem Einfügen berechnen
   updateNightsCell(tr);
   // Änderungsmarkierung wiederherstellen
-  if (m.changed) tr.classList.add('row-changed');
+  if (m.changed) {
+    tr.dataset.changed = '1';
+    tr.classList.add('row-changed');
+    const cb = tr.querySelector('.change-cb');
+    if (cb) cb.checked = true;
+  }
 
   // ── Auto-Highlight: jede Benutzeränderung markiert die Zeile automatisch ──
   tr.querySelectorAll('input, select').forEach(function(inp) {
-    if (inp.classList.contains('change-cb')) return; // nicht den CB selbst überwachen
+    if (inp.classList.contains('change-cb')) return;
     inp.addEventListener('input', function() { autoMarkRow(tr); });
     inp.addEventListener('change', function() { autoMarkRow(tr); });
   });
@@ -465,7 +470,6 @@ function collectRows() {
   const rows = [];
   document.querySelectorAll('#hotelBody tr').forEach(function(tr) {
     const inputs = tr.querySelectorAll('input, select');
-    const cb = tr.querySelector('.change-cb');
     rows.push({
       name:     inputs[0]?.value || '',
       checkin1: inputs[1]?.value || '',
@@ -475,7 +479,7 @@ function collectRows() {
       nights:   calcNights(inputs[1]?.value,inputs[2]?.value,inputs[3]?.value,inputs[4]?.value),
       zimmer:   inputs[5]?.value || 'Einzelzimmer',
       notiz:    inputs[6]?.value || '',
-      changed:  cb ? cb.checked : false
+      changed:  tr.dataset.changed === '1'   // direkt aus dem tr-Attribut lesen
     });
   });
   return rows;
@@ -484,26 +488,29 @@ function collectRows() {
 function toggleChanged(cb) {
   const tr = cb.closest('tr');
   if (cb.checked) {
+    tr.dataset.changed = '1';
     tr.classList.add('row-changed');
   } else {
+    delete tr.dataset.changed;
     tr.classList.remove('row-changed');
   }
   updateClearBtn();
+  saveState();
 }
 
 // Zeile automatisch markieren wenn ein Feld geändert wird
 function autoMarkRow(tr) {
-  const cb = tr.querySelector('.change-cb');
-  if (!cb) return;
-  cb.checked = true;
+  tr.dataset.changed = '1';
   tr.classList.add('row-changed');
+  const cb = tr.querySelector('.change-cb');
+  if (cb) cb.checked = true;
   updateClearBtn();
-  saveState(); // sofort speichern
+  saveState();
 }
 
 // Button "Markierungen löschen" ein-/ausblenden
 function updateClearBtn() {
-  const hasMarked = document.querySelectorAll('#hotelBody .change-cb:checked').length > 0;
+  const hasMarked = document.querySelectorAll('#hotelBody tr[data-changed="1"]').length > 0;
   const btn = document.getElementById('btnClearMarks');
   if (btn) btn.style.display = hasMarked ? '' : 'none';
 }
@@ -511,9 +518,10 @@ function updateClearBtn() {
 // Alle Markierungen entfernen
 function clearAllMarks() {
   document.querySelectorAll('#hotelBody tr').forEach(function(tr) {
+    delete tr.dataset.changed;
+    tr.classList.remove('row-changed');
     const cb = tr.querySelector('.change-cb');
     if (cb) cb.checked = false;
-    tr.classList.remove('row-changed');
   });
   updateClearBtn();
   saveState();
