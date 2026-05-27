@@ -2509,17 +2509,9 @@ function generateHotelPlanung() {
 
   try { localStorage.setItem('nw_hotel_import', JSON.stringify(hotelData)); } catch(e) {}
 
-  // Nur initialen Stand schreiben wenn noch KEIN gespeicherter Stand existiert.
-  // Bestehende Hotel-Daten (mit manuellen Änderungen / changed-Flags) werden NICHT überschrieben.
-  // Neue Crew-Mitglieder werden über syncHotelData() / mergeSyncFromCrewplanung() ergänzt.
-  const saveKey = 'nw_hotel_save_' + p.name;
-  const existingSave = SupaDB.get(saveKey);
-  if (!existingSave || !existingSave.rows || !existingSave.rows.length) {
-    SupaDB.set(saveKey, {
-      eventName: p.name, rows: crew, savedAt: new Date().toISOString()
-    });
-  }
-  // Sync-Daten immer schreiben (neue Crew-Mitglieder ergänzen)
+  // hotel_planung.html verwaltet nw_hotel_save_* selbst.
+  // Crewplanung schreibt NUR den Sync-Key (nw_hotel_sync_*).
+  // Neue Crew-Mitglieder werden über mergeSyncFromCrewplanung() ergänzt.
   syncHotelData();
 
   // Shareable URL mit ?e=Projektname

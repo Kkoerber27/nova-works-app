@@ -817,23 +817,18 @@ function scheduleAutoSave() {
 }
 
 async function loadSavedState() {
-  // Beide Quellen laden
-  await SupaDB.init([getSaveKey()]);
-  const sbData = SupaDB.get(getSaveKey());
-
+  // localStorage immer bevorzugen – synchron, kein async-Race-Risiko.
+  // Supabase nur als Fallback wenn localStorage leer ist (erster Aufruf / anderes Gerät).
   let lsData = null;
   try {
     const raw = localStorage.getItem(getSaveKey());
     if (raw) lsData = JSON.parse(raw);
   } catch(e) {}
+  if (lsData) return lsData;
 
-  // Die neuere Version gewinnt (Supabase kann veraltet sein wenn Tab schnell geschlossen)
-  if (sbData && lsData) {
-    const sbTime = new Date(sbData.savedAt || 0).getTime();
-    const lsTime = new Date(lsData.savedAt || 0).getTime();
-    return lsTime > sbTime ? lsData : sbData;
-  }
-  return sbData || lsData || null;
+  // Kein localStorage-Eintrag → Supabase laden
+  await SupaDB.init([getSaveKey()]);
+  return SupaDB.get(getSaveKey()) || null;
 }
 
 init();
