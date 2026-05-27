@@ -146,6 +146,7 @@
   <span id="saveIndicator" style="font-size:11px;color:#aaa;margin-right:6px;transition:color .3s"></span>
   <button class="btn btn-add no-print" onclick="addEmptyRow()">+ Zeile</button>
   <button class="btn btn-save no-print" onclick="saveState(true)">💾 Speichern</button>
+  <button class="btn no-print" id="btnClearMarks" onclick="clearAllMarks()" style="background:#e07b3a;color:#fff;display:none">✓ Markierungen löschen</button>
   <button class="btn btn-link no-print" id="copyLinkBtn" onclick="copyLink()">🔗 Link kopieren</button>
   <button class="btn btn-excel no-print" onclick="exportExcel()">📊 Excel</button>
   <button class="btn btn-pdf no-print" onclick="exportPDF()">🖨 PDF</button>
@@ -289,6 +290,7 @@ async function init() {
     }
     await mergeSyncFromCrewplanung(eventName);
     refreshAllNights();
+    updateClearBtn();
     return;
   }
 
@@ -337,6 +339,8 @@ async function init() {
 
   // Nächte nach vollständigem Laden nochmals berechnen (Sicherheitsnetz)
   refreshAllNights();
+  // Markierungs-Button aktualisieren
+  updateClearBtn();
 }
 
 // Liest nw_hotel_sync_[name] aus Supabase und ergänzt neue Crew-Mitglieder
@@ -424,6 +428,13 @@ function addRow(m) {
   updateNightsCell(tr);
   // Änderungsmarkierung wiederherstellen
   if (m.changed) tr.classList.add('row-changed');
+
+  // ── Auto-Highlight: jede Benutzeränderung markiert die Zeile automatisch ──
+  tr.querySelectorAll('input, select').forEach(function(inp) {
+    if (inp.classList.contains('change-cb')) return; // nicht den CB selbst überwachen
+    inp.addEventListener('input', function() { autoMarkRow(tr); });
+    inp.addEventListener('change', function() { autoMarkRow(tr); });
+  });
 }
 
 function addEmptyRow() {
@@ -477,6 +488,35 @@ function toggleChanged(cb) {
   } else {
     tr.classList.remove('row-changed');
   }
+  updateClearBtn();
+}
+
+// Zeile automatisch markieren wenn ein Feld geändert wird
+function autoMarkRow(tr) {
+  const cb = tr.querySelector('.change-cb');
+  if (!cb) return;
+  cb.checked = true;
+  tr.classList.add('row-changed');
+  updateClearBtn();
+  saveState(); // sofort speichern
+}
+
+// Button "Markierungen löschen" ein-/ausblenden
+function updateClearBtn() {
+  const hasMarked = document.querySelectorAll('#hotelBody .change-cb:checked').length > 0;
+  const btn = document.getElementById('btnClearMarks');
+  if (btn) btn.style.display = hasMarked ? '' : 'none';
+}
+
+// Alle Markierungen entfernen
+function clearAllMarks() {
+  document.querySelectorAll('#hotelBody tr').forEach(function(tr) {
+    const cb = tr.querySelector('.change-cb');
+    if (cb) cb.checked = false;
+    tr.classList.remove('row-changed');
+  });
+  updateClearBtn();
+  saveState();
 }
 
 // ── Datumsformat ISO → DD.MM.YYYY ──
