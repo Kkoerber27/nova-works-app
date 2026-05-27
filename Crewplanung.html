@@ -2509,9 +2509,9 @@ function generateHotelPlanung() {
 
   try { localStorage.setItem('nw_hotel_import', JSON.stringify(hotelData)); } catch(e) {}
 
-  // Sofort in Supabase schreiben damit externe Nutzer die Daten laden können
+  // Immer in Supabase schreiben (aktuellsten Stand sichern)
   const saveKey = 'nw_hotel_save_' + p.name;
-  SupaDB.get(saveKey) || SupaDB.set(saveKey, {
+  SupaDB.set(saveKey, {
     eventName: p.name, rows: crew, savedAt: new Date().toISOString()
   });
   // Sync-Daten ebenfalls sofort schreiben

@@ -247,6 +247,9 @@ const PHASE_COLORS = { aufbau:'#c0713a', proben:'#4a7fb5', show:'#5a9e6f', abbau
 let rowCount = 0;
 let eventName = '';
 
+// ── URL-Parameter ?e= auslesen (IMMER zuerst, vor allem anderen) ──
+const _urlEventName = new URLSearchParams(window.location.search).get('e') || '';
+
 // ── Load from localStorage ──
 async function init() {
 
@@ -263,7 +266,33 @@ async function init() {
     localStorage.setItem('nw_hotel_migrated', '1');
   }
 
-  // Try to load fresh import from Crewplanung first
+  // ── Wenn ?e= in der URL: direkt dieses Projekt laden (kein localStorage-Import) ──
+  if (_urlEventName) {
+    eventName = _urlEventName;
+    const saved = await loadSavedState();
+    if (saved && saved.rows && saved.rows.length) {
+      eventName = saved.eventName || eventName;
+      document.getElementById('eventLabel').textContent = eventName ? ' – ' + eventName : '';
+      document.getElementById('sectionTitle').textContent = 'Hotelplanung' + (eventName ? ': ' + eventName : '');
+      saved.rows.forEach(function(m) { addRow(m); });
+      const ind = document.getElementById('saveIndicator');
+      if (ind && saved.savedAt) {
+        const t = new Date(saved.savedAt);
+        ind.textContent = '✓ Stand: ' + t.toLocaleDateString('de-DE') + ' ' + t.toLocaleTimeString('de-DE',{hour:'2-digit',minute:'2-digit'});
+        ind.style.color = '#aaa';
+      }
+    } else {
+      // Noch kein gespeicherter Stand – leere Ansicht mit Projektname
+      document.getElementById('eventLabel').textContent = ' – ' + eventName;
+      document.getElementById('sectionTitle').textContent = 'Hotelplanung: ' + eventName;
+      addEmptyRow();
+    }
+    await mergeSyncFromCrewplanung(eventName);
+    refreshAllNights();
+    return;
+  }
+
+  // ── Kein URL-Parameter: frischer Import aus Crewplanung (direkter Klick) ──
   let importData = null;
   try {
     const raw = localStorage.getItem('nw_hotel_import');
