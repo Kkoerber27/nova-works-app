@@ -2509,12 +2509,17 @@ function generateHotelPlanung() {
 
   try { localStorage.setItem('nw_hotel_import', JSON.stringify(hotelData)); } catch(e) {}
 
-  // Immer in Supabase schreiben (aktuellsten Stand sichern)
+  // Nur initialen Stand schreiben wenn noch KEIN gespeicherter Stand existiert.
+  // Bestehende Hotel-Daten (mit manuellen Änderungen / changed-Flags) werden NICHT überschrieben.
+  // Neue Crew-Mitglieder werden über syncHotelData() / mergeSyncFromCrewplanung() ergänzt.
   const saveKey = 'nw_hotel_save_' + p.name;
-  SupaDB.set(saveKey, {
-    eventName: p.name, rows: crew, savedAt: new Date().toISOString()
-  });
-  // Sync-Daten ebenfalls sofort schreiben
+  const existingSave = SupaDB.get(saveKey);
+  if (!existingSave || !existingSave.rows || !existingSave.rows.length) {
+    SupaDB.set(saveKey, {
+      eventName: p.name, rows: crew, savedAt: new Date().toISOString()
+    });
+  }
+  // Sync-Daten immer schreiben (neue Crew-Mitglieder ergänzen)
   syncHotelData();
 
   // Shareable URL mit ?e=Projektname
