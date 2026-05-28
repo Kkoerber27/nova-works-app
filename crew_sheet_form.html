@@ -885,10 +885,11 @@ const SupaDB = {
   }
 };
 
-// Supabase beim Start initialisieren (TECH_DB + Hotel-Saves laden)
+// Supabase beim Start initialisieren (TECH_DB + Hotel-Saves/Sync laden)
 (async function supaInit() {
   await SupaDB.init(['nw_crew_techniker']);
   await SupaDB.initPrefix('nw_hotel_save_');
+  await SupaDB.initPrefix('nw_hotel_sync_');
   // Tech-DB: localStorage hat Vorrang (selbe Session), sonst Supabase
   if (!TECH_DB || !TECH_DB.length) {
     const dbSupa = SupaDB.get('nw_crew_techniker', []);
@@ -1853,6 +1854,30 @@ function importFromHotelPlanung() {
             if (raw) { hotelData = JSON.parse(raw); break; }
           } catch(e) {}
         }
+    }
+  }
+
+  // Fallback: nw_hotel_sync_* (wird bei jedem Speichern in Crewplanung geschrieben)
+  if (!hotelData) {
+    const syncKey = veranstaltung ? 'nw_hotel_sync_' + veranstaltung : null;
+    if (syncKey) {
+      const sbSync = SupaDB.get(syncKey);
+      if (sbSync && sbSync.crew && sbSync.crew.length) {
+        hotelData = { rows: sbSync.crew, eventName: sbSync.veranstaltung };
+      } else {
+        try {
+          const raw = localStorage.getItem(syncKey);
+          if (raw) { const s = JSON.parse(raw); if (s && s.crew) hotelData = { rows: s.crew, eventName: s.veranstaltung }; }
+        } catch(e) {}
+      }
+    }
+    // Alle nw_hotel_sync_* Keys als letzter Fallback
+    if (!hotelData) {
+      const syncKeys = Object.keys(SupaDB.cache).filter(k => k.startsWith('nw_hotel_sync_'));
+      if (syncKeys.length) {
+        const d = SupaDB.get(syncKeys[0]);
+        if (d && d.crew) hotelData = { rows: d.crew, eventName: d.veranstaltung };
+      }
     }
   }
 

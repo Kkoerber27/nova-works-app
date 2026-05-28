@@ -2304,6 +2304,9 @@ function generateCrewSheet() {
   // Export full DB so crew_sheet_form can use it for autocomplete
   try { localStorage.setItem('nw_crew_db_export', JSON.stringify([...DB, ...customTechniker])); } catch(e) {}
 
+  // Hotel-Sync immer aktualisieren damit crew_sheet_form den Hotel-Import findet
+  syncHotelData();
+
   // Store import payload
   localStorage.setItem('nw_crewsheet_import', JSON.stringify(importData));
 
@@ -2324,6 +2327,7 @@ function generateCrewSheet() {
       '<div style="font-size:13px;color:#888;margin-bottom:24px;">' +
         '<strong style="color:#c8a96e;">' + eventName + '</strong><br>' +
         crewCount + ' bestätigte' + (crewCount === 1 ? 's' : '') + ' Crew-Mitglied' + (crewCount !== 1 ? 'er' : '') +
+        (crewCount === 0 ? '<br><span style="color:#c0713a;font-size:11px;">⚠ Keine bestätigten Crew-Mitglieder (Status muss grün/bestätigt sein)</span>' : '') +
       '</div>' +
       '<a href="crew_sheet_form.html" target="_blank" rel="noopener" ' +
         'style="display:inline-block;background:#2d7a4f;color:#fff;padding:12px 28px;font-size:14px;font-weight:700;text-decoration:none;letter-spacing:.5px;border-radius:3px;margin-bottom:16px;">' +
