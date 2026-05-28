@@ -1841,11 +1841,12 @@ function importFromHotelPlanung() {
     }
   }
 
-  // Fallback: find any nw_hotel_save_* key (Supabase-Cache)
+  // Fallback: nw_hotel_save_* aus Supabase-Cache oder localStorage
   if (!hotelData) {
     const allKeys = Object.keys(SupaDB.cache).filter(k => k.startsWith('nw_hotel_save_'));
-    if (allKeys.length) { hotelData = SupaDB.get(allKeys[0]); }
-    else {
+    if (allKeys.length) {
+      hotelData = SupaDB.get(allKeys[0]);
+    } else {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('nw_hotel_save_')) {
@@ -1854,6 +1855,7 @@ function importFromHotelPlanung() {
             if (raw) { hotelData = JSON.parse(raw); break; }
           } catch(e) {}
         }
+      }
     }
   }
 
@@ -1867,11 +1869,13 @@ function importFromHotelPlanung() {
       } else {
         try {
           const raw = localStorage.getItem(syncKey);
-          if (raw) { const s = JSON.parse(raw); if (s && s.crew) hotelData = { rows: s.crew, eventName: s.veranstaltung }; }
+          if (raw) {
+            const s = JSON.parse(raw);
+            if (s && s.crew) hotelData = { rows: s.crew, eventName: s.veranstaltung };
+          }
         } catch(e) {}
       }
     }
-    // Alle nw_hotel_sync_* Keys als letzter Fallback
     if (!hotelData) {
       const syncKeys = Object.keys(SupaDB.cache).filter(k => k.startsWith('nw_hotel_sync_'));
       if (syncKeys.length) {
@@ -1881,7 +1885,7 @@ function importFromHotelPlanung() {
     }
   }
 
-  // Also try nw_hotel_import as last resort
+  // Letzter Fallback: nw_hotel_import (localStorage, von generateHotelPlanung gesetzt)
   if (!hotelData) {
     try {
       const raw = localStorage.getItem('nw_hotel_import');
