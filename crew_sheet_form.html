@@ -1043,6 +1043,8 @@ function addGuestRow(name, checkin, checkout) {
   const row = document.createElement('div');
   row.className = 'hotel-guest-row';
   row.id = 'guest-' + id;
+  const ciVal = isoToDE(checkin);
+  const coVal = isoToDE(checkout);
   row.innerHTML = `
     <div class="pr-ac-wrap" style="position:relative;">
       <input type="text" class="g-name" placeholder="Name" value="${name||''}"
@@ -1051,8 +1053,10 @@ function addGuestRow(name, checkin, checkout) {
         onblur="setTimeout(()=>{const d=document.getElementById('gac_${id}');if(d)d.classList.remove('open');},180)">
       <div class="pr-ac-drop" id="gac_${id}"></div>
     </div>
-    <input type="date"  class="g-checkin"  value="${checkin||''}">
-    <input type="date"  class="g-checkout" value="${checkout||''}">
+    <input type="text" class="g-checkin"  placeholder="TT.MM.JJJJ" value="${ciVal}"
+           oninput="autoFmtDate(this)" maxlength="10">
+    <input type="text" class="g-checkout" placeholder="TT.MM.JJJJ" value="${coVal}"
+           oninput="autoFmtDate(this)" maxlength="10">
     <div class="rem-cell">
       <button class="btn-rem" onclick="removeGuestRow(${id})" title="Zeile entfernen">×</button>
     </div>
@@ -1211,6 +1215,23 @@ function prAcSelect(rowId, name, gewerk, tel, email) {
 }
 
 function esc2(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+
+// Datum-Hilfsfunktionen
+function isoToDE(val) {
+  if (!val) return '';
+  // YYYY-MM-DD → DD.MM.YYYY
+  const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (m) return m[3] + '.' + m[2] + '.' + m[1];
+  return val; // bereits im DE-Format oder leer
+}
+function autoFmtDate(inp) {
+  // Automatisch Punkte einfügen: 01.01.2025
+  let v = inp.value.replace(/[^\d]/g, '');
+  if (v.length > 8) v = v.slice(0, 8);
+  if (v.length > 4) v = v.slice(0,2) + '.' + v.slice(2,4) + '.' + v.slice(4);
+  else if (v.length > 2) v = v.slice(0,2) + '.' + v.slice(2);
+  inp.value = v;
+}
 
 // Close dropdowns on outside click
 document.addEventListener('click', e => {
@@ -1987,12 +2008,12 @@ function importFromHotelPlanung() {
   rows.forEach(function(r) {
     if (!r.name || !r.name.trim()) return;
     // Use checkout2 if it exists (gap person), else checkout1
-    const checkin  = r.checkin1  || '';
-    const checkout = r.checkout2 || r.checkout1 || '';
+    const checkin  = isoToDE(r.checkin1  || '');
+    const checkout = isoToDE(r.checkout2 || r.checkout1 || '');
     const notiz = [
       r.zimmer && r.zimmer !== 'Einzelzimmer' ? r.zimmer : '',
-      r.checkin2  ? 'Check-in 2: '  + r.checkin2  : '',
-      r.checkout2 ? 'Check-out 2: ' + r.checkout2 : '',
+      r.checkin2  ? 'Check-in 2: '  + isoToDE(r.checkin2)  : '',
+      r.checkout2 ? 'Check-out 2: ' + isoToDE(r.checkout2) : '',
       r.notiz || ''
     ].filter(Boolean).join(' | ');
 
