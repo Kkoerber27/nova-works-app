@@ -635,6 +635,7 @@
     ✚&nbsp; Neues Sheet
   </button>
   <div style="flex:1"></div>
+  <span id="autoSaveIndicator" style="font-size:11px;color:#3a7a3a;font-weight:600;margin-right:8px"></span>
   <button class="btn" style="background:#0078d4;color:#fff" onclick="sendViaEmail()" title="Email in Outlook mit allen Crew-Adressen erstellen">
     ✉&nbsp; Send via Email
   </button>
@@ -885,15 +886,69 @@ const SupaDB = {
   }
 };
 
+/* ─── Auto-Save State ─── */
+let _crewsheetFromImport = false;
+let _autoSaveTimer = null;
+
+function scheduleAutoSave() {
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(autoSave, 1500);
+}
+
+async function autoSave() {
+  try {
+    const data = collectData();
+    data._savedAt = new Date().toISOString();
+    const json = JSON.stringify(data);
+    localStorage.setItem('nw_crewsheet_autosave', json);
+    // Supabase-Backup
+    if (typeof SupaDB !== 'undefined') {
+      await SupaDB.set('nw_crewsheet_autosave', data);
+    }
+    const el = document.getElementById('autoSaveIndicator');
+    if (el) {
+      el.textContent = '✓ Gespeichert';
+      setTimeout(() => { if (el) el.textContent = ''; }, 2500);
+    }
+  } catch(e) {
+    console.warn('Auto-Save fehlgeschlagen:', e);
+  }
+}
+
 // Supabase beim Start initialisieren (TECH_DB + Hotel-Saves/Sync laden)
 (async function supaInit() {
-  await SupaDB.init(['nw_crew_techniker']);
+  await SupaDB.init(['nw_crew_techniker', 'nw_crewsheet_autosave']);
   await SupaDB.initPrefix('nw_hotel_save_');
   await SupaDB.initPrefix('nw_hotel_sync_');
   // Tech-DB: localStorage hat Vorrang (selbe Session), sonst Supabase
   if (!TECH_DB || !TECH_DB.length) {
     const dbSupa = SupaDB.get('nw_crew_techniker', []);
     if (dbSupa && dbSupa.length) TECH_DB = dbSupa;
+  }
+  // Auto-Save wiederherstellen (nur wenn kein frischer Import von Crewplanung)
+  if (!_crewsheetFromImport) {
+    let saved = null;
+    try {
+      const raw = localStorage.getItem('nw_crewsheet_autosave');
+      if (raw) saved = JSON.parse(raw);
+    } catch(e) {}
+    // Supabase-Version vergleichen
+    const sbSaved = SupaDB.get('nw_crewsheet_autosave');
+    if (saved && sbSaved) {
+      const lsTime = new Date(saved._savedAt || 0).getTime();
+      const sbTime = new Date(sbSaved._savedAt || 0).getTime();
+      if (sbTime > lsTime) saved = sbSaved;
+    } else if (!saved && sbSaved) {
+      saved = sbSaved;
+    }
+    if (saved && saved._savedAt) {
+      applyData(saved);
+      const el = document.getElementById('autoSaveIndicator');
+      if (el) {
+        el.textContent = '↺ Wiederhergestellt';
+        setTimeout(() => { if (el) el.textContent = ''; }, 3000);
+      }
+    }
   }
 })();
 
@@ -940,6 +995,7 @@ function addPositionRow(label, prefillName, prefillTel) {
       <button class="btn-rem" onclick="removePositionRow(${id})" title="Zeile löschen">×</button>
     </div>
   `;
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', scheduleAutoSave));
   block.appendChild(row);
 }
 
@@ -969,7 +1025,7 @@ function posAcSelect(rowId, name, tel) {
 
 function removePositionRow(id) {
   const el = document.getElementById('pos-' + id);
-  if (el) el.remove();
+  if (el) { el.remove(); scheduleAutoSave(); }
 }
 
 // Initialize default positions
@@ -1001,6 +1057,8 @@ function addGuestRow(name, checkin, checkout) {
       <button class="btn-rem" onclick="removeGuestRow(${id})" title="Zeile entfernen">×</button>
     </div>
   `;
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('change', scheduleAutoSave));
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', scheduleAutoSave));
   container.appendChild(row);
 }
 
@@ -1028,7 +1086,7 @@ function guestAcSelect(rowId, name) {
 
 function removeGuestRow(id) {
   const el = document.getElementById('guest-' + id);
-  if (el) el.remove();
+  if (el) { el.remove(); scheduleAutoSave(); }
 }
 
 // Start with 2 empty rows
@@ -1102,7 +1160,10 @@ function addPersonnelRow(name, gewerk, tel, email, phasen) {
       <button class="btn-rem" onclick="removePersonnelRow(${id})" title="Zeile entfernen">×</button>
     </div>
   `;
-  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', syncPersonnelPrint));
+  row.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('input', syncPersonnelPrint);
+    inp.addEventListener('input', scheduleAutoSave);
+  });
   container.appendChild(row);
   syncPersonnelPrint();
 }
@@ -1114,11 +1175,12 @@ function togglePhaseDot(rowId, phKey) {
   dot.classList.toggle('on',  !isOn);
   dot.classList.toggle('off',  isOn);
   syncPersonnelPrint();
+  scheduleAutoSave();
 }
 
 function removePersonnelRow(id) {
   const el = document.getElementById('pers-' + id);
-  if (el) { el.remove(); syncPersonnelPrint(); }
+  if (el) { el.remove(); syncPersonnelPrint(); scheduleAutoSave(); }
 }
 
 /* ── Autocomplete ── */
@@ -1782,6 +1844,8 @@ function base64ToBlob(b64, mime) {
     localStorage.removeItem('nw_crewsheet_import'); // einmalig verwenden
     const importData = JSON.parse(raw);
     if (!importData || importData._source !== 'crewplanung') return;
+    // Frischer Import → kein Auto-Save wiederherstellen
+    _crewsheetFromImport = true;
 
     // Felder übertragen
     const f = importData.fields || {};
@@ -1954,6 +2018,20 @@ function importFromHotelPlanung() {
     setTimeout(() => { status.textContent = ''; }, 5000);
   }
 }
+
+/* ─── Globaler Input-Listener für Auto-Save ─── */
+document.addEventListener('input', function(e) {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') {
+    scheduleAutoSave();
+  }
+});
+document.addEventListener('change', function(e) {
+  const tag = e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT') {
+    scheduleAutoSave();
+  }
+});
 </script>
 </body>
 </html>
