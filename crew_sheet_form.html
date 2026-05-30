@@ -979,18 +979,18 @@ function addPositionRow(label, prefillName, prefillTel) {
   row.id = 'pos-' + id;
   row.innerHTML = `
     <div class="pos-lbl">
-      <input type="text" class="p-label" value="${label || ''}" placeholder="Position …">
+      <input type="text" class="p-label" value="${escHtml(label)}" placeholder="Position …">
     </div>
     <div class="val">
       <div class="pr-ac-wrap" style="position:relative;">
-        <input type="text" class="p-name" placeholder="Name" value="${prefillName||''}"
+        <input type="text" class="p-name" placeholder="Name" value="${escHtml(prefillName)}"
           oninput="posAcSearch(${id}, this.value)"
           onfocus="posAcSearch(${id}, this.value)"
           onblur="setTimeout(()=>{const d=document.getElementById('posac_${id}');if(d)d.classList.remove('open');},180)">
         <div class="pr-ac-drop" id="posac_${id}"></div>
       </div>
     </div>
-    <div class="val"><input type="text" class="p-tel" placeholder="Tel. / E-Mail" value="${prefillTel||''}"></div>
+    <div class="val"><input type="text" class="p-tel" placeholder="Tel. / E-Mail" value="${escHtml(prefillTel)}"></div>
     <div class="pos-del">
       <button class="btn-rem" onclick="removePositionRow(${id})" title="Zeile löschen">×</button>
     </div>
@@ -1047,15 +1047,15 @@ function addGuestRow(name, checkin, checkout) {
   const coVal = isoToDE(checkout);
   row.innerHTML = `
     <div class="pr-ac-wrap" style="position:relative;">
-      <input type="text" class="g-name" placeholder="Name" value="${name||''}"
+      <input type="text" class="g-name" placeholder="Name" value="${escHtml(name)}"
         oninput="guestAcSearch(${id}, this.value)"
         onfocus="guestAcSearch(${id}, this.value)"
         onblur="setTimeout(()=>{const d=document.getElementById('gac_${id}');if(d)d.classList.remove('open');},180)">
       <div class="pr-ac-drop" id="gac_${id}"></div>
     </div>
-    <input type="text" class="g-checkin"  placeholder="TT.MM.JJJJ" value="${ciVal}"
+    <input type="text" class="g-checkin"  placeholder="TT.MM.JJJJ" value="${escHtml(ciVal)}"
            oninput="autoFmtDate(this)" maxlength="10">
-    <input type="text" class="g-checkout" placeholder="TT.MM.JJJJ" value="${coVal}"
+    <input type="text" class="g-checkout" placeholder="TT.MM.JJJJ" value="${escHtml(coVal)}"
            oninput="autoFmtDate(this)" maxlength="10">
     <div class="rem-cell">
       <button class="btn-rem" onclick="removeGuestRow(${id})" title="Zeile entfernen">×</button>
@@ -1151,14 +1151,14 @@ function addPersonnelRow(name, gewerk, tel, email, phasen) {
 
   row.innerHTML = `
     <div class="pr-ac-wrap">
-      <input type="text" class="pr-name" placeholder="Name" value="${(name||'').replace(/"/g,'&quot;')}"
+      <input type="text" class="pr-name" placeholder="Name" value="${escHtml(name)}"
              oninput="prAcSearch(${id},this.value)" onfocus="prAcSearch(${id},this.value)"
              autocomplete="off">
       <div class="pr-ac-drop" id="prac_${id}"></div>
     </div>
-    <input type="text"  class="pr-gewerk" placeholder="Gewerk / Position" value="${(gewerk||'').replace(/"/g,'&quot;')}">
-    <input type="text"  class="pr-tel"    placeholder="Telefon"           value="${(tel   ||'').replace(/"/g,'&quot;')}">
-    <input type="text"  class="pr-email"  placeholder="E-Mail"            value="${(email ||'').replace(/"/g,'&quot;')}">
+    <input type="text"  class="pr-gewerk" placeholder="Gewerk / Position" value="${escHtml(gewerk)}">
+    <input type="text"  class="pr-tel"    placeholder="Telefon"           value="${escHtml(tel)}">
+    <input type="text"  class="pr-email"  placeholder="E-Mail"            value="${escHtml(email)}">
     <div class="phase-dots-cell" id="pdots_${id}">${dotsHtml}</div>
     <div class="rem-cell">
       <button class="btn-rem" onclick="removePersonnelRow(${id})" title="Zeile entfernen">×</button>
@@ -1214,7 +1214,17 @@ function prAcSelect(rowId, name, gewerk, tel, email) {
   syncPersonnelPrint();
 }
 
+// JS-String escaping (für onclick-Attribute mit einfachen Anführungszeichen)
 function esc2(s) { return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'"); }
+// HTML escaping (für innerHTML: verhindert XSS durch <, >, &, ", ')
+function escHtml(s) {
+  return String(s||'')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;');
+}
 
 // Datum-Hilfsfunktionen
 function isoToDE(val) {
@@ -1330,7 +1340,7 @@ function renderPreviews() {
     div.className = 'preview-item';
     if (item.file.type.startsWith('image/')) {
       div.innerHTML = `
-        <img src="${item.dataUrl}" alt="${item.file.name}">
+        <img src="${item.dataUrl}" alt="${escHtml(item.file.name)}">
         <button class="del-btn" onclick="removeFile(${item.id})" title="Entfernen">×</button>
       `;
     } else {
@@ -1339,7 +1349,7 @@ function renderPreviews() {
         : item.file.name;
       div.innerHTML = `
         <span class="pdf-icon">📄</span>
-        <span class="file-name">${shortName}</span>
+        <span class="file-name">${escHtml(shortName)}</span>
         <button class="del-btn" onclick="removeFile(${item.id})" title="Entfernen">×</button>
       `;
     }
@@ -1349,7 +1359,7 @@ function renderPreviews() {
     const page = document.createElement('div');
     page.className = 'print-att-page';
     if (item.file.type.startsWith('image/')) {
-      page.innerHTML = `<img src="${item.dataUrl}" alt="${item.file.name}">`;
+      page.innerHTML = `<img src="${item.dataUrl}" alt="${escHtml(item.file.name)}">`;
     } else {
       // PDF: embed via iframe with data URL
       page.innerHTML = `<iframe src="${item.dataUrl}" title="${item.file.name}"></iframe>`;
