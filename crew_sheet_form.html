@@ -684,7 +684,8 @@
       border-radius: 0 !important;
     }
     .btn, .btn-add, .btn-rem, .hotel-add-row, .pos-add-row, .pos-del,
-    .personnel-add-row { display: none !important; }
+    .personnel-add-row, .btn-add-hotel, .einsatz-add-row,
+    .hotel-assign-cell, #hotelImportStatus, #autoSaveIndicator { display: none !important; }
     .preview-item .del-btn { display: none !important; }
     input, textarea {
       border: none !important;
@@ -692,6 +693,23 @@
     }
     .upload-zone { display: none !important; }
     .preview-grid { display: none !important; }
+
+    /* Seitenumbrüche: Blöcke möglichst zusammenhalten */
+    .hotel-block        { page-break-inside: avoid; margin-bottom: 6px !important; }
+    .einsatz-section    { page-break-inside: avoid; }
+    .einsatz-header     { page-break-after: avoid; }
+    .section-gap        { height: 6px !important; }
+    .detail-grid        { page-break-inside: avoid; }
+    .detail-row         { page-break-inside: avoid; }
+    .hotel-block-header { page-break-after: avoid; }
+
+    /* Einsatztage Zeilen kompakter im Druck */
+    .einsatz-row input  { min-height: 22px !important; font-size: 11px !important; }
+    .einsatz-header span { padding: 3px 10px !important; }
+
+    /* Hotel-Gästeliste kompakter */
+    .hotel-guest-row input { min-height: 22px !important; }
+    .hotel-guest-header span { padding: 3px 10px !important; }
 
     /* Personnel list prints as its own A4 page */
     .personnel-print-page {
@@ -922,6 +940,7 @@
     <span>Gewerk / Position</span>
     <span>Telefon</span>
     <span>E-Mail</span>
+    <span style="text-align:center">Hotel</span>
     <span style="text-align:center">Phasen</span>
     <span style="border-right:none"></span>
   </div>
@@ -1539,22 +1558,35 @@ function syncPersonnelPrint() {
     const gewerk = row.querySelector('.pr-gewerk')?.value || '';
     const tel    = row.querySelector('.pr-tel')?.value    || '';
     const email  = row.querySelector('.pr-email')?.value  || '';
-    // Collect phase dots
+
+    // Hotel badge
+    const hid = row.dataset.hotelId ? parseInt(row.dataset.hotelId) : null;
+    const hotel = hid ? getHotelById(hid) : null;
+    const hotelHtml = hotel
+      ? `<span style="display:inline-flex;align-items:center;gap:4px">
+           <span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:${escHtml(hotel.color)};flex-shrink:0"></span>
+           <span style="font-size:10px;color:#555">${escHtml(hotel.name || ('Hotel ' + hid))}</span>
+         </span>`
+      : '<span style="color:#ccc;font-size:10px">–</span>';
+
+    // Phase dots
     const dots = [];
     row.querySelectorAll('.pdot').forEach(d => {
       if (d.classList.contains('on')) {
         const ph = PHASE_CFG.find(p => p.key === d.dataset.ph);
-        if (ph) dots.push(`<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:${ph.color};margin-right:2px;vertical-align:middle" title="${ph.title}"></span>`);
+        if (ph) dots.push(`<span style="display:inline-block;width:14px;height:14px;border-radius:2px;background:${ph.color};margin-right:2px;vertical-align:middle" title="${escHtml(ph.title)}"></span>`);
       }
     });
+
     const pr = document.createElement('div');
     pr.className = 'personnel-row';
     pr.style.cssText = 'border-bottom:1px solid var(--lgray)';
     pr.innerHTML = `
-      <input type="text" value="${name}"   readonly style="border-right:1px solid var(--lgray)">
-      <input type="text" value="${gewerk}" readonly style="border-right:1px solid var(--lgray)">
-      <input type="text" value="${tel}"    readonly style="border-right:1px solid var(--lgray)">
-      <input type="text" value="${email}"  readonly style="border-right:1px solid var(--lgray)">
+      <input type="text" value="${escHtml(name)}"   readonly style="border-right:1px solid var(--lgray)">
+      <input type="text" value="${escHtml(gewerk)}" readonly style="border-right:1px solid var(--lgray)">
+      <input type="text" value="${escHtml(tel)}"    readonly style="border-right:1px solid var(--lgray)">
+      <input type="text" value="${escHtml(email)}"  readonly style="border-right:1px solid var(--lgray)">
+      <div style="display:flex;align-items:center;justify-content:center;padding:4px 6px;border-right:1px solid var(--lgray)">${hotelHtml}</div>
       <div style="display:flex;align-items:center;padding:4px 6px;border-right:1px solid var(--lgray)">${dots.join('')}</div>
       <div></div>
     `;
