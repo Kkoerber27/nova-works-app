@@ -1958,14 +1958,20 @@ function newSheet() {
 /* ═══════════════════════════════════════
    PDF Export
 ═══════════════════════════════════════ */
-function exportPDF() {
-  const page = document.querySelector('.page');
-  const replacements = [];
+/* ── Print-Vorbereitung: läuft bei "Export als PDF" UND bei Cmd+P ── */
+let _printReplacements = [];
+let _printPrepared = false;
 
-  // Alle Inputs und Textareas durch Text-Divs ersetzen
-  page.querySelectorAll('input, textarea').forEach(function(el) {
+function _preparePrint() {
+  if (_printPrepared) return;
+  _printPrepared = true;
+  _printReplacements = [];
+
+  // Inputs und Textareas durch Text-Divs ersetzen (kein Clipping mehr)
+  document.querySelectorAll('.page input, .page textarea, #personnelPrintPage input').forEach(function(el) {
     const val = el.value || '';
     const cs  = window.getComputedStyle(el);
+    const isTA = el.tagName === 'TEXTAREA';
     const div = document.createElement('div');
     div.className = '__pdf_text';
     div.style.cssText = [
@@ -1980,52 +1986,32 @@ function exportPDF() {
       'box-sizing:border-box',
       'word-break:break-word',
       'overflow-wrap:break-word',
-      'white-space:' + (el.tagName === 'TEXTAREA' ? 'pre-wrap' : 'normal'),
-      'min-height:20px',
+      'white-space:' + (isTA ? 'pre-wrap' : 'normal'),
+      'min-height:' + (isTA ? 'auto' : '20px'),
       'line-height:1.4',
     ].join(';');
-    div.textContent = val || el.placeholder || '';
+    div.textContent = val || (el.readOnly ? '' : (el.placeholder || ''));
     el.style.display = 'none';
     el.after(div);
-    replacements.push({ el, div });
+    _printReplacements.push(el);
   });
+}
 
-  // Personalseite: Inputs dort auch ersetzen
-  const ppRows = document.getElementById('personnelPrintRows');
-  if (ppRows) {
-    ppRows.querySelectorAll('input').forEach(function(el) {
-      const val = el.value || '';
-      const cs  = window.getComputedStyle(el);
-      const div = document.createElement('div');
-      div.className = '__pdf_text';
-      div.style.cssText = [
-        'font-family:' + cs.fontFamily,
-        'font-size:12px',
-        'color:' + cs.color,
-        'padding:5px 10px',
-        'width:100%',
-        'box-sizing:border-box',
-        'word-break:break-word',
-        'white-space:normal',
-        'min-height:20px',
-      ].join(';');
-      div.textContent = val;
-      el.style.display = 'none';
-      el.after(div);
-      replacements.push({ el, div });
-    });
-  }
+function _restorePrint() {
+  _printReplacements.forEach(function(el) {
+    el.style.display = '';
+  });
+  document.querySelectorAll('.__pdf_text').forEach(function(d) { d.remove(); });
+  _printReplacements = [];
+  _printPrepared = false;
+}
 
-  // Nach dem Drucken alles wiederherstellen
-  function restore() {
-    replacements.forEach(function(r) {
-      r.el.style.display = '';
-      r.div.remove();
-    });
-    window.removeEventListener('afterprint', restore);
-  }
-  window.addEventListener('afterprint', restore);
+// Cmd+P abfangen – auch dann korrekt drucken
+window.addEventListener('beforeprint', _preparePrint);
+window.addEventListener('afterprint',  _restorePrint);
 
+function exportPDF() {
+  _preparePrint();
   window.print();
 }
 
