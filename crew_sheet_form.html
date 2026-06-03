@@ -1959,6 +1959,73 @@ function newSheet() {
    PDF Export
 ═══════════════════════════════════════ */
 function exportPDF() {
+  const page = document.querySelector('.page');
+  const replacements = [];
+
+  // Alle Inputs und Textareas durch Text-Divs ersetzen
+  page.querySelectorAll('input, textarea').forEach(function(el) {
+    const val = el.value || '';
+    const cs  = window.getComputedStyle(el);
+    const div = document.createElement('div');
+    div.className = '__pdf_text';
+    div.style.cssText = [
+      'font-family:'    + cs.fontFamily,
+      'font-size:'      + cs.fontSize,
+      'color:'          + (val ? cs.color : '#bbb'),
+      'padding:'        + cs.padding,
+      'font-weight:'    + cs.fontWeight,
+      'letter-spacing:' + cs.letterSpacing,
+      'text-transform:' + cs.textTransform,
+      'width:100%',
+      'box-sizing:border-box',
+      'word-break:break-word',
+      'overflow-wrap:break-word',
+      'white-space:' + (el.tagName === 'TEXTAREA' ? 'pre-wrap' : 'normal'),
+      'min-height:20px',
+      'line-height:1.4',
+    ].join(';');
+    div.textContent = val || el.placeholder || '';
+    el.style.display = 'none';
+    el.after(div);
+    replacements.push({ el, div });
+  });
+
+  // Personalseite: Inputs dort auch ersetzen
+  const ppRows = document.getElementById('personnelPrintRows');
+  if (ppRows) {
+    ppRows.querySelectorAll('input').forEach(function(el) {
+      const val = el.value || '';
+      const cs  = window.getComputedStyle(el);
+      const div = document.createElement('div');
+      div.className = '__pdf_text';
+      div.style.cssText = [
+        'font-family:' + cs.fontFamily,
+        'font-size:12px',
+        'color:' + cs.color,
+        'padding:5px 10px',
+        'width:100%',
+        'box-sizing:border-box',
+        'word-break:break-word',
+        'white-space:normal',
+        'min-height:20px',
+      ].join(';');
+      div.textContent = val;
+      el.style.display = 'none';
+      el.after(div);
+      replacements.push({ el, div });
+    });
+  }
+
+  // Nach dem Drucken alles wiederherstellen
+  function restore() {
+    replacements.forEach(function(r) {
+      r.el.style.display = '';
+      r.div.remove();
+    });
+    window.removeEventListener('afterprint', restore);
+  }
+  window.addEventListener('afterprint', restore);
+
   window.print();
 }
 
