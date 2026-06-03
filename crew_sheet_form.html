@@ -306,6 +306,58 @@
     border-top: 1px solid var(--lgray);
   }
 
+  /* ── Einsatztage ── */
+  .einsatz-section {
+    border-left: 1px solid var(--lgray);
+    border-right: 1px solid var(--lgray);
+    border-bottom: 1px solid var(--lgray);
+  }
+  .einsatz-header {
+    display: grid;
+    grid-template-columns: 120px 80px 80px 1fr 36px;
+    background: var(--lgray);
+    border-bottom: 1px solid #d0d0d0;
+  }
+  .einsatz-header span {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .8px;
+    text-transform: uppercase;
+    color: var(--gray);
+    padding: 5px 10px;
+    border-right: 1px solid #d0d0d0;
+  }
+  .einsatz-header span:last-child { border-right: none; text-align: center; }
+  .einsatz-row {
+    display: grid;
+    grid-template-columns: 120px 80px 80px 1fr 36px;
+    border-bottom: 1px solid var(--lgray);
+  }
+  .einsatz-row:last-child { border-bottom: none; }
+  .einsatz-row input {
+    width: 100%;
+    border: none;
+    border-right: 1px solid var(--lgray);
+    background: transparent;
+    font-family: var(--font);
+    font-size: 12px;
+    color: var(--dark);
+    padding: 5px 10px;
+    outline: none;
+    min-height: 28px;
+  }
+  .einsatz-row input:focus { background: #f0f4ff; }
+  .einsatz-row .rem-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-left: 1px solid var(--lgray);
+  }
+  .einsatz-add-row {
+    padding: 6px 10px;
+    border-top: 1px solid var(--lgray);
+  }
+
   /* ── Multi-Hotel Blocks ── */
   .hotel-block {
     margin-bottom: 10px;
@@ -766,6 +818,23 @@
     <textarea id="f_inhalte" placeholder="Programm, Ablauf, Besonderheiten …" rows="4"></textarea>
   </div>
 
+  <!-- ═══ EINSATZTAGE ═══ -->
+  <div class="section-gap"></div>
+  <div class="section-label">Einsatztage</div>
+  <div class="einsatz-header">
+    <span>Datum</span>
+    <span>Von</span>
+    <span>Bis</span>
+    <span>Gewerk / Beschreibung</span>
+    <span>–</span>
+  </div>
+  <div class="einsatz-section">
+    <div id="einsatzRows"></div>
+    <div class="einsatz-add-row">
+      <button class="btn-add" onclick="addEinsatzRow()" title="Tag hinzufügen">+</button>
+    </div>
+  </div>
+
   <!-- ═══ HOTEL ═══ -->
   <div class="section-gap"></div>
   <div class="section-label" style="display:flex;align-items:center;justify-content:space-between">
@@ -923,6 +992,43 @@ const SupaDB = {
 };
 
 /* ─── Auto-Save State ─── */
+/* ═══════════════════════════════════════
+   Einsatztage
+═══════════════════════════════════════ */
+let einsatzRowCount = 0;
+
+function addEinsatzRow(datum, von, bis, gewerk) {
+  einsatzRowCount++;
+  const id = einsatzRowCount;
+  const container = document.getElementById('einsatzRows');
+  const row = document.createElement('div');
+  row.className = 'einsatz-row';
+  row.id = 'einsatz-' + id;
+  row.innerHTML = `
+    <input type="text" class="e-datum"  placeholder="TT.MM.JJJJ" value="${escHtml(datum)}"  oninput="autoFmtDate(this)" maxlength="10">
+    <input type="text" class="e-von"    placeholder="08:00"       value="${escHtml(von)}"    oninput="autoFmtTime(this)" maxlength="5">
+    <input type="text" class="e-bis"    placeholder="18:00"       value="${escHtml(bis)}"    oninput="autoFmtTime(this)" maxlength="5">
+    <input type="text" class="e-gewerk" placeholder="z. B. Aufbau Ton, Licht, alle Gewerke …" value="${escHtml(gewerk)}">
+    <div class="rem-cell">
+      <button class="btn-rem" onclick="removeEinsatzRow(${id})" title="Zeile entfernen">×</button>
+    </div>
+  `;
+  row.querySelectorAll('input').forEach(inp => inp.addEventListener('input', scheduleAutoSave));
+  container.appendChild(row);
+}
+
+function removeEinsatzRow(id) {
+  const el = document.getElementById('einsatz-' + id);
+  if (el) { el.remove(); scheduleAutoSave(); }
+}
+
+function autoFmtTime(inp) {
+  let v = inp.value.replace(/[^\d]/g, '');
+  if (v.length > 4) v = v.slice(0, 4);
+  if (v.length > 2) v = v.slice(0, 2) + ':' + v.slice(2);
+  inp.value = v;
+}
+
 /* ═══════════════════════════════════════
    Multi-Hotel State
 ═══════════════════════════════════════ */
@@ -1263,6 +1369,11 @@ function removeGuestRow(id) {
 // Start with default hotel block
 addHotelBlock();
 
+// Start with 3 default Einsatztage rows
+addEinsatzRow();
+addEinsatzRow();
+addEinsatzRow();
+
 /* ═══════════════════════════════════════
    Techniker-Datenbank (aus Crewplanung via localStorage)
 ═══════════════════════════════════════ */
@@ -1555,6 +1666,17 @@ function collectData() {
     });
   });
 
+  // Einsatztage
+  const einsatztage = [];
+  document.querySelectorAll('#einsatzRows .einsatz-row').forEach(function(row) {
+    einsatztage.push({
+      datum:  row.querySelector('.e-datum')?.value  || '',
+      von:    row.querySelector('.e-von')?.value    || '',
+      bis:    row.querySelector('.e-bis')?.value    || '',
+      gewerk: row.querySelector('.e-gewerk')?.value || '',
+    });
+  });
+
   // Hotels with their guest lists
   const hotelsData = hotels.map(function(h) {
     const block = document.getElementById('hotel-block-' + h.id);
@@ -1615,6 +1737,7 @@ function collectData() {
       notizen:       g('f_notizen'),
     },
     positions,
+    einsatztage,
     hotels: hotelsData,
     personnel,
     attachments,
@@ -1676,6 +1799,17 @@ function applyData(data) {
     last.querySelector('.p-tel').value  = p.tel  || '';
   });
 
+  // Einsatztage
+  document.getElementById('einsatzRows').innerHTML = '';
+  einsatzRowCount = 0;
+  if (data.einsatztage && data.einsatztage.length > 0) {
+    data.einsatztage.forEach(function(e) {
+      addEinsatzRow(e.datum, e.von, e.bis, e.gewerk);
+    });
+  } else {
+    addEinsatzRow(); addEinsatzRow(); addEinsatzRow();
+  }
+
   // Hotels (new multi-hotel format + backward compat for old single-hotel)
   document.getElementById('hotelBlocks').innerHTML = '';
   hotels = [];
@@ -1735,7 +1869,7 @@ function applyData(data) {
 
 function newSheet() {
   if (!confirm('Neues leeres Sheet erstellen? Nicht gespeicherte Daten gehen verloren.')) return;
-  applyData({ fields: {}, positions: [], guests: [], attachments: [] });
+  applyData({ fields: {}, positions: [], einsatztage: [], guests: [], attachments: [] });
 }
 
 /* ═══════════════════════════════════════
@@ -1770,7 +1904,18 @@ function exportExcel() {
     ['INHALTE / ABLAUF'],
     [g('f_inhalte')],
     [],
+    ['EINSATZTAGE'],
+    ['Datum', 'Von', 'Bis', 'Gewerk / Beschreibung'],
   ];
+  document.querySelectorAll('#einsatzRows .einsatz-row').forEach(function(row) {
+    detailData.push([
+      row.querySelector('.e-datum')?.value  || '',
+      row.querySelector('.e-von')?.value    || '',
+      row.querySelector('.e-bis')?.value    || '',
+      row.querySelector('.e-gewerk')?.value || '',
+    ]);
+  });
+  detailData.push([]);
 
   // Hotels
   hotels.forEach(function(h, idx) {
