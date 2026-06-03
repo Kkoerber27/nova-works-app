@@ -687,27 +687,65 @@
     .personnel-add-row, .btn-add-hotel, .einsatz-add-row,
     .hotel-assign-cell, #hotelImportStatus, #autoSaveIndicator { display: none !important; }
     .preview-item .del-btn { display: none !important; }
-    input, textarea {
-      border: none !important;
-      background: transparent !important;
-    }
     .upload-zone { display: none !important; }
     .preview-grid { display: none !important; }
 
-    /* Seitenumbrüche: Blöcke möglichst zusammenhalten */
+    /* ── Inputs: volle Breite, Text umbrechend, kein Clipping ── */
+    input {
+      border: none !important;
+      background: transparent !important;
+      overflow: visible !important;
+      white-space: normal !important;
+      text-overflow: clip !important;
+      height: auto !important;
+      min-height: unset !important;
+    }
+
+    /* ── Textareas: Zeilenumbrüche sichtbar, volle Höhe ── */
+    textarea {
+      border: none !important;
+      background: transparent !important;
+      white-space: pre-wrap !important;
+      overflow: visible !important;
+      height: auto !important;
+      min-height: unset !important;
+      resize: none !important;
+    }
+
+    /* ── Positionen: Spalte nicht abschneiden ── */
+    .pos-row {
+      grid-template-columns: 160px 1fr 1fr !important;  /* pos-del versteckt → Spalte weg */
+      page-break-inside: avoid !important;
+    }
+    .pos-row .pos-lbl input {
+      white-space: normal !important;
+      overflow: visible !important;
+      font-size: 9px !important;
+      line-height: 1.3 !important;
+      height: auto !important;
+    }
+    .pos-header {
+      grid-template-columns: 160px 1fr 1fr !important;
+    }
+    .pos-header span:last-child { display: none !important; }   /* "–" Spalte weg */
+
+    /* ── Seitenumbrüche ── */
     .hotel-block        { page-break-inside: avoid; margin-bottom: 6px !important; }
     .einsatz-section    { page-break-inside: avoid; }
     .einsatz-header     { page-break-after: avoid; }
+    .hotel-block-header { page-break-after: avoid; }
     .section-gap        { height: 6px !important; }
     .detail-grid        { page-break-inside: avoid; }
     .detail-row         { page-break-inside: avoid; }
-    .hotel-block-header { page-break-after: avoid; }
+    .pos-header         { page-break-after: avoid; }
+    .personnel-header   { page-break-after: avoid; }
+    .personnel-row      { page-break-inside: avoid !important; }
+    .hotel-guest-row    { page-break-inside: avoid; }
+    .einsatz-row        { page-break-inside: avoid; }
 
-    /* Einsatztage Zeilen kompakter im Druck */
-    .einsatz-row input  { min-height: 22px !important; font-size: 11px !important; }
+    /* ── Kompaktere Zeilen im Druck ── */
+    .einsatz-row input   { min-height: 22px !important; font-size: 11px !important; }
     .einsatz-header span { padding: 3px 10px !important; }
-
-    /* Hotel-Gästeliste kompakter */
     .hotel-guest-row input { min-height: 22px !important; }
     .hotel-guest-header span { padding: 3px 10px !important; }
 
