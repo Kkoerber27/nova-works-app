@@ -735,6 +735,17 @@
     }
     .pos-header span:last-child { display: none !important; }   /* "–" Spalte weg */
 
+    /* ── Personalliste: rem-cell ausblenden, Grid ohne leere Spalte ── */
+    .rem-cell { display: none !important; }
+    .personnel-header,
+    .personnel-row {
+      grid-template-columns: 1.2fr 1fr 1fr 1fr 36px 88px !important; /* letztes 36px (rem) weg */
+    }
+    .einsatz-header span:last-child,
+    .hotel-guest-header span:last-child { display: none !important; } /* "–" Spalten weg */
+    .einsatz-row { grid-template-columns: 120px 80px 80px 1fr !important; }
+    .hotel-guest-row { grid-template-columns: 1fr 130px 130px !important; }
+
     /* ── Seitenumbrüche ── */
     .hotel-block        { page-break-inside: avoid; margin-bottom: 6px !important; }
     .einsatz-section    { page-break-inside: avoid; }
@@ -1968,10 +1979,9 @@ const PRINT_HIDE_SEL = [
   '.btn-rem', '.btn-add', '.btn', '.btn-add-hotel',
   '.hotel-add-row', '.einsatz-add-row', '.pos-add-row',
   '.pos-del', '.personnel-add-row', '.hotel-assign-cell',
-  '.pr-ac-drop', '.pos-del', '.ac-drop', '.pr-ac-wrap .pr-ac-drop',
+  '.pr-ac-drop', '.ac-drop',
   '#hotelImportStatus', '#autoSaveIndicator',
-  '.upload-zone', '.preview-grid',
-  '.personnel-add-row', '.einsatz-add-row',
+  '.upload-zone', '.preview-grid', '.rem-cell',
 ].join(',');
 
 function _preparePrint() {
