@@ -701,16 +701,22 @@
       min-height: unset !important;
     }
 
-    /* ── Textareas: Zeilenumbrüche sichtbar, volle Höhe ── */
+    /* ── Textareas: Zeilenumbrüche sichtbar, kein Überlauf ── */
     textarea {
       border: none !important;
       background: transparent !important;
       white-space: pre-wrap !important;
       overflow: visible !important;
+      overflow-wrap: break-word !important;
+      word-break: break-word !important;
       height: auto !important;
       min-height: unset !important;
       resize: none !important;
+      width: 100% !important;
+      max-width: 100% !important;
     }
+    .inhalte-area,
+    .inhalte-area textarea { overflow: visible !important; }
 
     /* ── Positionen: Spalte nicht abschneiden ── */
     .pos-row {
@@ -739,9 +745,16 @@
     .detail-row         { page-break-inside: avoid; }
     .pos-header         { page-break-after: avoid; }
     .personnel-header   { page-break-after: avoid; }
-    .personnel-row      { page-break-inside: avoid !important; }
-    .hotel-guest-row    { page-break-inside: avoid; }
-    .einsatz-row        { page-break-inside: avoid; }
+    /* Alle Zeilen: beide Syntax-Varianten für maximale Browser-Kompatibilität */
+    .personnel-row,
+    .hotel-guest-row,
+    .einsatz-row,
+    .pos-row,
+    .detail-row {
+      break-inside:            avoid !important;
+      page-break-inside:       avoid !important;
+      -webkit-column-break-inside: avoid !important;
+    }
 
     /* ── Kompaktere Zeilen im Druck ── */
     .einsatz-row input   { min-height: 22px !important; font-size: 11px !important; }
