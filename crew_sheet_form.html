@@ -514,7 +514,7 @@
   }
   .personnel-header {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 1fr 36px 88px 36px;
+    grid-template-columns: 1.2fr 1fr 1fr 1fr 120px 36px;
     background: var(--lgray);
     border-bottom: 1px solid #d0d0d0;
   }
@@ -530,7 +530,7 @@
   .personnel-header span:last-child { border-right: none; text-align: center; }
   .personnel-row {
     display: grid;
-    grid-template-columns: 1.2fr 1fr 1fr 1fr 36px 88px 36px;
+    grid-template-columns: 1.2fr 1fr 1fr 1fr 120px 36px;
     border-bottom: 1px solid var(--lgray);
     position: relative;
   }
@@ -685,7 +685,7 @@
     }
     .btn, .btn-add, .btn-rem, .hotel-add-row, .pos-add-row, .pos-del,
     .personnel-add-row, .btn-add-hotel, .einsatz-add-row,
-    .hotel-assign-cell, #hotelImportStatus, #autoSaveIndicator { display: none !important; }
+    #hotelImportStatus, #autoSaveIndicator { display: none !important; }
     .preview-item .del-btn { display: none !important; }
     .upload-zone { display: none !important; }
     .preview-grid { display: none !important; }
@@ -737,9 +737,10 @@
 
     /* ── Personalliste: rem-cell ausblenden, Grid ohne leere Spalte ── */
     .rem-cell { display: none !important; }
+    .personnel-header span:last-child { display: none !important; }
     .personnel-header,
     .personnel-row {
-      grid-template-columns: 1.2fr 1fr 1fr 1fr 36px 88px !important; /* letztes 36px (rem) weg */
+      grid-template-columns: 1.2fr 1fr 1fr 1fr 120px !important;
     }
     .einsatz-header span:last-child,
     .hotel-guest-header span:last-child { display: none !important; } /* "–" Spalten weg */
@@ -957,8 +958,7 @@
     <span>Gewerk / Position</span>
     <span>Telefon</span>
     <span>E-Mail</span>
-    <span style="text-align:center">Hotel</span>
-    <span style="text-align:center">Phasen</span>
+    <span style="text-align:center">Hotel / Phasen</span>
     <span>–</span>
   </div>
   <div class="personnel-section">
@@ -1002,8 +1002,7 @@
     <span>Gewerk / Position</span>
     <span>Telefon</span>
     <span>E-Mail</span>
-    <span style="text-align:center">Hotel</span>
-    <span style="text-align:center">Phasen</span>
+    <span style="text-align:center">Hotel / Phasen</span>
     <span style="border-right:none"></span>
   </div>
   <div class="personnel-section" id="personnelPrintRows"></div>
@@ -1517,10 +1516,10 @@ function addPersonnelRow(name, gewerk, tel, email, phasen) {
     <input type="text"  class="pr-gewerk" placeholder="Gewerk / Position" value="${escHtml(gewerk)}">
     <input type="text"  class="pr-tel"    placeholder="Telefon"           value="${escHtml(tel)}">
     <input type="text"  class="pr-email"  placeholder="E-Mail"            value="${escHtml(email)}">
-    <div class="hotel-assign-cell" onclick="cyclePersonnelHotel(${id})" title="Hotel zuweisen (klicken zum Wechseln)">
-      <span class="hotel-assign-badge">–</span>
+    <div class="phase-dots-cell" id="pdots_${id}">
+      <span class="hotel-assign-badge" onclick="cyclePersonnelHotel(${id})" title="Hotel zuweisen (klicken zum Wechseln)" style="cursor:pointer;margin-right:4px;flex-shrink:0">–</span>
+      ${dotsHtml}
     </div>
-    <div class="phase-dots-cell" id="pdots_${id}">${dotsHtml}</div>
     <div class="rem-cell">
       <button class="btn-rem" onclick="removePersonnelRow(${id})" title="Zeile entfernen">×</button>
     </div>
@@ -1978,7 +1977,7 @@ let _printPrepared = false;
 const PRINT_HIDE_SEL = [
   '.btn-rem', '.btn-add', '.btn', '.btn-add-hotel',
   '.hotel-add-row', '.einsatz-add-row', '.pos-add-row',
-  '.pos-del', '.personnel-add-row', '.hotel-assign-cell',
+  '.pos-del', '.personnel-add-row',
   '.pr-ac-drop', '.ac-drop',
   '#hotelImportStatus', '#autoSaveIndicator',
   '.upload-zone', '.preview-grid', '.rem-cell',
