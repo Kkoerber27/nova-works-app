@@ -1960,14 +1960,35 @@ function newSheet() {
 ═══════════════════════════════════════ */
 /* ── Print-Vorbereitung: läuft bei "Export als PDF" UND bei Cmd+P ── */
 let _printReplacements = [];
+let _printHidden = [];
 let _printPrepared = false;
+
+// Elemente die im Druck versteckt werden sollen (auch ohne @media print)
+const PRINT_HIDE_SEL = [
+  '.btn-rem', '.btn-add', '.btn', '.btn-add-hotel',
+  '.hotel-add-row', '.einsatz-add-row', '.pos-add-row',
+  '.pos-del', '.personnel-add-row', '.hotel-assign-cell',
+  '.pr-ac-drop', '.pos-del', '.ac-drop', '.pr-ac-wrap .pr-ac-drop',
+  '#hotelImportStatus', '#autoSaveIndicator',
+  '.upload-zone', '.preview-grid',
+  '.personnel-add-row', '.einsatz-add-row',
+].join(',');
 
 function _preparePrint() {
   if (_printPrepared) return;
   _printPrepared = true;
   _printReplacements = [];
+  _printHidden = [];
 
-  // Inputs und Textareas durch Text-Divs ersetzen (kein Clipping mehr)
+  // 1. Alle interaktiven Elemente per JS verstecken
+  document.querySelectorAll(PRINT_HIDE_SEL).forEach(function(el) {
+    if (el.style.display !== 'none') {
+      _printHidden.push({ el: el, prev: el.style.display });
+      el.style.display = 'none';
+    }
+  });
+
+  // 2. Inputs und Textareas durch wrappende Text-Divs ersetzen
   document.querySelectorAll('.page input, .page textarea, #personnelPrintPage input').forEach(function(el) {
     const val = el.value || '';
     const cs  = window.getComputedStyle(el);
@@ -1998,15 +2019,17 @@ function _preparePrint() {
 }
 
 function _restorePrint() {
-  _printReplacements.forEach(function(el) {
-    el.style.display = '';
-  });
+  // Inputs wiederherstellen
+  _printReplacements.forEach(function(el) { el.style.display = ''; });
   document.querySelectorAll('.__pdf_text').forEach(function(d) { d.remove(); });
+  // Buttons wiederherstellen
+  _printHidden.forEach(function(item) { item.el.style.display = item.prev; });
   _printReplacements = [];
+  _printHidden = [];
   _printPrepared = false;
 }
 
-// Cmd+P abfangen – auch dann korrekt drucken
+// Cmd+P abfangen
 window.addEventListener('beforeprint', _preparePrint);
 window.addEventListener('afterprint',  _restorePrint);
 
@@ -2252,6 +2275,9 @@ function startEmailPdfDownload() {
   if (toolbar) toolbar.style.display = 'none';
   document.querySelectorAll('.pr-ac-drop').forEach(d => d.classList.remove('open'));
 
+  // Buttons verstecken + Inputs durch Text-Divs ersetzen VOR dem Screenshot
+  _preparePrint();
+
   const pageEl = document.getElementById('crewsheet');
   html2canvas(pageEl, {
     scale: 2,
@@ -2263,6 +2289,8 @@ function startEmailPdfDownload() {
     windowHeight: pageEl.scrollHeight
   }).then(function(canvas) {
     if (toolbar) toolbar.style.display = '';
+    // Buttons und Inputs wiederherstellen nach dem Screenshot
+    _restorePrint();
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
