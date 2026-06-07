@@ -35,7 +35,10 @@
   td.nm{padding:7px 10px;font-size:12.5px;font-weight:500}
   td.nm small{color:#aaa;font-weight:400;font-size:10px}
   td.chk{text-align:center;height:30px}
-  td.chk .box{display:inline-block;width:15px;height:15px;border:1.5px solid #bbb;border-radius:3px}
+  td.chk input.cb{width:16px;height:16px;cursor:pointer;accent-color:#2a8a8f;margin:0;vertical-align:middle}
+  td.wr input.wr-in{width:100%;height:30px;border:none;background:transparent;font-size:12px;font-family:inherit;color:var(--ink);padding:4px 8px;outline:none}
+  td.wr input.wr-in:focus{background:#eef7f7}
+  @media print{ td.chk input.cb{-webkit-appearance:none;appearance:none;width:15px;height:15px;border:1.5px solid #999;border-radius:3px;position:relative} td.chk input.cb:checked::after{content:"\2713";position:absolute;top:-2px;left:1px;font-size:14px;color:#1a1a1a;font-weight:700} }
   td.wr{height:30px}
   .foot{margin-top:18px;font-size:10px;color:#999;display:flex;justify-content:space-between;border-top:1px solid var(--border);padding-top:8px}
   .empty{padding:60px 20px;text-align:center;color:#999;font-size:14px}
@@ -135,8 +138,8 @@ function render(){
     members.forEach(function(m){
       var fn = (m.funktion && m.funktion!==g) ? ' <small>· '+esc(m.funktion)+'</small>' : '';
       html += '<tr><td class="nm">'+esc(m.name)+fn+'</td>'+
-        CHECK_COLS.map(function(){return '<td class="chk"><span class="box"></span></td>';}).join('')+
-        '<td class="wr"></td><td class="wr"></td></tr>';
+        CHECK_COLS.map(function(){return '<td class="chk"><input type="checkbox" class="cb"></td>';}).join('')+
+        '<td class="wr"><input type="text" class="wr-in"></td><td class="wr"><input type="text" class="wr-in"></td></tr>';
     });
     html += '</tbody></table></div>';
   });
