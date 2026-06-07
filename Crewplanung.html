@@ -568,6 +568,7 @@
       <button class="btn" style="background:#0078d4;color:#fff;display:none" onclick="generateHotelPlanung()" id="btnHotel" title="Hotelplanung erstellen">🏨 Hotelplanung</button>
       <button class="btn" style="background:#7c5cbf;color:#fff;display:none" onclick="generateBauzeitenplan()" id="btnBauzeit" title="Bauzeitenplan erstellen">🗓 Bauzeitenplan</button>
       <button class="btn" style="background:#e07b3a;color:#fff;display:none" onclick="generateSchichtplan()" id="btnSchicht" title="Schichtplan erstellen">🕐 Schichtplan</button>
+      <button class="btn" style="background:#2a8a8f;color:#fff;display:none" onclick="generateFunkgeraete()" id="btnFunk" title="Funkgeräte-Ausgabeliste erstellen">📻 Funkgeräte</button>
       <label class="btn btn-outline" style="cursor:pointer;display:none" id="btnLoad" title="JSON Backup laden">
         Laden <input type="file" accept=".json" style="display:none" onchange="importJSON(event)">
       </label>
@@ -1021,7 +1022,7 @@ function openPlanung(id) {
   renderSidebar();
   const p = getPlanung(id);
   document.getElementById('topbarTitle').textContent = p.name;
-  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit','btnSchicht'].forEach(id => document.getElementById(id).style.display = '');
+  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit','btnSchicht','btnFunk'].forEach(id => document.getElementById(id).style.display = '');
   renderMain(p);
 }
 
@@ -1461,7 +1462,7 @@ function deletePlanung(e, id) {
   if (activePlanungId === id) {
     activePlanungId = null;
     document.getElementById('topbarTitle').textContent = 'Crewplanung';
-    ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit'].forEach(id => document.getElementById(id).style.display = 'none');
+    ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit','btnFunk'].forEach(id => document.getElementById(id).style.display = 'none');
     document.getElementById('mainContent').innerHTML = `
       <div class="empty-state">
         <div class="empty-logo">Nova Works</div>
@@ -2559,6 +2560,64 @@ function generateHotelPlanung() {
   overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.remove(); });
 }
 
+function generateFunkgeraete() {
+  const p = getPlanung(activePlanungId);
+  if (!p) return;
+
+  function isoStart(v){ return v ? v.split('/')[0] : ''; }
+  function fmtPhaseLabel(v){
+    if(!v) return '';
+    const parts=v.split('/');
+    function de(x){ if(!x) return ''; const d=new Date(x+'T00:00:00'); if(isNaN(d)) return x; return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear(); }
+    return parts[1] && parts[1]!==parts[0] ? de(parts[0])+' – '+de(parts[1]) : de(parts[0]);
+  }
+
+  // Bestaetigte Crew je Gewerk sammeln (gleiche Logik wie Crewsheet)
+  const personnel = [];
+  GEWERKE.forEach(function(g){
+    const crew = p.crew[g.id] || [];
+    crew.forEach(function(m){
+      if((m.status||'')==='bestaetigt'){
+        personnel.push({ name:m.name||'', gruppe:g.name, funktion:m.funktion||'' });
+      }
+    });
+  });
+
+  const payload = {
+    _source:'crewplanung',
+    event: p.name || '',
+    location: p.ort || '',
+    zeitraum: fmtPhaseLabel(p.show) || fmtPhaseLabel(p.aufbau) || '',
+    personnel: personnel
+  };
+  try { localStorage.setItem('nw_funk_import', JSON.stringify(payload)); } catch(e){}
+
+  const base = window.location.origin + window.location.pathname.replace(/[^/]*$/, '') + 'funkgeraete.html';
+  const shareUrl = base + '?e=' + encodeURIComponent(p.name || '');
+
+  const existing = document.getElementById('funk-modal-overlay');
+  if (existing) existing.remove();
+  const crewCount = personnel.length;
+  const eventName = p.name || 'Veranstaltung';
+  const overlay = document.createElement('div');
+  overlay.id = 'funk-modal-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:center;justify-content:center;';
+  overlay.innerHTML =
+    '<div style="background:#1a1a1a;border:1px solid #3a3a3a;border-radius:6px;padding:32px 36px;max-width:420px;width:90%;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.6);">' +
+      '<div style="font-size:36px;margin-bottom:12px;">\U0001F4FB</div>' +
+      '<div style="font-size:15px;font-weight:700;color:#e8e8e8;margin-bottom:6px;">Funkgeräte-Liste bereit</div>' +
+      '<div style="font-size:13px;color:#888;margin-bottom:24px;">' +
+        '<strong style="color:#c8a96e;">' + eventName + '</strong><br>' +
+        crewCount + ' bestätigte' + (crewCount === 1 ? 's' : '') + ' Crew-Mitglied' + (crewCount !== 1 ? 'er' : '') +
+        (crewCount === 0 ? '<br><span style="color:#c0713a;font-size:11px;">⚠ Keine bestätigten Crew-Mitglieder (Status muss grün/bestätigt sein)</span>' : '') +
+      '</div>' +
+      '<a href="' + shareUrl + '" target="_blank" rel="noopener" style="display:inline-block;background:#2a8a8f;color:#fff;text-decoration:none;padding:11px 26px;border-radius:4px;font-size:13px;font-weight:700;">Funkgeräte-Liste öffnen</a>' +
+      '<div style="margin-top:14px;"><button onclick="document.getElementById(\'funk-modal-overlay\').remove()" style="background:none;border:none;color:#777;font-size:12px;cursor:pointer;">Schließen</button></div>' +
+    '</div>';
+  document.body.appendChild(overlay);
+  overlay.addEventListener('click', function(e){ if(e.target===overlay) overlay.remove(); });
+}
+
 function generateBauzeitenplan() {
   const p = getPlanung(activePlanungId);
   if (!p) return;
@@ -2786,7 +2845,7 @@ function techDateRange(member, planung) {
 function showOverview() {
   activePlanungId = null;
   document.getElementById('topbarTitle').textContent = 'Personalübersicht';
-  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit'].forEach(function(id){
+  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit','btnFunk'].forEach(function(id){
     document.getElementById(id).style.display = 'none';
   });
   renderSidebar();
@@ -2939,7 +2998,7 @@ let calMonth = new Date().getMonth(); // 0-indexed
 function showCalendar() {
   activePlanungId = null;
   document.getElementById('topbarTitle').textContent = 'Kalenderansicht';
-  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit'].forEach(function(id) {
+  ['btnSave','btnJSON','btnPDF','btnXLS','btnLoad','btnCrewSheet','btnHotel','btnBauzeit','btnFunk'].forEach(function(id) {
     document.getElementById(id).style.display = 'none';
   });
   renderSidebar();
