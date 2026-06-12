@@ -355,11 +355,15 @@ function toggleDay(di) {
 function updateShiftField(di, ri, field, val) {
   if (!days[di] || !days[di].rows[ri]) return;
   days[di].rows[ri][field] = val;
-  if (field === 'gid') {
-    // Sort rows into gewerk groups (stable sort preserves within-group order)
+  if (field === 'gid' || field === 'von') {
+    // Sort rows: 1) by gewerk order, 2) by start time within each gewerk (empty → end)
     const gwOrder = {};
     GEWERKE.forEach((g, i) => { gwOrder[g.id] = i; });
-    days[di].rows.sort((a, b) => (gwOrder[a.gid] ?? 999) - (gwOrder[b.gid] ?? 999));
+    days[di].rows.sort((a, b) => {
+      const gDiff = (gwOrder[a.gid] ?? 999) - (gwOrder[b.gid] ?? 999);
+      if (gDiff !== 0) return gDiff;
+      return (a.von || '99:99').localeCompare(b.von || '99:99');
+    });
     rerenderDayBody(di);
   }
   saveState(false);
