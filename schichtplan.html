@@ -355,7 +355,8 @@ function toggleDay(di) {
 function updateShiftField(di, ri, field, val) {
   if (!days[di] || !days[di].rows[ri]) return;
   days[di].rows[ri][field] = val;
-  if (field === 'gid' || field === 'von') {
+  // Sort when gewerk changes, or when a complete time (HH:MM) is entered
+  if (field === 'gid' || (field === 'von' && /^\d{2}:\d{2}$/.test(val))) {
     // Sort rows: 1) by gewerk order, 2) by start time within each gewerk (empty → end)
     const gwOrder = {};
     GEWERKE.forEach((g, i) => { gwOrder[g.id] = i; });
