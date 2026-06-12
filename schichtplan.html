@@ -356,7 +356,10 @@ function updateShiftField(di, ri, field, val) {
   if (!days[di] || !days[di].rows[ri]) return;
   days[di].rows[ri][field] = val;
   if (field === 'gid') {
-    // Re-render day body to update group headers and dot colors
+    // Sort rows into gewerk groups (stable sort preserves within-group order)
+    const gwOrder = {};
+    GEWERKE.forEach((g, i) => { gwOrder[g.id] = i; });
+    days[di].rows.sort((a, b) => (gwOrder[a.gid] ?? 999) - (gwOrder[b.gid] ?? 999));
     rerenderDayBody(di);
   }
   saveState(false);
