@@ -71,11 +71,17 @@ selbst:
 
 | Datei | Wo | Motiv | Stand |
 |---|---|---|---|
-| `header.jpg` | Hero, Vollbild | Open-Air-Festival bei Nacht, Magenta-Laser | **festgelegt** |
-| `live.jpg` | Karte 1 | „DIE 80er live", Veltins-Arena, Konfetti und Pyro | **festgelegt** |
+| `header.jpg` | Hero, Vollbild | Open-Air-Festival bei Nacht, Magenta-Laser | **eingebaut** |
+| `live.jpg` | Karte 1 | „DIE 80er live", Veltins-Arena | **eingebaut** |
 | `corporate.jpg` | Karte 2 | offen – bislang kein passendes Motiv | offen |
-| `tv.jpg` | Karte 3 | SWR3-Produktion, Regieplatz mit Kameramonitoren | Vorschlag |
+| `tv.jpg` | Karte 3 | SWR3-Produktion, Regieplatz | **eingebaut** |
 | `messe.jpg` | Karte 4 | offen – bislang kein Motiv | offen |
+
+Die eingebauten Fotos wurden aus den Originalen verkleinert – Hero auf 1920 px
+Breite bei Qualität 0,72, die Karten auf 800 px kurze Seite bei 0,72 bis 0,74.
+Zusammen 466 kB. Das reicht auch für Bildschirme mit doppelter Auflösung: Der
+Hero liegt bei 50 % Deckkraft unter einem Verlauf, die Karten sind klein.
+Die Originale (zusammen 16 MB) liegen nicht im Repository.
 
 Der Hero braucht mindestens 1600 px Breite, besser 2400. Die vier Karten sind
 kleiner, dort reichen 900 px. Alle Motive werden dunkel überblendet, helle
