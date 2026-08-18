@@ -93,6 +93,12 @@ magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.j
 - Signalgelb `#f8f808` auf Fast-Schwarz `#0b0b0c`
 - Schrift: Zalando Sans, variabler Schnitt, liegt lokal (38 kB)
 - Logo: `site/assets/img/logo-weiss.svg` (heller Grund: `logo-schwarz.svg`)
+  Aus dem Original `reference/logo/novaworks_logo.eps` gewonnen – echte
+  Montserrat-Konturen, keine Nachzeichnung. Die Wortmarke steht in Montserrat
+  Light, der Claim in Montserrat Regular. Die Trennlinie liegt im Original als
+  Verlaufsbild vor; im SVG ist sie ein Rechteck mit Verlauf, das an den Enden
+  auf Transparenz statt auf Weiß ausläuft – so trägt sie auf hellem wie auf
+  dunklem Grund. Grauwert der dunklen Fassung: `#393736`.
 
 ## Was bewusst weggefallen ist
 
@@ -102,7 +108,7 @@ magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.j
 - **Der Blogbeitrag `hallo-welt`.** War der unveränderte
   WordPress-Standardbeitrag.
 - **jQuery, Flickity, Fancybox, Superfish, Waypoints, WPBakery.** Zusammen
-  795 kB CSS und JS. Der Neubau liegt bei 91 kB für die erste Ansicht,
+  795 kB CSS und JS. Der Neubau überträgt für die erste Ansicht 57 kB,
   Schrift und Logo eingerechnet.
 
 ## Offene Punkte
