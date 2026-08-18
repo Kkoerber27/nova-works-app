@@ -69,22 +69,23 @@ ein Verlauf die Fläche, es entsteht kein kaputtes Bildsymbol. Sobald die
 Dateien unter diesen Namen in `site/assets/img/` liegen, erscheinen sie von
 selbst:
 
-| Datei | Wo | Aus der alten Seite |
-|---|---|---|
-| `header.jpg` | Hero, Vollbild | `header-scaled.jpg` |
-| `live.jpg` | Karte 1 | `live_2.jpg` |
-| `corporate.jpg` | Karte 2 | `corporate_3.jpg` |
-| `tv.jpg` | Karte 3 | `tv_shows_2.jpg` |
-| `messe.jpg` | Karte 4 | `messe_1-scaled.jpg` |
+| Datei | Wo | Motiv | Stand |
+|---|---|---|---|
+| `header.jpg` | Hero, Vollbild | Open-Air-Festival bei Nacht, Magenta-Laser | Vorschlag |
+| `live.jpg` | Karte 1 | „DIE 80er live", Veltins-Arena, Konfetti und Pyro | **festgelegt** |
+| `corporate.jpg` | Karte 2 | offen – bislang kein passendes Motiv | offen |
+| `tv.jpg` | Karte 3 | SWR3-Produktion, Regieplatz mit Kameramonitoren | Vorschlag |
+| `messe.jpg` | Karte 4 | offen – bislang kein Motiv | offen |
 
-Querformat, mindestens 1600 px breit, vor dem Hochladen verkleinern:
+Der Hero braucht mindestens 1600 px Breite, besser 2400. Die vier Karten sind
+kleiner, dort reichen 900 px. Alle Motive werden dunkel überblendet, helle
+Fotos sind also kein Problem.
+
+Querformat, vor dem Hochladen verkleinern:
 
 ```bash
-magick original.jpg -resize "1600x>" -strip -quality 82 site/assets/img/header.jpg
+magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.jpg
 ```
-
-Der Hero legt einen dunklen Verlauf über das Bild, die Karten ebenfalls – die
-Fotos dürfen also ruhig hell sein, die Schrift bleibt lesbar.
 
 ## Marke
 
