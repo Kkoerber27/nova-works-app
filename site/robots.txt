@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+
+Disallow: /kontakt.php
+
+Sitemap: https://nova-works.de/sitemap.xml
