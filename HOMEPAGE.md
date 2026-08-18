@@ -71,7 +71,7 @@ selbst:
 
 | Datei | Wo | Motiv | Stand |
 |---|---|---|---|
-| `header.jpg` | Hero, Vollbild | Open-Air-Festival bei Nacht, Magenta-Laser | Vorschlag |
+| `header.jpg` | Hero, Vollbild | Open-Air-Festival bei Nacht, Magenta-Laser | **festgelegt** |
 | `live.jpg` | Karte 1 | „DIE 80er live", Veltins-Arena, Konfetti und Pyro | **festgelegt** |
 | `corporate.jpg` | Karte 2 | offen – bislang kein passendes Motiv | offen |
 | `tv.jpg` | Karte 3 | SWR3-Produktion, Regieplatz mit Kameramonitoren | Vorschlag |
