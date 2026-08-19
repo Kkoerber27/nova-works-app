@@ -21,6 +21,8 @@
 
   --danger:       #ff6b5e;
 
+  --kopf-grund:   rgba(11, 11, 12, .82);   /* Kopfzeile, sobald sie klebt */
+
   /* --- Typografie --------------------------------------------------- */
   --font: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
           Helvetica, Arial, sans-serif;
@@ -44,6 +46,44 @@
   --ease:      cubic-bezier(.22, .61, .36, 1);
   --ease-out:  cubic-bezier(.16, 1, .3, 1);
   --dur:       .5s;
+}
+
+/* =========================================================================
+   Farbschema beim Scrollen
+
+   Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Signalgelb -
+   so wie es die alte Seite gemacht hat. Beide Schemata belegen dieselben
+   Variablen; alle Bausteine weiter unten greifen unveraendert darauf zu und
+   drehen sich dadurch von selbst mit. Umgeschaltet wird ueber data-schema
+   am body, gesetzt von main.js.
+
+   Achtung: --signal traegt hier ausnahmsweise nicht Gelb, sondern das
+   Gegenteil. Auf gelbem Grund ist der Akzent das Dunkel.
+   ========================================================================= */
+
+body[data-schema="signal"] {
+  --ink:          #ebeb0d;
+  --ink-raised:   #e2e20a;
+  --ink-sunken:   #d9d909;
+  --line:         rgba(18, 18, 19, .22);
+  --line-strong:  rgba(18, 18, 19, .48);
+
+  --text:         #121213;
+  --text-dim:     rgba(18, 18, 19, .74);
+  --text-faint:   rgba(18, 18, 19, .74);
+
+  --signal:       #121213;
+  --signal-dim:   #2b2b2c;
+  --danger:       #8c1b10;
+
+  --kopf-grund:   rgba(235, 235, 13, .88);
+}
+
+/* Das Logo liegt als weisse SVG-Datei in einem <img>. Auf gelbem Grund
+   wird es schwarz gerechnet - das braucht keine zweite Datei. */
+body[data-schema="signal"] .masthead__logo img,
+body[data-schema="signal"] .footer__logo img {
+  filter: brightness(0);
 }
 
 /* =========================================================================
@@ -189,7 +229,8 @@ a { color: inherit; }
   cursor: pointer;
   overflow: hidden;
   isolation: isolate;
-  transition: color .35s var(--ease), border-color .35s var(--ease);
+  transition: color .35s var(--ease), border-color .35s var(--ease),
+              background-color .55s var(--ease);
 }
 
 /* Fuellung waechst von unten - der Text wechselt dabei auf Schwarz */
@@ -250,14 +291,15 @@ a { color: inherit; }
   top: 0; left: 0; right: 0;
   z-index: 100;
   padding-block: 1.35rem;
-  transition: background-color .4s var(--ease), border-color .4s var(--ease),
-              padding .4s var(--ease), backdrop-filter .4s var(--ease);
+  transition: background-color .55s var(--ease), border-color .55s var(--ease),
+              color .55s var(--ease), padding .4s var(--ease),
+              backdrop-filter .4s var(--ease);
   border-bottom: 1px solid transparent;
 }
 
 .masthead.is-stuck {
   padding-block: .9rem;
-  background: rgba(11, 11, 12, .82);
+  background: var(--kopf-grund);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom-color: var(--line);
@@ -273,7 +315,7 @@ a { color: inherit; }
 .masthead__logo img {
   width: clamp(120px, 13vw, 170px);
   height: auto;
-  transition: opacity .3s var(--ease);
+  transition: opacity .3s var(--ease), filter .55s var(--ease);
 }
 .masthead__logo:hover img { opacity: .72; }
 
@@ -658,7 +700,8 @@ a { color: inherit; }
   color: var(--text);
   font: inherit;
   font-size: var(--fs-body);
-  transition: border-color .3s var(--ease), background-color .3s var(--ease);
+  transition: border-color .3s var(--ease), background-color .55s var(--ease),
+              color .55s var(--ease);
 }
 .section--raised .field__input { background: var(--ink); }
 
@@ -746,12 +789,14 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   border: 1px solid var(--danger);
   border-radius: var(--radius);
   background: rgba(255, 107, 94, .08);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
   font-size: var(--fs-small);
   line-height: 1.55;
 }
 .form__status--ok {
   border-color: var(--signal);
   background: rgba(248, 248, 8, .08);
+  background: color-mix(in srgb, var(--signal) 10%, transparent);
 }
 .form__status a { color: var(--signal); }
 
@@ -810,7 +855,7 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   gap: 1.5rem 2rem;
 }
 
-.footer__logo img { width: 140px; opacity: .55; transition: opacity .3s var(--ease); }
+.footer__logo img { width: 140px; opacity: .55; transition: opacity .3s var(--ease), filter .55s var(--ease); }
 .footer__logo:hover img { opacity: 1; }
 
 .footer__meta {
@@ -859,6 +904,28 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .legal__inner a { color: var(--text); text-decoration-color: var(--text-faint); }
 .legal__inner a:hover { color: var(--signal); }
 .legal__inner strong { color: var(--text); font-weight: 500; }
+
+/* =========================================================================
+   Weiches Umblenden zwischen den Farbschemata
+
+   Nur Flaechen, Schrift und Rahmen werden ueberblendet. Bausteine mit
+   eigenen Bewegungen - Knoepfe, Karten, Navigation - stehen bewusst nicht
+   in dieser Liste, sonst wuerden ihre Uebergaenge ueberschrieben.
+   ========================================================================= */
+
+body,
+.section, .section--raised, .footer,
+.contact__details, .detail, .trades__item, .form__status,
+.eyebrow, .section__title, .card__index,
+.field__label, .field__error, .consent, .form__note,
+.detail__label, .detail__value,
+.footer__meta, .hero__lead, .about__body, .about__body p,
+.legal__inner, .legal__inner p, .legal__inner li,
+.legal__inner h3, .legal__inner strong {
+  transition: background-color .55s var(--ease),
+              color .55s var(--ease),
+              border-color .55s var(--ease);
+}
 
 /* =========================================================================
    Umbrueche

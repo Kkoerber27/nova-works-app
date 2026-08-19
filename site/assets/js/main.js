@@ -68,6 +68,42 @@
     }, { threshold: 0 }).observe(sentinel);
   }
 
+  /* ---------- Farbschema beim Scrollen ----------------------------------
+     Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Gelb.
+     Welcher Abschnitt gerade gilt, entscheidet ein schmales Band auf
+     halber Fensterhoehe - wieder ohne Scroll-Listener. Die Farben selbst
+     stehen im Stylesheet unter body[data-schema].
+
+     Die Fusszeile traegt bewusst keine eigene Angabe: Am Seitenende
+     erreicht das Band sie nie, die Seite endet deshalb im Gelb des
+     Kontaktbereichs.                                                     */
+
+  var schemaAbschnitte = document.querySelectorAll('[data-schema]');
+
+  if (schemaAbschnitte.length && 'IntersectionObserver' in window) {
+    var themeMeta  = document.querySelector('meta[name="theme-color"]');
+    var seitenfarbe = { dunkel: '#0b0b0c', signal: '#ebeb0d' };
+
+    var setzeSchema = function (name) {
+      if (!name || document.body.getAttribute('data-schema') === name) return;
+      document.body.setAttribute('data-schema', name);
+      // Auch die Browserleiste auf dem Handy faerbt sich mit.
+      if (themeMeta) themeMeta.setAttribute('content', seitenfarbe[name] || seitenfarbe.dunkel);
+    };
+
+    setzeSchema(schemaAbschnitte[0].getAttribute('data-schema'));
+
+    var schemaObserver = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) setzeSchema(entry.target.getAttribute('data-schema'));
+      });
+    }, { rootMargin: '-50% 0px -50% 0px', threshold: 0 });
+
+    Array.prototype.forEach.call(schemaAbschnitte, function (el) {
+      schemaObserver.observe(el);
+    });
+  }
+
   /* ---------- Mobile-Navigation ------------------------------------------ */
 
   var toggle = document.querySelector('.nav-toggle');

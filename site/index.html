@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=1">
+<link rel="stylesheet" href="assets/css/style.css?v=2">
 
 <script>document.documentElement.classList.add('js');</script>
 
@@ -48,7 +48,7 @@
 </script>
 </head>
 
-<body>
+<body data-schema="dunkel">
 <a class="skip-link" href="#main">Zum Inhalt springen</a>
 <div class="grain" aria-hidden="true"></div>
 
@@ -87,7 +87,7 @@
   <!-- ================= Hero ================= -->
   <!-- Das Foto steckt als Hintergrundbild im style-Attribut. Fehlt die
        Datei, bleibt der Verlauf aus dem Stylesheet stehen. -->
-  <section class="hero">
+  <section class="hero" data-schema="dunkel">
     <div class="hero__media" style="background-image:url('assets/img/header.jpg')" aria-hidden="true"></div>
 
     <div class="shell hero__inner">
@@ -113,7 +113,7 @@
   </section>
 
   <!-- ================= Über uns ================= -->
-  <section class="section" id="ueber-uns">
+  <section class="section" id="ueber-uns" data-schema="dunkel">
     <div class="shell">
       <div class="about__grid">
         <div data-reveal>
@@ -154,7 +154,7 @@
   </section>
 
   <!-- ================= Services ================= -->
-  <section class="section section--raised" id="services">
+  <section class="section section--raised" id="services" data-schema="dunkel">
     <div class="shell">
       <div class="section__head" data-reveal>
         <p class="eyebrow eyebrow--signal">Services</p>
@@ -212,7 +212,7 @@
   </section>
 
   <!-- ================= Kontakt ================= -->
-  <section class="section" id="kontakt">
+  <section class="section" id="kontakt" data-schema="signal">
     <div class="shell">
       <div class="section__head" data-reveal>
         <p class="eyebrow eyebrow--signal">Kontakt</p>
@@ -337,6 +337,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=1" defer></script>
+<script src="assets/js/main.js?v=2" defer></script>
 </body>
 </html>

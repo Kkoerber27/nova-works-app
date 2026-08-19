@@ -49,7 +49,7 @@ Alles ist Handarbeit an drei Dateien – kein Build, kein npm:
 |---|---|
 | Texte, Struktur | `site/index.html` |
 | Farben, Abstände, Schriftgrößen | `site/assets/css/style.css`, Block `:root` ganz oben |
-| Verhalten (Menü, Reveals, Formular) | `site/assets/js/main.js` |
+| Verhalten (Menü, Reveals, Farbwechsel, Formular) | `site/assets/js/main.js` |
 | Bilder | `site/assets/img/` |
 
 **Wichtig beim Ändern von CSS oder JS:** `.htaccess` setzt für diese Dateien
@@ -96,6 +96,34 @@ Querformat, vor dem Hochladen verkleinern:
 ```bash
 magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.jpg
 ```
+
+## Farbwechsel beim Scrollen
+
+Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Signalgelb – Schrift,
+Rahmen, Formularfelder und das Logo drehen sich mit. Danach endet die Seite in
+Gelb. Das ist der Effekt der alten Seite, dort über Salients
+`nectar-color-change-bg.js` und Midnight.js gelöst; hier ohne beides.
+
+So funktioniert es:
+
+- Jeder Abschnitt in `index.html` trägt `data-schema="dunkel"` oder `"signal"`.
+- `main.js` beobachtet diese Abschnitte über ein schmales Band auf halber
+  Fensterhöhe und setzt den Wert auf `<body>`. Kein Scroll-Listener.
+- `style.css` definiert unter `body[data-schema="signal"]` dieselben Variablen
+  noch einmal mit den hellen Werten. Alle Bausteine greifen unverändert darauf
+  zu und invertieren dadurch von selbst.
+
+Ein neuer Abschnitt braucht also nur das Attribut – am Stylesheet ist nichts zu
+tun. Und wer die Farben ändern will, ändert die beiden Variablenblöcke, sonst
+nichts.
+
+Zwei Eigenheiten sind Absicht: In `body[data-schema="signal"]` trägt `--signal`
+nicht Gelb, sondern das Dunkel – auf gelbem Grund ist der Akzent das Gegenteil.
+Und das weiße Logo wird per `filter: brightness(0)` schwarz gerechnet, statt
+eine zweite Datei zu laden.
+
+Die Fußzeile hat bewusst kein eigenes Schema: Am Seitenende erreicht das
+Auslöseband sie nie, die Seite endet deshalb im Gelb des Kontaktbereichs.
 
 ## Marke
 
