@@ -34,6 +34,14 @@
   var kannScrollAnimation = window.CSS && CSS.supports &&
                             CSS.supports('animation-timeline', 'scroll()');
 
+  /* Der Lichtstrahl ueber dem Claim laeuft im Dauerlauf. Ausserhalb des
+     Bildes soll er ruhen - das Stylesheet haelt ihn ueber .hero--weg an. */
+  if (hero && 'IntersectionObserver' in window) {
+    new IntersectionObserver(function (eintraege) {
+      hero.classList.toggle('hero--weg', !eintraege[0].isIntersecting);
+    }, { threshold: 0 }).observe(hero);
+  }
+
   var heroBild = document.querySelector('.hero__media');
 
   if (heroBild && hero && !reduceMotion && !kannScrollAnimation &&

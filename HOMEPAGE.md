@@ -103,10 +103,11 @@ Zwei zurückhaltende Effekte, beide an der Marke entlang gedacht: Ihr macht
 Licht, also bewegt sich Licht.
 
 **Ein Lichtstrahl über dem Claim.** Ein schmales Band wandert schräg über
-„Momente, die bleiben, weil alles passt." – einmal kurz nach dem Seitenaufbau,
-danach bei jedem Überfahren mit der Maus. Weiß kann nicht heller werden,
-deshalb ist der Strahl ein Farbton: Signalgelb läuft über die weiße Zeile,
-Weiß über die gelbe.
+„Momente, die bleiben, weil alles passt." – alle 9,5 Sekunden ein Durchgang,
+dazu einer auf Zuruf beim Überfahren mit der Maus. Ein Durchgang dauert rund
+1,4 Sekunden, in der Spitze färbt er etwa jeden zehnten Pixel der Zeile.
+Weiß kann nicht heller werden, deshalb ist der Strahl ein Farbton: Signalgelb
+läuft über die weiße Zeile, Weiß über die gelbe. Außerhalb des Bildes ruht er.
 
 Umgesetzt über einen Verlauf, der auf die Buchstaben zugeschnitten wird
 (`background-clip: text`). Drei Dinge daran sind nicht offensichtlich:
@@ -120,6 +121,11 @@ Umgesetzt über einen Verlauf, der auf die Buchstaben zugeschnitten wird
   startet der Browser die Animation nicht neu, sondern rechnet nur die Zeiten
   um – die abgelaufene Einstiegs-Animation bliebe abgelaufen und beim
   Überfahren passierte nichts.
+- Die Zeitkurve ist **linear**, und der Weg reicht genau von knapp links neben
+  der Zeile bis knapp rechts daneben. Mit einer Ease-out-Kurve schoss der
+  Strahl in 270 Millisekunden durch die Zeile und kroch danach 1,4 Sekunden
+  im Unsichtbaren nach – sichtbar war er 17 Bilder lang, also gar nicht.
+  Ein Scheinwerfer wandert gleichmäßig.
 
 Der ganze Block steckt in einem `@supports`-Rahmen. Kann ein Browser
 `background-clip: text` nicht, bleibt der Claim schlicht weiß und gelb.
