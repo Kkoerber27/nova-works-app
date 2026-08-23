@@ -106,8 +106,22 @@ Licht, also bewegt sich Licht.
 „Momente, die bleiben, weil alles passt." – alle 9,5 Sekunden ein Durchgang,
 dazu einer auf Zuruf beim Überfahren mit der Maus. Ein Durchgang dauert rund
 1,4 Sekunden, in der Spitze färbt er etwa jeden zehnten Pixel der Zeile.
-Weiß kann nicht heller werden, deshalb ist der Strahl ein Farbton: Signalgelb
-läuft über die weiße Zeile, Weiß über die gelbe. Außerhalb des Bildes ruht er.
+Außerhalb des Bildes ruht er.
+
+Der Strahl besteht aus drei Lagen, die zusammen erst als Licht lesbar werden –
+einzeln tut es keine:
+
+1. **Farbwechsel auf den Buchstaben.** Weiß kann nicht heller werden, deshalb
+   ist der Strahl dort ein Farbton: Signalgelb läuft über die weiße Zeile,
+   Weiß über die gelbe.
+2. **Die Lichtbahn selbst**, eine schmale helle Spur im Aufhell-Modus
+   (`mix-blend-mode: screen`) über der Überschrift. Sie hellt auf, was sie
+   streift, und macht sichtbar, woher der Farbwechsel kommt.
+3. **Ein Lichthof um die Buchstaben** (`text-shadow`), der anschwillt, während
+   die Bahn die Zeile quert. Das ist der eigentliche Glanz: Auf weißen
+   Buchstaben liest sich nicht die Aufhellung als Licht, sondern der Schein
+   ringsherum. Die Radien stehen in `em`, damit der Hof auf kleinen Schirmen
+   mitschrumpft.
 
 Umgesetzt über einen Verlauf, der auf die Buchstaben zugeschnitten wird
 (`background-clip: text`). Drei Dinge daran sind nicht offensichtlich:
@@ -121,6 +135,12 @@ Umgesetzt über einen Verlauf, der auf die Buchstaben zugeschnitten wird
   startet der Browser die Animation nicht neu, sondern rechnet nur die Zeiten
   um – die abgelaufene Einstiegs-Animation bliebe abgelaufen und beim
   Überfahren passierte nichts.
+- Die Lichtbahn braucht eine **Maske**, die sie oben und unten auslaufen
+  lässt. Ohne sie schneidet ihr Kasten die Bahn waagerecht ab, und über der
+  Zeile liegt eine helle Platte statt eines Strahls.
+- Die Bahn ist **waagerecht exakt so breit wie die Zeilen**. Ist sie breiter,
+  landen dieselben Prozentwerte an anderer Stelle, und Glanz und Farbwechsel
+  laufen auseinander.
 - Die Zeitkurve ist **linear**, und der Weg reicht genau von knapp links neben
   der Zeile bis knapp rechts daneben. Mit einer Ease-out-Kurve schoss der
   Strahl in 270 Millisekunden durch die Zeile und kroch danach 1,4 Sekunden
