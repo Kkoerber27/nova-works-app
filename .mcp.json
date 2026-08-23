@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "nova-works": {
+      "command": "node",
+      "args": ["./mcp/nova-works-mcp-server/dist/index.js"],
+      "env": {
+        "NOVA_ALLOW_WRITE": "0"
+      }
+    }
+  }
+}
