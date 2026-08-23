@@ -16,6 +16,15 @@ import type { AppDataRow } from "../types.js";
 
 const REST = `${SUPABASE_URL}/rest/v1/app_data`;
 
+/** Hostname only, for error messages that talk about network policy. */
+const HOST = (() => {
+  try {
+    return new URL(SUPABASE_URL).host;
+  } catch {
+    return SUPABASE_URL;
+  }
+})();
+
 /** An error carrying enough context for the agent to act on it. */
 export class SupabaseError extends Error {
   constructor(message: string, readonly status?: number) {
@@ -58,17 +67,48 @@ async function request(url: string, init: RequestInit = {}): Promise<Response> {
   }
 }
 
+/** PostgREST answers with a JSON body carrying a `message`. Anything else came from elsewhere. */
+function parseApiError(body: string): { message: string; hint?: string } | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      typeof (parsed as { message?: unknown }).message === "string"
+    ) {
+      return parsed as { message: string; hint?: string };
+    }
+  } catch {
+    // Not JSON, so not a PostgREST error.
+  }
+  return null;
+}
+
 function describeStatus(status: number, body: string): string {
+  const api = parseApiError(body);
+  const detail = api ? `${api.message}${api.hint ? ` (${api.hint})` : ""}` : body.trim();
+
+  // A rejection without a PostgREST body never reached Supabase: something in
+  // between — a corporate proxy, a container egress allowlist — refused it.
+  if (!api && (status === 401 || status === 403 || status === 407)) {
+    return (
+      `Blocked on the way to Supabase (HTTP ${status}). The request to ${HOST} was refused by a proxy ` +
+      `or network egress policy before it reached the database, so this is not a key or permission problem. ` +
+      `Allow the host "${HOST}" in the network settings of wherever this server runs. ` +
+      `Response: ${detail || "(empty)"}`
+    );
+  }
+
   switch (status) {
     case 401:
     case 403:
-      return `Supabase rejected the key (HTTP ${status}). The anon key only has access to keys starting with "nw_" (see supabase_rls_setup.sql). Set NOVA_SUPABASE_KEY if the project key has been rotated. Details: ${body}`;
+      return `Supabase rejected the key (HTTP ${status}). The anon key only has access to keys starting with "nw_" (see supabase_rls_setup.sql). Set NOVA_SUPABASE_KEY if the project key has been rotated. Details: ${detail}`;
     case 404:
-      return `Table app_data not found (HTTP 404). Check NOVA_SUPABASE_URL points at the right project and that supabase_setup.sql has been run. Details: ${body}`;
+      return `Table app_data not found (HTTP 404). Check NOVA_SUPABASE_URL points at the right project and that supabase_setup.sql has been run. Details: ${detail}`;
     case 429:
       return "Supabase rate limit reached (HTTP 429). Wait a moment and retry.";
     default:
-      return `Supabase request failed with HTTP ${status}. Details: ${body}`;
+      return `Supabase request failed with HTTP ${status}. Details: ${detail || "(no body)"}`;
   }
 }
 

@@ -50,6 +50,13 @@ Der verwendete Key ist der öffentliche Anon-Key, der ohnehin im Frontend steht.
 Er kommt nur an Keys mit Präfix `nw_` (siehe `supabase_rls_setup.sql`).
 **Niemals den Service-Role-Key hier eintragen** — der umgeht RLS vollständig.
 
+## Netzwerk
+
+Der Server spricht `ekfuzciwjsldpkojyzgg.supabase.co` über HTTPS an. Läuft er in einer
+Umgebung mit Egress-Allowlist — etwa einem Cloud-Container —, muss dieser Host dort
+freigegeben sein. Die Fehlermeldung unterscheidet die beiden Fälle: „Blocked on the way to
+Supabase" heißt Netzwerk, „Supabase rejected the key" heißt Key oder RLS.
+
 ## Tools
 
 ### Lesen
