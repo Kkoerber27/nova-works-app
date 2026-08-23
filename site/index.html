@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=2">
+<link rel="stylesheet" href="assets/css/style.css?v=3">
 
 <script>document.documentElement.classList.add('js');</script>
 
@@ -163,9 +163,13 @@
         <h2 class="section__title">Unsere Spielplätze. <em>Ihre Bühne.</em></h2>
       </div>
 
-      <div class="services__grid">
+      <!-- Laufband: die vier Felder wandern langsam durchs Bild und lassen
+           sich schieben. data-richtung="links" dreht die Laufrichtung um. -->
+      <div class="slider" data-slider data-richtung="rechts" data-reveal
+           role="region" aria-label="Unsere Leistungsfelder" tabindex="0">
+        <div class="slider__spur">
 
-        <article class="card" data-reveal>
+        <article class="card">
           <div class="card__media" style="background-image:url('assets/img/live.jpg')" aria-hidden="true"></div>
           <span class="card__index" aria-hidden="true">01</span>
           <p class="card__kicker">Live</p>
@@ -176,7 +180,7 @@
           </p>
         </article>
 
-        <article class="card" data-reveal data-reveal-delay="1">
+        <article class="card">
           <div class="card__media" style="background-image:url('assets/img/corporate.jpg')" aria-hidden="true"></div>
           <span class="card__index" aria-hidden="true">02</span>
           <p class="card__kicker">Corporate Events</p>
@@ -187,7 +191,7 @@
           </p>
         </article>
 
-        <article class="card" data-reveal data-reveal-delay="2">
+        <article class="card">
           <div class="card__media" style="background-image:url('assets/img/tv.jpg')" aria-hidden="true"></div>
           <span class="card__index" aria-hidden="true">03</span>
           <p class="card__kicker">TV</p>
@@ -198,7 +202,7 @@
           </p>
         </article>
 
-        <article class="card" data-reveal data-reveal-delay="3">
+        <article class="card">
           <div class="card__media" style="background-image:url('assets/img/messe.jpg')" aria-hidden="true"></div>
           <span class="card__index" aria-hidden="true">04</span>
           <p class="card__kicker">Messe</p>
@@ -209,6 +213,7 @@
           </p>
         </article>
 
+        </div>
       </div>
     </div>
   </section>
@@ -416,6 +421,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=2" defer></script>
+<script src="assets/js/main.js?v=3" defer></script>
 </body>
 </html>

@@ -68,6 +68,155 @@
     }, { threshold: 0 }).observe(sentinel);
   }
 
+  /* ---------- Laufband der Leistungsfelder -------------------------------
+     Ersetzt Flickity von der alten Seite. Die Karten wandern langsam durchs
+     Bild und lassen sich mit Maus, Finger oder Trackpad schieben. Grundlage
+     ist ein ganz normaler seitwaerts scrollbarer Kasten - dadurch
+     funktionieren Wischen, Trackpad und Pfeiltasten von selbst, und ohne
+     JavaScript bleibt die Reihe trotzdem bedienbar.
+
+     Eine Eigenheit des Browsers macht Arbeit: scrollLeft wird auf ganze
+     Pixel gerundet. Ein Schritt von 0,45 px pro Bild verschwindet dadurch
+     spurlos, das Band stuende still. Die massgebliche Position liegt
+     deshalb als Fliesskommazahl hier im Skript, und scrollLeft wird jedes
+     Mal absolut gesetzt.                                                  */
+
+  Array.prototype.forEach.call(document.querySelectorAll('[data-slider]'), function (kasten) {
+    var spur = kasten.querySelector('.slider__spur');
+    if (!spur) return;
+
+    var TEMPO = 28;                                    // Pixel je Sekunde
+    var richtung = kasten.getAttribute('data-richtung') === 'links' ? 1 : -1;
+    var original = Array.prototype.slice.call(spur.children);
+    if (!original.length) return;
+
+    var satzBreite = 0, pos = 0, pausen = 0, letzte = 0;
+
+    /* Fuer die Endlosschleife braucht es drei Saetze: einen sichtbaren und
+       je einen als Reserve links und rechts. Die Kopien sind fuer
+       Screenreader unsichtbar. */
+    for (var runde = 0; runde < 2; runde++) {
+      original.forEach(function (el) {
+        var kopie = el.cloneNode(true);
+        kopie.setAttribute('aria-hidden', 'true');
+        Array.prototype.forEach.call(kopie.querySelectorAll('a, button, input'), function (f) {
+          f.setAttribute('tabindex', '-1');
+        });
+        spur.appendChild(kopie);
+      });
+    }
+
+    var messen = function () {
+      var stil = window.getComputedStyle(spur);
+      var abstand = parseFloat(stil.columnGap || stil.gap) || 0;
+      satzBreite = original.reduce(function (summe, el) {
+        return summe + el.getBoundingClientRect().width + abstand;
+      }, 0);
+    };
+
+    /* Setzt die Position und faltet sie in den mittleren Satz zurueck.
+       Gibt zurueck, um wie viel gefaltet wurde. */
+    var setzen = function (wert) {
+      var vorher = wert;
+      if (satzBreite > 0) {
+        while (wert < satzBreite) wert += satzBreite;
+        while (wert >= satzBreite * 2) wert -= satzBreite;
+      }
+      pos = wert;
+      kasten.scrollLeft = pos;
+      return pos - vorher;
+    };
+
+    messen();
+    setzen(satzBreite);
+
+    var neuMessen = function () {
+      var anteil = satzBreite ? (pos - satzBreite) / satzBreite : 0;
+      messen();
+      setzen(satzBreite + anteil * satzBreite);
+    };
+    if ('ResizeObserver' in window) new ResizeObserver(neuMessen).observe(kasten);
+    else window.addEventListener('resize', neuMessen);
+
+    var anhalten = function () { pausen++; };
+    var weiter   = function () { pausen = Math.max(0, pausen - 1); letzte = 0; };
+
+    /* Hat etwas anderes gescrollt - Trackpad, Wischen, Pfeiltasten -,
+       uebernehmen wir dessen Position. Die eigene Rundung von unter einem
+       Pixel zaehlt dabei nicht als fremde Bewegung. */
+    kasten.addEventListener('scroll', function () {
+      if (Math.abs(kasten.scrollLeft - pos) > 2) setzen(kasten.scrollLeft);
+    }, { passive: true });
+
+    /* --- Automatischer Lauf --- */
+    if (!reduceMotion) {
+      var schritt = function (zeit) {
+        var dt = letzte ? Math.min(zeit - letzte, 50) : 0;
+        letzte = zeit;
+        if (pausen === 0 && satzBreite > 0) setzen(pos + richtung * TEMPO * dt / 1000);
+        window.requestAnimationFrame(schritt);
+      };
+      window.requestAnimationFrame(schritt);
+
+      kasten.addEventListener('mouseenter', anhalten);
+      kasten.addEventListener('mouseleave', weiter);
+      kasten.addEventListener('focusin', anhalten);
+      kasten.addEventListener('focusout', weiter);
+
+      // Steht das Laufband nicht im Bild, muss es auch nicht rechnen.
+      if ('IntersectionObserver' in window) {
+        var sichtbar = true;
+        new IntersectionObserver(function (eintraege) {
+          var jetzt = eintraege[0].isIntersecting;
+          if (jetzt === sichtbar) return;
+          sichtbar = jetzt;
+          if (jetzt) weiter(); else anhalten();
+        }, { threshold: 0 }).observe(kasten);
+      }
+
+      // Beim Scrollen per Trackpad kurz aussetzen, sonst zieht es dagegen.
+      var radUhr = null;
+      kasten.addEventListener('wheel', function () {
+        if (!radUhr) anhalten();
+        window.clearTimeout(radUhr);
+        radUhr = window.setTimeout(function () { radUhr = null; weiter(); }, 700);
+      }, { passive: true });
+    }
+
+    /* --- Schieben mit der Maus --- */
+    var startX = 0, startScroll = 0, greift = false;
+
+    kasten.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'touch') return;            // Wischen kann der Browser selbst
+      greift = true;
+      startX = e.clientX;
+      startScroll = pos;
+      kasten.setAttribute('data-greift', '');
+      anhalten();
+      kasten.setPointerCapture(e.pointerId);
+    });
+
+    kasten.addEventListener('pointermove', function (e) {
+      if (!greift) return;
+      e.preventDefault();
+      var ziel = startScroll - (e.clientX - startX);
+      // Wurde beim Falten ein Satz uebersprungen, wandert der Bezugspunkt mit.
+      startScroll += setzen(ziel);
+    });
+
+    var loslassen = function (e) {
+      if (!greift) return;
+      greift = false;
+      kasten.removeAttribute('data-greift');
+      weiter();
+      if (e && e.pointerId != null && kasten.hasPointerCapture(e.pointerId)) {
+        kasten.releasePointerCapture(e.pointerId);
+      }
+    };
+    kasten.addEventListener('pointerup', loslassen);
+    kasten.addEventListener('pointercancel', loslassen);
+  });
+
   /* ---------- Farbschema beim Scrollen ----------------------------------
      Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Gelb.
      Welcher Abschnitt gerade gilt, entscheidet ein schmales Band auf

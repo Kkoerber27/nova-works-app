@@ -557,10 +557,32 @@ a { color: inherit; }
 
 /* --- Leistungen ------------------------------------------------------ */
 
-.services__grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 270px), 1fr));
-  gap: clamp(1rem, 1.6vw, 1.5rem);
+/* Laufband statt Raster: drei Karten nebeneinander, danebenliegende
+   schieben sich langsam durchs Bild. Ohne JavaScript bleibt es eine ganz
+   normale, seitwaerts scrollbare Reihe - Wischen funktioniert dann trotzdem. */
+
+.slider {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  cursor: grab;
+}
+.slider::-webkit-scrollbar { display: none; }
+.slider[data-greift] { cursor: grabbing; }
+.slider:focus-visible { outline: 2px solid var(--signal); outline-offset: 6px; border-radius: var(--radius-lg); }
+
+.slider__spur {
+  display: flex;
+  gap: .625rem;                 /* wie frueher: 10px */
+  width: max-content;
+  align-items: stretch;
+}
+
+/* Drei Karten sichtbar, darunter zwei, auf dem Handy eine. */
+.slider__spur > .card {
+  flex: 0 0 calc((min(100vw, var(--shell)) - 2 * var(--gutter) - 1.25rem) / 3);
+  min-width: 240px;
 }
 
 .card {
@@ -995,6 +1017,10 @@ body,
 @media (max-width: 960px) {
   .nav, .masthead__cta { display: none; }
 
+  .slider__spur > .card {
+    flex-basis: calc((100vw - 2 * var(--gutter) - .625rem) / 2);
+  }
+
   .ref { grid-template-columns: 1fr; gap: 1.5rem; }
   .ref:nth-child(even) .ref__media { order: 0; }
   .nav-toggle { display: block; }
@@ -1006,6 +1032,8 @@ body,
 }
 
 @media (max-width: 620px) {
+  .slider__spur > .card { flex-basis: calc(100vw - 2 * var(--gutter) - 2.5rem); }
+
   .form__row { grid-template-columns: 1fr; gap: 0; }
   .hero__meta { flex-direction: column; gap: .35rem; }
   .detail { padding-left: 1.15rem; }

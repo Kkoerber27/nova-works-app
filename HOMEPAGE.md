@@ -97,6 +97,36 @@ Querformat, vor dem Hochladen verkleinern:
 magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.jpg
 ```
 
+## Laufband der Leistungsfelder
+
+Die vier Felder unter „Services" stehen nicht mehr im Raster, sondern in einem
+Laufband: Sie wandern langsam durchs Bild und lassen sich mit Maus, Finger,
+Trackpad oder Pfeiltasten schieben. Das ersetzt Flickity von der alten Seite –
+dieselben Einstellungen, nur ohne Bibliothek: drei Karten nebeneinander,
+darunter zwei, auf dem Handy eine; Endlosschleife; Pause beim Überfahren.
+
+Stellschrauben in `main.js`, ganz oben im Block:
+
+| Was | Wert |
+|---|---|
+| Tempo | `var TEMPO = 28;` Pixel je Sekunde |
+| Laufrichtung | `data-richtung="rechts"` am `.slider` in `index.html`, `"links"` dreht um |
+
+Drei Dinge, die dabei zu wissen sind:
+
+**Endlosschleife.** `main.js` hängt zwei Kopien der Karten an die Reihe und
+faltet die Position immer in den mittleren Satz zurück. Die Kopien sind für
+Screenreader ausgeblendet, dort erscheinen die vier Felder also genau einmal.
+
+**Warum die Position im Skript liegt.** Browser runden `scrollLeft` auf ganze
+Pixel. Ein Schritt von 0,45 px pro Bild verschwindet dadurch spurlos und das
+Band stünde still. Die maßgebliche Position wird deshalb als Fließkommazahl im
+Skript geführt und `scrollLeft` jedes Mal absolut gesetzt.
+
+**Ohne JavaScript** bleibt eine ganz normale, seitwärts scrollbare Reihe –
+Wischen und Trackpad funktionieren dann trotzdem. Bei eingeschaltetem
+Ruhe-Modus des Betriebssystems läuft nichts von selbst, schieben geht weiter.
+
 ## Referenzen
 
 Der Abschnitt `#referenzen` liegt zwischen Services und Kontakt. Jedes Projekt
