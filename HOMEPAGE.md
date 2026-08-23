@@ -97,6 +97,43 @@ Querformat, vor dem Hochladen verkleinern:
 magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.jpg
 ```
 
+## Referenzen
+
+Der Abschnitt `#referenzen` liegt zwischen Services und Kontakt. Jedes Projekt
+ist ein `<article class="ref">` mit Bildspalte und Textspalte; jede zweite Zeile
+läuft seitenverkehrt. Unter 960 px stapelt sich alles, Bild immer über dem Text.
+
+**Ein neues Projekt** ist ein kopierter Block. Darin zu ändern:
+
+| Was | Wo im Block |
+|---|---|
+| Ort, Jahr oder Anlass | `<p class="eyebrow">` |
+| Projektname | `<h3 class="ref__titel">` |
+| Beschreibung, zwei bis drei Sätze | das `<p>` darunter |
+| Gewerke | die `<li>` in der `<ul class="trades">` |
+| Bild | `background-image` im `style` des `.ref__bild` |
+
+**Zwei Bilder** statt einem: ein zweites `<div class="ref__bild">` daneben
+stellen, das Raster teilt die Spalte von selbst.
+
+**Die Gewerke** nutzen dieselben Farben wie die Liste unter „Über uns" und wie
+die interne Crewplanung:
+
+```
+Technische Leitung #8a8a8a   Licht #4a7fb5   Ton #5a9e6f
+Rigging #c0713a              AV / Video #7c5cbf   Logistik #b5862a
+```
+
+Ein Eintrag sieht so aus:
+
+```html
+<li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
+```
+
+Steht in einem Projekt noch `<li class="trades__item offen">`, ist die Liste
+nicht ausgefüllt. Solche Einträge erscheinen rot und gestrichelt – das ist
+Absicht, damit sie nicht versehentlich live gehen.
+
 ## Farbwechsel beim Scrollen
 
 Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Signalgelb – Schrift,
@@ -166,3 +203,11 @@ steht, ist eine Entscheidung, keine Programmierarbeit.
   beschreiben jetzt mehr Datenverarbeitung als tatsächlich stattfindet. Sollte
   jemand mit juristischem Blick durchgehen, bevor es live geht.
 - **Fünf Fotos**, siehe oben.
+- **Die Gewerke in den Referenzen.** Bei allen drei Projekten steht dort noch
+  der rote Platzhalter. Was Nova Works auf welcher Produktion gemacht hat,
+  steht in keiner der Unterlagen – das war nicht zu erraten und wurde deshalb
+  offen gelassen. Muss vor dem Livegang ausgefüllt werden.
+- **Die Bilder in den Referenzen** sind vorerst dieselben wie im Hero und auf
+  den Karten. Sobald es projekteigene Fotos gibt, dort die Pfade tauschen.
+- **Die Projektbeschreibungen** stammen von mir und beschreiben nur, was auf
+  den Fotos zu sehen ist. Bitte gegenlesen.

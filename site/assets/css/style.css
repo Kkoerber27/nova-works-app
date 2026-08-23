@@ -633,6 +633,56 @@ a { color: inherit; }
   color: var(--text-dim);
 }
 
+/* --- Referenzen ------------------------------------------------------ */
+
+.refs {
+  display: grid;
+  gap: clamp(3.5rem, 9vh, 7rem);
+}
+
+.ref {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
+  gap: clamp(1.75rem, 4vw, 4.5rem);
+  align-items: center;
+}
+
+/* Jedes zweite Projekt seitenverkehrt - das gibt der Liste einen Takt. */
+.ref:nth-child(even) .ref__media { order: 2; }
+
+/* Ein oder zwei Bilder. Bei zweien teilen sie sich die Spalte. */
+.ref__media {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: .7rem;
+}
+
+.ref__bild {
+  aspect-ratio: 3 / 2;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  /* Feste Flaeche, damit ein fehlendes Foto kein Loch hinterlaesst. */
+  background-color: #17171a;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  transition: border-color .4s var(--ease);
+}
+.ref:hover .ref__bild { border-color: var(--line-strong); }
+
+.ref__titel {
+  margin: .75rem 0 1rem;
+  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+  font-weight: 400;
+  letter-spacing: -.02em;
+}
+
+.ref__text p:not(.eyebrow) {
+  max-width: 46ch;
+  color: var(--text-dim);
+}
+
 /* --- Gewerke --------------------------------------------------------- */
 
 .trades {
@@ -644,6 +694,8 @@ a { color: inherit; }
   gap: .6rem;
   margin-top: clamp(2.5rem, 6vh, 4rem);
 }
+.trades--eng { margin-top: 1.5rem; }
+
 .trades__item {
   display: inline-flex;
   align-items: center;
@@ -660,6 +712,14 @@ a { color: inherit; }
   background: var(--dot, var(--signal));
   flex: none;
 }
+
+/* Noch auszufuellen. Bewusst auffaellig, damit es niemand uebersieht. */
+.offen {
+  border-style: dashed;
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.offen .trades__dot { background: var(--danger); }
 
 /* =========================================================================
    Kontakt
@@ -920,6 +980,7 @@ body,
 .field__label, .field__error, .consent, .form__note,
 .detail__label, .detail__value,
 .footer__meta, .hero__lead, .about__body, .about__body p,
+.ref__bild, .ref__titel, .ref__text p,
 .legal__inner, .legal__inner p, .legal__inner li,
 .legal__inner h3, .legal__inner strong {
   transition: background-color .55s var(--ease),
@@ -933,6 +994,9 @@ body,
 
 @media (max-width: 960px) {
   .nav, .masthead__cta { display: none; }
+
+  .ref { grid-template-columns: 1fr; gap: 1.5rem; }
+  .ref:nth-child(even) .ref__media { order: 0; }
   .nav-toggle { display: block; }
 
   .about__grid,
