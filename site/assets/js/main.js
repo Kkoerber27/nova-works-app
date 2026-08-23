@@ -21,6 +21,42 @@
     });
   }
 
+  /* ---------- Bildtiefe im Hero -----------------------------------------
+     Das Hintergrundbild faehrt beim Scrollen langsam heran und tritt
+     zurueck. Kann der Browser scrollgebundene CSS-Animationen, macht das
+     Stylesheet die Arbeit - ausserhalb des Hauptstrangs und ohne uns.
+     Sonst uebernehmen wir hier dieselbe Bewegung.
+
+     Auch das kommt ohne Scroll-Listener aus: Ein IntersectionObserver
+     schaltet eine rAF-Schleife an und wieder aus, sobald der Hero das Bild
+     verlaesst. Ausserhalb des Heros rechnet also nichts.                  */
+
+  var kannScrollAnimation = window.CSS && CSS.supports &&
+                            CSS.supports('animation-timeline', 'scroll()');
+
+  var heroBild = document.querySelector('.hero__media');
+
+  if (heroBild && hero && !reduceMotion && !kannScrollAnimation &&
+      'IntersectionObserver' in window) {
+    var laeuftHero = false;
+
+    var zeichne = function () {
+      var hoehe = window.innerHeight || 1;
+      var fortschritt = Math.min(1, Math.max(0, (window.pageYOffset || 0) / hoehe));
+      heroBild.style.transform = 'scale(' + (1.04 + fortschritt * 0.09).toFixed(4) + ') ' +
+                                 'translateY(' + (fortschritt * -2.5).toFixed(3) + '%)';
+      heroBild.style.opacity = (0.5 - fortschritt * 0.18).toFixed(3);
+      if (laeuftHero) window.requestAnimationFrame(zeichne);
+    };
+
+    new IntersectionObserver(function (eintraege) {
+      var sichtbar = eintraege[0].isIntersecting;
+      if (sichtbar === laeuftHero) return;
+      laeuftHero = sichtbar;
+      if (sichtbar) window.requestAnimationFrame(zeichne);
+    }, { threshold: 0 }).observe(hero);
+  }
+
   /* ---------- Scroll-Reveal ---------------------------------------------
      Erzählt die Seite in der Reihenfolge, in der sie gelesen wird.       */
 

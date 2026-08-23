@@ -485,6 +485,98 @@ a { color: inherit; }
   color: var(--signal);
 }
 
+/* Ein Lichtstrahl wandert ueber den Claim - einmal nach dem Aufbau der
+   Seite, danach bei jedem Ueberfahren. Umgesetzt ueber einen Verlauf, der
+   auf die Buchstaben zugeschnitten wird und seitlich durchlaeuft.
+
+   Der @supports-Rahmen ist Pflicht: Ohne background-clip: text waere die
+   Schrift durchsichtig und damit unsichtbar. Faellt der Rahmen weg, bleibt
+   der Claim schlicht weiss und gelb wie bisher. */
+
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  @media (prefers-reduced-motion: no-preference) {
+    .hero__title span,
+    .hero__title em {
+      background-repeat: no-repeat;
+      background-size: 220% 100%;
+      background-position: 135% 0;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+
+    /* Weisser Teil: der Strahl faerbt ihn kurz ins Signalgelb.
+       Weiss kann nicht heller werden, deshalb ist der Strahl ein Farbton:
+       Signalgelb wandert ueber die weisse Zeile, Weiss ueber die gelbe.
+
+       Die Grundfarbe darunter ist Pflicht - der Verlauf ist breiter als die
+       Flaeche und deckt sie beim Durchlaufen nicht ueberall ab. Ohne sie
+       waeren die Buchstaben dort durchsichtig, also unsichtbar.
+
+       Die Randstopps tragen bewusst dieselbe Farbe mit Alpha 0 statt
+       "transparent" - sonst mischt manche Rechnung ueber Grau. */
+    .hero__title span {
+      background-color: var(--text);
+      background-image: linear-gradient(100deg,
+        rgba(248, 248, 8, 0)   46%,
+        rgba(248, 248, 8, .85) 50%,
+        rgba(248, 248, 8, 0)   54%);
+    }
+
+    /* Gelber Teil bekommt seinen eigenen Strahl, sonst verlaeuft er ins Weiss. */
+    .hero__title em {
+      background-color: var(--signal);
+      background-image: linear-gradient(100deg,
+        rgba(255, 255, 255, 0)   46%,
+        rgba(255, 255, 255, .92) 50%,
+        rgba(255, 255, 255, 0)   54%);
+    }
+
+    @keyframes lichtstrahl {
+      from { background-position: 135% 0; }
+      to   { background-position: -35% 0; }
+    }
+
+    /* Zweimal derselbe Ablauf unter zwei Namen - das ist Absicht. Bleibt der
+       Name gleich, startet der Browser die Animation nicht neu, sondern
+       rechnet nur die Zeiten um. Die abgelaufene Einstiegs-Animation bliebe
+       dann abgelaufen und beim Ueberfahren passierte nichts. */
+    @keyframes lichtstrahl-zwei {
+      from { background-position: 135% 0; }
+      to   { background-position: -35% 0; }
+    }
+
+    /* Einmal nach dem Einstieg, damit der Effekt sich zeigt. */
+    .hero.is-ready .hero__title span,
+    .hero.is-ready .hero__title em { animation: lichtstrahl 1.7s var(--ease-out) 1.15s; }
+
+    /* Danach auf Zuruf. */
+    .hero.is-ready .hero__title:hover span,
+    .hero.is-ready .hero__title:hover em { animation: lichtstrahl-zwei 1.25s var(--ease-out); }
+  }
+}
+
+/* Das Hintergrundbild faehrt beim Scrollen langsam heran und tritt zurueck.
+   Bevorzugt ueber eine scrollgebundene CSS-Animation, die ohne JavaScript
+   und ausserhalb des Hauptstrangs laeuft. Kann der Browser das nicht,
+   uebernimmt main.js dieselbe Bewegung. */
+
+@keyframes hero-tiefe {
+  from { transform: scale(1.04) translateY(0);      opacity: .5; }
+  to   { transform: scale(1.13) translateY(-2.5%);  opacity: .32; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .hero__media {
+      animation: hero-tiefe linear both;
+      animation-timeline: scroll(root block);
+      animation-range: 0 100vh;
+    }
+  }
+}
+
 .hero__foot {
   display: grid;
   grid-template-columns: 1fr auto;

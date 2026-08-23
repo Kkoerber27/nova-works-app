@@ -97,6 +97,43 @@ Querformat, vor dem Hochladen verkleinern:
 magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.jpg
 ```
 
+## Bewegung im Hero
+
+Zwei zurückhaltende Effekte, beide an der Marke entlang gedacht: Ihr macht
+Licht, also bewegt sich Licht.
+
+**Ein Lichtstrahl über dem Claim.** Ein schmales Band wandert schräg über
+„Momente, die bleiben, weil alles passt." – einmal kurz nach dem Seitenaufbau,
+danach bei jedem Überfahren mit der Maus. Weiß kann nicht heller werden,
+deshalb ist der Strahl ein Farbton: Signalgelb läuft über die weiße Zeile,
+Weiß über die gelbe.
+
+Umgesetzt über einen Verlauf, der auf die Buchstaben zugeschnitten wird
+(`background-clip: text`). Drei Dinge daran sind nicht offensichtlich:
+
+- Unter dem Verlauf liegt eine **Grundfarbe**. Der Verlauf ist breiter als die
+  Zeile und deckt sie beim Durchlaufen nicht überall ab – ohne Grundfarbe
+  wären die Buchstaben dort durchsichtig, also weg.
+- Die Randstopps tragen **dieselbe Farbe mit Alpha 0** statt `transparent`,
+  sonst mischt manche Rechnung über Grau.
+- Es gibt den Ablauf **zweimal unter zwei Namen**. Bleibt der Name gleich,
+  startet der Browser die Animation nicht neu, sondern rechnet nur die Zeiten
+  um – die abgelaufene Einstiegs-Animation bliebe abgelaufen und beim
+  Überfahren passierte nichts.
+
+Der ganze Block steckt in einem `@supports`-Rahmen. Kann ein Browser
+`background-clip: text` nicht, bleibt der Claim schlicht weiß und gelb.
+
+**Das Bild fährt beim Scrollen heran** und tritt dabei zurück – von Maßstab
+1,04 auf 1,13 und von 50 auf 32 Prozent Deckkraft über die erste Bildschirmhöhe.
+Bevorzugt über eine scrollgebundene CSS-Animation, die außerhalb des
+Hauptstrangs läuft. Kann der Browser das nicht, übernimmt `main.js` dieselbe
+Bewegung – gesteuert von einem IntersectionObserver, der die Rechnung
+abschaltet, sobald der Hero aus dem Bild ist. Beide Wege liefern dieselben
+Werte.
+
+Im Ruhe-Modus des Betriebssystems passiert nichts davon.
+
 ## Laufband der Leistungsfelder
 
 Die vier Felder unter „Services" stehen nicht mehr im Raster, sondern in einem
