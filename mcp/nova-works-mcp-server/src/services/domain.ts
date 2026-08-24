@@ -172,3 +172,43 @@ export function statusCounts(p: Planung): Record<CrewStatus, number> {
   }
   return counts;
 }
+
+/**
+ * Names that stand for a group rather than a person — "TCLG Techniker",
+ * "Rigging Werk Techniker". Two signals are reliable in this data: the same
+ * name filling several rows of one Gewerk, and a name that is simply a Gewerk
+ * or category label. Returns the normalised forms, for lookup via normalise().
+ */
+export function collectiveNames(planungen: Planung[], gewerke: Gewerk[]): Set<string> {
+  const labels = new Set<string>();
+  for (const g of gewerke) {
+    labels.add(normalise(g.name));
+    for (const c of g.cats ?? []) labels.add(normalise(c));
+  }
+
+  const collective = new Set<string>();
+  for (const p of planungen) {
+    for (const members of Object.values(p.crew ?? {})) {
+      if (!Array.isArray(members)) continue;
+      const seen = new Map<string, number>();
+      for (const m of members) {
+        const key = normalise(m.name ?? "");
+        if (!key) continue;
+        if (labels.has(key)) collective.add(key);
+        seen.set(key, (seen.get(key) ?? 0) + 1);
+      }
+      for (const [key, count] of seen) {
+        if (count > 1) collective.add(key);
+      }
+    }
+  }
+  return collective;
+}
+
+/** Total number of crew rows across all Gewerke of a project. */
+export function crewSize(p: Planung): number {
+  return Object.values(p.crew ?? {}).reduce(
+    (sum, members) => sum + (Array.isArray(members) ? members.length : 0),
+    0,
+  );
+}

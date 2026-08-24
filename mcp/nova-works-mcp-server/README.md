@@ -66,8 +66,8 @@ Supabase" heißt Netzwerk, „Supabase rejected the key" heißt Key oder RLS.
 | `nova_list_projects` | Welche Projekte gibt es, wann laufen sie, wie voll ist die Crew? |
 | `nova_get_project` | Wer ist auf Projekt X gebucht, nach Gewerk sortiert? |
 | `nova_search_crew` | Wo ist Person X gebucht? Alle Buchungen projektübergreifend. |
-| `nova_staffing_gaps` | Was ist noch offen — angefragt, abgesagt, unbesetzt? |
-| `nova_find_conflicts` | Wer ist auf zwei Projekten gleichzeitig verplant? |
+| `nova_staffing_gaps` | Was ist noch offen — angefragt, abgesagt, unbesetzt, ganz ohne Crew? |
+| `nova_find_conflicts` | Wer ist auf zwei Projekten gleichzeitig verplant? (ohne Sammelposten) |
 | `nova_search_technicians` | Freelancer-Adressbuch: Kontakt und Qualifikation. |
 | `nova_list_events` | Für welche Events gibt es Hotel-, Schicht- oder Bauzeitenplan? |
 | `nova_get_hotel_plan` | Wer übernachtet wann und in welchem Zimmertyp? |
@@ -120,5 +120,16 @@ mischt die Supabase-Techniker darüber.
   parallel zur offenen Crewplanung nutzen.
 - **Doppelbuchungen werden über den Namen erkannt.** Zwei verschiedene Personen
   mit identischem Namen erscheinen als Konflikt.
+- **Sammelposten** wie „TCLG Techniker" oder „Rigging Werk Techniker" stehen für
+  eine Gruppe, nicht für eine Person, und würden sonst laufend falsche Konflikte
+  erzeugen. `nova_find_conflicts` lässt sie weg und nennt im Ergebnis, welche das
+  waren; `include_sammelposten: true` bezieht sie wieder ein. Erkannt werden sie
+  daran, dass derselbe Name mehrere Zeilen eines Gewerks füllt oder wörtlich einer
+  Gewerk-Kategorie entspricht.
+- **Leere Projekte** haben keine Crew-Zeilen und damit nichts, was man einzeln
+  bemängeln könnte. `nova_staffing_gaps` meldet sie deshalb als eigenen Eintrag mit
+  Grund `"leer"`. Einzelne leere Gewerke werden bewusst *nicht* gemeldet: die App
+  legt bei jedem neuen Projekt alle sechs Gewerke leer an, „leer" und „nicht
+  gebraucht" sind dort nicht unterscheidbar.
 - **`nova_get_schichtplan` und `nova_get_bauzeitenplan`** geben die Tagesdaten
   unverändert durch. Für die einzelnen Zeilen `response_format: "json"` nutzen.

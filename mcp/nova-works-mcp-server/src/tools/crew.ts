@@ -5,11 +5,15 @@ import { z } from "zod";
 
 import { STATUS_VALUES } from "../constants.js";
 import {
+  collectiveNames,
+  crewSize,
+  findPlanung,
   flattenAssignments,
   loadGewerke,
   loadPlanungen,
   matches,
   normalise,
+  projectRange,
   rangesOverlap,
 } from "../services/domain.js";
 import {
@@ -161,9 +165,11 @@ Examples:
     "nova_staffing_gaps",
     {
       title: "Offene Positionen finden",
-      description: `Find everything that is not confirmed yet: bookings still 'angefragt', people who cancelled, and rows with no name filled in.
+      description: `Find everything that is not confirmed yet: bookings still 'angefragt', people who cancelled, rows with no name filled in, and projects with no crew at all.
 
-This is the dispo check — "what still needs chasing before the show?".
+This is the dispo check — "what still needs chasing before the show?". A project whose crew
+list is entirely empty is reported as one entry with grund "leer"; it has no rows to flag, yet
+it is the largest gap there is.
 
 Args:
   - project (string, optional): limit to one project, by id or name
@@ -177,14 +183,16 @@ Args:
 Returns (json):
   {
     "total","count","offset","has_more",
-    "summary": { "angefragt": number, "abgesagt": number, "unbesetzt": number },
-    "gaps": [{ ...booking fields..., "grund": "angefragt"|"abgesagt"|"unbesetzt" }]
+    "summary": { "angefragt": number, "abgesagt": number, "unbesetzt": number, "leer": number },
+    "gaps": [{ ...booking fields..., "grund": "angefragt"|"abgesagt"|"unbesetzt"|"leer" }]
   }
   "unbesetzt" means the row exists but carries no name — an open slot.
+  "leer" means the whole project has no crew rows; its entry carries no Gewerk and index -1.
 
 Examples:
   - "Was ist für die Automotive Show noch offen?" -> project="Automotive Show"
-  - "Welche Anfragen laufen im März noch?" -> from="2026-03-01", to="2026-03-31"`,
+  - "Welche Anfragen laufen im März noch?" -> from="2026-03-01", to="2026-03-31"
+  - "Welches Projekt hat noch gar keine Crew?" -> no arguments, then read the "leer" entries`,
       inputSchema: {
         project: z.string().optional().describe("Project id or name"),
         from: z
@@ -222,29 +230,40 @@ Examples:
       response_format: ResponseFormat;
     }) => {
       const [planungen, gewerke] = await Promise.all([loadPlanungen(), loadGewerke()]);
-      let bookings = flattenAssignments(planungen, gewerke);
 
+      // Scope by project first, not by booking: a project with no crew at all
+      // has no bookings to filter, and that is exactly the case worth finding.
+      let scoped = planungen;
       if (params.project) {
         const q = params.project;
-        bookings = bookings.filter(
-          (a) => a.projekt_id === q || matches(a.projekt, q),
-        );
-        if (!bookings.length) {
+        const one = findPlanung(planungen, q);
+        scoped = one ? [one] : [];
+        if (!scoped.length) {
           return fail(
             `No Crewplanung matches "${q}". Run nova_list_projects to see the available projects.`,
           );
         }
       }
+
+      const inWindow = (von: string, bis: string): boolean => {
+        if (!von || !bis) return false;
+        if (params.from && bis < params.from) return false;
+        if (params.to && von > params.to) return false;
+        return true;
+      };
       if (params.from || params.to) {
-        bookings = bookings.filter((a) => {
-          if (!a.von || !a.bis) return false;
-          if (params.from && a.bis < params.from) return false;
-          if (params.to && a.von > params.to) return false;
-          return true;
+        scoped = scoped.filter((p) => {
+          const r = projectRange(p);
+          return inWindow(r.von, r.bis);
         });
       }
 
-      const gaps = bookings
+      let bookings = flattenAssignments(scoped, gewerke);
+      if (params.from || params.to) {
+        bookings = bookings.filter((a) => inWindow(a.von, a.bis));
+      }
+
+      const gaps: Array<CrewAssignment & { grund: string }> = bookings
         .map((a) => {
           const grund = !a.name.trim()
             ? "unbesetzt"
@@ -258,17 +277,45 @@ Examples:
         .filter((x): x is CrewAssignment & { grund: string } => x !== null)
         .filter((x) => params.include_abgesagt || x.grund !== "abgesagt");
 
+      // A project with no crew rows produces no bookings, so it would otherwise
+      // never show up here — while being the largest gap there is.
+      for (const p of scoped) {
+        if (crewSize(p) > 0) continue;
+        const range = projectRange(p);
+        gaps.push({
+          projekt_id: p.id,
+          projekt: p.name ?? "",
+          kunde: p.kunde ?? "",
+          ort: p.ort ?? "",
+          gewerk_id: "",
+          gewerk: "",
+          index: -1,
+          name: "",
+          funktion: "",
+          tel: "",
+          email: "",
+          notiz: p.notizen ?? "",
+          status: "angefragt",
+          phasen: [],
+          von: range.von,
+          bis: range.bis,
+          grund: "leer",
+        });
+      }
+
       const summary = {
         angefragt: gaps.filter((g) => g.grund === "angefragt").length,
         abgesagt: gaps.filter((g) => g.grund === "abgesagt").length,
         unbesetzt: gaps.filter((g) => g.grund === "unbesetzt").length,
+        leer: gaps.filter((g) => g.grund === "leer").length,
       };
 
       if (!gaps.length) {
         return ok(
           params.response_format,
           { total: 0, count: 0, offset: 0, has_more: false, summary, gaps: [] },
-          () => "# Offene Positionen\n\nAlles bestätigt — keine offenen Positionen im gewählten Ausschnitt.",
+          () =>
+            "# Offene Positionen\n\nAlles bestätigt, jedes Projekt besetzt — keine offenen Positionen im gewählten Ausschnitt.",
         );
       }
 
@@ -293,10 +340,17 @@ Examples:
         const lines = [
           `# Offene Positionen (${total})`,
           "",
-          `? ${summary.angefragt} angefragt · ✗ ${summary.abgesagt} abgesagt · ␣ ${summary.unbesetzt} unbesetzt`,
+          `? ${summary.angefragt} angefragt · ✗ ${summary.abgesagt} abgesagt · ␣ ${summary.unbesetzt} unbesetzt · ⚠ ${summary.leer} ohne Crew`,
           "",
         ];
         for (const g of page) {
+          if (g.grund === "leer") {
+            const range = deRange(g.von, g.bis);
+            lines.push(
+              `- ⚠ **${g.projekt}** — keine Crew eingetragen${range ? ` · ${range}` : ""}${g.ort ? ` · ${g.ort}` : ""}`,
+            );
+            continue;
+          }
           const label = g.grund === "unbesetzt" ? "**(offene Position)**" : `**${g.name}**`;
           const bits = [label];
           if (g.funktion) bits.push(g.funktion);
@@ -320,16 +374,23 @@ Examples:
 Compares every pair of bookings that share a person name. Cancelled bookings ('abgesagt')
 are ignored, since they no longer occupy the person.
 
+Collective rows are skipped by default. Those are entries standing for a group rather than a
+person — "TCLG Techniker", "Rigging Werk Techniker" — recognised by the same name filling
+several rows of one Gewerk, or by a name that is just a Gewerk or category label. Without this
+they produce false conflicts. The names that were skipped are always reported back.
+
 Args:
   - project (string, optional): only report conflicts touching this project
   - from (string, optional): ISO date lower bound
   - to (string, optional): ISO date upper bound
   - confirmed_only (boolean): only count 'bestaetigt' bookings (default false)
+  - include_sammelposten (boolean): also compare collective rows (default false)
   - response_format ('markdown' | 'json'): default 'markdown'
 
 Returns (json):
   {
     "total": number,
+    "sammelposten_ignoriert": string[],   // collective names left out of the comparison
     "conflicts": [{
       "name": string,
       "ueberschneidung": { "von": string, "bis": string },
@@ -358,6 +419,10 @@ Note: matching is by name, so two different people with the same name would show
           .boolean()
           .default(false)
           .describe("Only consider bookings with status 'bestaetigt'"),
+        include_sammelposten: z
+          .boolean()
+          .default(false)
+          .describe("Also compare collective rows such as 'TCLG Techniker'"),
         response_format: responseFormatSchema,
       },
       annotations: {
@@ -372,6 +437,7 @@ Note: matching is by name, so two different people with the same name would show
       from?: string;
       to?: string;
       confirmed_only: boolean;
+      include_sammelposten: boolean;
       response_format: ResponseFormat;
     }) => {
       const [planungen, gewerke] = await Promise.all([loadPlanungen(), loadGewerke()]);
@@ -382,6 +448,16 @@ Note: matching is by name, so two different people with the same name would show
 
       if (params.confirmed_only) {
         bookings = bookings.filter((a) => a.status === "bestaetigt");
+      }
+
+      const collective = collectiveNames(planungen, gewerke);
+      const skipped = new Set<string>();
+      if (!params.include_sammelposten) {
+        bookings = bookings.filter((a) => {
+          if (!collective.has(normalise(a.name))) return true;
+          skipped.add(a.name);
+          return false;
+        });
       }
       if (params.from || params.to) {
         bookings = bookings.filter((a) => {
@@ -444,11 +520,20 @@ Note: matching is by name, so two different people with the same name would show
       }
 
       conflicts.sort((a, b) => a.ueberschneidung.von.localeCompare(b.ueberschneidung.von));
-      const structured = { total: conflicts.length, conflicts };
+      const sammelposten = [...skipped].sort((a, b) => a.localeCompare(b, "de"));
+      const structured = {
+        total: conflicts.length,
+        sammelposten_ignoriert: sammelposten,
+        conflicts,
+      };
+
+      const footer = sammelposten.length
+        ? `\n_Nicht verglichen, weil Sammelposten statt Personen: ${sammelposten.join(", ")}. Mit include_sammelposten=true einbeziehen._`
+        : "";
 
       return ok(params.response_format, structured, () => {
         if (!conflicts.length) {
-          return "# Doppelbuchungen\n\nKeine Überschneidungen gefunden.";
+          return "# Doppelbuchungen\n\nKeine Überschneidungen gefunden." + footer;
         }
         const lines = [`# Doppelbuchungen (${conflicts.length})`, ""];
         for (const c of conflicts) {
@@ -462,7 +547,7 @@ Note: matching is by name, so two different people with the same name would show
           }
           lines.push("");
         }
-        return lines.join("\n");
+        return lines.join("\n") + footer;
       });
     }),
   );
