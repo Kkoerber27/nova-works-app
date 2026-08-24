@@ -18,6 +18,15 @@ import type {
   VoucherListPage,
 } from "../types.js";
 
+/** Hostname only, for error messages that talk about network policy. */
+const HOST = (() => {
+  try {
+    return new URL(API_BASE).host;
+  } catch {
+    return API_BASE;
+  }
+})();
+
 export class LexwareError extends Error {
   constructor(message: string, readonly status?: number) {
     super(message);
@@ -79,8 +88,35 @@ async function call(path: string, accept: string): Promise<Response> {
   }
 }
 
+/** Lexware answers errors as a JSON object. Anything else came from in between. */
+function parseApiError(body: string): { message?: string } | null {
+  try {
+    const parsed: unknown = JSON.parse(body);
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as { message?: string };
+    }
+  } catch {
+    // Not JSON, so not a Lexware error.
+  }
+  return null;
+}
+
 function describe(status: number, body: string, path: string): string {
-  const detail = body.trim().slice(0, 400);
+  const api = parseApiError(body);
+  const detail = (api?.message ?? body).trim().slice(0, 400);
+
+  // A refusal without a Lexware body never reached Lexware: a proxy, a VPN or a
+  // container egress allowlist stopped it. Saying "key" here sends people to
+  // the wrong place entirely.
+  if (!api && (status === 401 || status === 403 || status === 407)) {
+    return (
+      `Blocked on the way to Lexware (HTTP ${status}). The request to ${HOST} was refused by a ` +
+      `proxy or network egress policy before it reached Lexware, so this is not a key or ` +
+      `permission problem. Allow the host "${HOST}" in the network settings of wherever this ` +
+      `server runs. Response: ${detail || "(empty)"}`
+    );
+  }
+
   switch (status) {
     case 401:
       return `Lexware rejected the API key (401). Check LEX_API_KEY — keys are scoped to one organisation and can be revoked in Einstellungen → Öffentliche API. Details: ${detail || "(none)"}`;

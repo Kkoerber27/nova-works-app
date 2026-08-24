@@ -40,6 +40,14 @@ npm run build
 | `LEX_DOWNLOAD_DIR` | `~/.nova-works/rechnungen` | Wohin die PDFs vor dem Hochladen geschrieben werden |
 | `LEX_LEDGER_PATH` | `~/.nova-works/lexware-filed.json` | Protokoll der bereits abgelegten Rechnungen |
 
+## Netzwerk
+
+Der Server spricht `api.lexware.io` über HTTPS an. Läuft er in einer Umgebung mit
+Egress-Allowlist — etwa einem Cloud-Container —, muss dieser Host freigegeben sein.
+Die Fehlermeldung unterscheidet die Fälle: „Blocked on the way to Lexware" heißt
+Netzwerk, „Lexware rejected the API key" heißt Schlüssel, „No API key configured"
+heißt fehlende Umgebungsvariable.
+
 ## Tools
 
 | Tool | Zweck |
