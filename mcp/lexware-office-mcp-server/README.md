@@ -59,6 +59,30 @@ heißt fehlende Umgebungsvariable.
 
 Der Ablauf selbst steht in `.claude/skills/rechnungsablage/SKILL.md` im Projekt-Root.
 
+## Wiederkehrender Ablauf
+
+Der Server tut von sich aus nichts — er antwortet, wenn er gefragt wird. Für die
+Ablage alle 15 Minuten sorgt ein LaunchAgent auf dem Mac:
+
+```bash
+./scripts/install-rechnungsablage.sh
+```
+
+Der Installer legt `~/.nova-works/env` an (dort den `LEX_API_KEY` eintragen, Rechte 600),
+schreibt den LaunchAgent nach `~/Library/LaunchAgents/de.nova-works.rechnungsablage.plist`
+und lädt ihn. Entfernen mit `--remove`, anderes Intervall über `NOVA_INTERVAL=600`.
+
+Vor dem Verlassen einmal von Hand prüfen:
+
+```bash
+./scripts/rechnungsablage.sh && tail -n 40 ~/.nova-works/rechnungsablage.log
+```
+
+Der Lauf bricht mit einer Zeile im Protokoll ab, wenn das Repository fehlt, `claude`
+nicht im PATH ist oder kein Schlüssel gesetzt wurde — und meldet „ABBRUCH: SharePoint-Tools
+nicht verfügbar", wenn der Microsoft-365-Connector im kopflosen Lauf fehlt. Dann wird
+nichts heruntergeladen und nichts als abgelegt vermerkt.
+
 ## Warum nie geraten wird
 
 `projektnummer` ist bewusst `null`, sobald eine Rechnung **keine** oder **mehrere**
