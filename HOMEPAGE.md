@@ -284,8 +284,10 @@ Auslöseband sie nie, die Seite endet deshalb im Gelb des Kontaktbereichs.
 Zwei davon sind Rechtstexte. Beide wurden bewusst nicht angefasst – was darin
 steht, ist eine Entscheidung, keine Programmierarbeit.
 
-- **Impressum, Absatz „Konzeption, Gestaltung & Betreuung".** Dort steht noch
-  die Werbeagentur Lebegern. Ob der Absatz bleibt, ist zu entscheiden.
+- ~~Impressum, Absatz „Konzeption, Gestaltung & Betreuung".~~ Entfernt – die
+  Seite wird neu aufgesetzt, die Agentur ist daran nicht beteiligt. Eine
+  Pflichtangabe war der Absatz nie; § 5 DDG verlangt Betreiber, Vertretung,
+  Kontakt, Register und Umsatzsteuer-ID, nicht den Gestalter.
 - **Impressum, Disclaimer.** Der erste Satz nennt „Nova Works GmbH Steuerungs-
   und Informationstechnologie für Logistik". Das ist ein stehengebliebener
   Textbaustein aus einer fremden Vorlage und beschreibt nicht, was die Firma
