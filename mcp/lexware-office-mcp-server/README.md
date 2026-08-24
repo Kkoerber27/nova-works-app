@@ -1,0 +1,74 @@
+# lexware-office-mcp-server
+
+MCP-Server für die Rechnungsablage. Findet die offenen Rechnungen in Lexware Office,
+liest die Projektnummer heraus und lädt das PDF herunter — damit es im passenden
+Projektordner unter `Rechnungen/Out` landen kann.
+
+Die Ablage in SharePoint macht dieser Server **nicht** selbst. Das übernimmt der
+Microsoft-365-Connector, den du ohnehin schon hast; so braucht es keine zweiten
+Zugangsdaten und keine Azure-App-Registrierung.
+
+## API-Key anlegen
+
+In Lexware Office: **Einstellungen → Erweiterungen → Öffentliche API** (je nach
+Version auch „Schnittstellen"). Dort einen persönlichen Zugangsschlüssel erzeugen.
+Der Schlüssel läuft nicht ab und gilt für genau eine Firma.
+
+Den Schlüssel **nicht** ins Repository schreiben. Stattdessen in die Shell-Konfiguration
+auf dem Rechner, der den Server startet — bei zsh in `~/.zshrc`:
+
+```bash
+export LEX_API_KEY="dein-schluessel"
+```
+
+Die `.mcp.json` im Projekt liest ihn von dort.
+
+## Einrichten
+
+```bash
+cd mcp/lexware-office-mcp-server
+npm install
+npm run build
+```
+
+## Konfiguration
+
+| Variable | Default | Zweck |
+|---|---|---|
+| `LEX_API_KEY` | — | Zugangsschlüssel, ohne ihn antwortet jedes Tool mit einem Hinweis |
+| `LEX_API_BASE` | `https://api.lexware.io` | Nur ändern, wenn Lexware das Gateway verschiebt |
+| `LEX_DOWNLOAD_DIR` | `~/.nova-works/rechnungen` | Wohin die PDFs vor dem Hochladen geschrieben werden |
+| `LEX_LEDGER_PATH` | `~/.nova-works/lexware-filed.json` | Protokoll der bereits abgelegten Rechnungen |
+
+## Tools
+
+| Tool | Zweck |
+|---|---|
+| `lex_list_open_invoices` | Offene, noch nicht abgelegte Rechnungen samt Projektnummer |
+| `lex_download_invoice_pdf` | PDF rendern lassen, herunterladen, lokal speichern |
+| `lex_mark_filed` | Vermerken, dass eine Rechnung abgelegt wurde |
+| `lex_filing_log` | Was wurde wann wohin abgelegt |
+
+Der Ablauf selbst steht in `.claude/skills/rechnungsablage/SKILL.md` im Projekt-Root.
+
+## Warum nie geraten wird
+
+`projektnummer` ist bewusst `null`, sobald eine Rechnung **keine** oder **mehrere**
+Projektnummern trägt. Dazu kommt, dass die Nummer allein nicht eindeutig ist: unter
+`26-0007` liegen vier Projektordner (80er Live, … Frankfurt, … Hamburg, … Schalke),
+unter `26-0021` zwei.
+
+Eine im falschen Projekt abgelegte Rechnung fällt erst bei der Steuerprüfung auf.
+Deshalb meldet der Server solche Fälle, statt sich für eine Variante zu entscheiden.
+
+## Grenzen
+
+- **Gegen die echte Lexware-API ungetestet.** Entwickelt und geprüft wurde gegen einen
+  Nachbau der Schnittstelle; die Endpunkte stammen aus der Dokumentation. Der erste
+  Lauf mit echtem Schlüssel ist der eigentliche Test.
+- **Zwei Anfragen pro Sekunde.** Das Limit gibt Lexware vor. Der Server hält sich
+  daran, weshalb eine Liste mit 25 Rechnungen rund fünfzehn Sekunden braucht.
+- **Das Protokoll liegt lokal.** Wird der Server auf einem zweiten Rechner gestartet,
+  kennt er die dort noch nicht vermerkten Ablagen nicht und würde sie erneut anbieten.
+- **Rechnungen im Entwurf haben kein PDF.** Erst mit dem Festschreiben („offen") gibt
+  es ein Dokument zum Herunterladen.
