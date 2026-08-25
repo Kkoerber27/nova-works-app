@@ -1,0 +1,6 @@
+{
+  "enabledMcpjsonServers": [
+    "nova-works",
+    "lexware"
+  ]
+}
