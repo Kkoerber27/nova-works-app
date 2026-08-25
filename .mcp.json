@@ -2,14 +2,14 @@
   "mcpServers": {
     "nova-works": {
       "command": "node",
-      "args": ["./mcp/nova-works-mcp-server/dist/index.js"],
+      "args": ["${NOVA_WORKS_DIR:-/Users/kk/nova-works-app}/mcp/nova-works-mcp-server/dist/index.js"],
       "env": {
         "NOVA_ALLOW_WRITE": "0"
       }
     },
     "lexware": {
       "command": "node",
-      "args": ["./mcp/lexware-office-mcp-server/dist/index.js"],
+      "args": ["${NOVA_WORKS_DIR:-/Users/kk/nova-works-app}/mcp/lexware-office-mcp-server/dist/index.js"],
       "env": {
         "LEX_API_KEY": "${LEX_API_KEY}"
       }
