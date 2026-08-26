@@ -288,10 +288,9 @@ steht, ist eine Entscheidung, keine Programmierarbeit.
   Seite wird neu aufgesetzt, die Agentur ist daran nicht beteiligt. Eine
   Pflichtangabe war der Absatz nie; § 5 DDG verlangt Betreiber, Vertretung,
   Kontakt, Register und Umsatzsteuer-ID, nicht den Gestalter.
-- **Impressum, Disclaimer.** Der erste Satz nennt „Nova Works GmbH Steuerungs-
-  und Informationstechnologie für Logistik". Das ist ein stehengebliebener
-  Textbaustein aus einer fremden Vorlage und beschreibt nicht, was die Firma
-  tut.
+- ~~Impressum, Disclaimer.~~ Der stehengebliebene Textbaustein „Steuerungs-
+  und Informationstechnologie für Logistik" ist raus, der Satz nennt jetzt
+  die NovaWorks GmbH. Schreibweise im ganzen Dokument einheitlich.
 - **Datenschutzerklärung.** Der Abschnitt „Cookies" beschreibt Session- und
   Wiedererkennungs-Cookies, die es auf der neuen Seite nicht mehr gibt.
   Ebenso „Analyse-Tools und Tools von Drittanbietern". Beide Passagen
