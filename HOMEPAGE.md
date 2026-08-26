@@ -136,9 +136,13 @@ Umgesetzt über einen Verlauf, der auf die Buchstaben zugeschnitten wird
   startet der Browser die Animation nicht neu, sondern rechnet nur die Zeiten
   um – die abgelaufene Einstiegs-Animation bliebe abgelaufen und beim
   Überfahren passierte nichts.
-- Die Lichtbahn braucht eine **Maske**, die sie oben und unten auslaufen
-  lässt. Ohne sie schneidet ihr Kasten die Bahn waagerecht ab, und über der
-  Zeile liegt eine helle Platte statt eines Strahls.
+- Die Lichtbahn braucht eine **Maske**, sonst schneidet ihr Kasten sie an
+  allen vier Seiten hart ab: senkrecht läge eine helle Platte über der Zeile,
+  waagerecht risse der Strahl hinter dem Komma abrupt ab. Eine Ellipse löst
+  beides in einem Zug und braucht kein `mask-composite`, dessen Schreibweise
+  sich zwischen den Browsern unterscheidet. Ihr Mittelpunkt sitzt links, weil
+  der Text links steht – über den Buchstaben trägt die Bahn voll, dahinter
+  fällt sie weich ab.
 - Die Bahn ist **waagerecht exakt so breit wie die Zeilen**. Ist sie breiter,
   landen dieselben Prozentwerte an anderer Stelle, und Glanz und Farbwechsel
   laufen auseinander.
@@ -160,6 +164,122 @@ abschaltet, sobald der Hero aus dem Bild ist. Beide Wege liefern dieselben
 Werte.
 
 Im Ruhe-Modus des Betriebssystems passiert nichts davon.
+
+## Laufband der Leistungsfelder
+
+Die vier Felder unter „Services" stehen nicht mehr im Raster, sondern in einem
+Laufband: Sie wandern langsam durchs Bild und lassen sich mit Maus, Finger,
+Trackpad oder Pfeiltasten schieben. Das ersetzt Flickity von der alten Seite –
+dieselben Einstellungen, nur ohne Bibliothek: drei Karten nebeneinander,
+darunter zwei, auf dem Handy eine; Endlosschleife; Pause beim Überfahren.
+
+Stellschrauben in `main.js`, ganz oben im Block:
+
+| Was | Wert |
+|---|---|
+| Tempo | `var TEMPO = 28;` Pixel je Sekunde |
+| Laufrichtung | `data-richtung="rechts"` am `.slider` in `index.html`, `"links"` dreht um |
+
+Drei Dinge, die dabei zu wissen sind:
+
+**Endlosschleife.** `main.js` hängt zwei Kopien der Karten an die Reihe und
+faltet die Position immer in den mittleren Satz zurück. Die Kopien sind für
+Screenreader ausgeblendet, dort erscheinen die vier Felder also genau einmal.
+
+**Warum die Position im Skript liegt.** Browser runden `scrollLeft` auf ganze
+Pixel. Ein Schritt von 0,45 px pro Bild verschwindet dadurch spurlos und das
+Band stünde still. Die maßgebliche Position wird deshalb als Fließkommazahl im
+Skript geführt und `scrollLeft` jedes Mal absolut gesetzt.
+
+**Ohne JavaScript** bleibt eine ganz normale, seitwärts scrollbare Reihe –
+Wischen und Trackpad funktionieren dann trotzdem. Bei eingeschaltetem
+Ruhe-Modus des Betriebssystems läuft nichts von selbst, schieben geht weiter.
+
+## Referenzen
+
+Der Abschnitt `#referenzen` liegt zwischen Services und Kontakt. Jedes Projekt
+ist ein `<article class="ref">` mit Bildspalte und Textspalte; jede zweite Zeile
+läuft seitenverkehrt. Unter 960 px stapelt sich alles, Bild immer über dem Text.
+
+**Ein neues Projekt** ist ein kopierter Block. Darin zu ändern:
+
+| Was | Wo im Block |
+|---|---|
+| Ort, Jahr oder Anlass | `<p class="eyebrow">` |
+| Projektname | `<h3 class="ref__titel">` |
+| Beschreibung, zwei bis drei Sätze | das `<p>` darunter |
+| Gewerke | die `<li>` in der `<ul class="trades">` |
+| Bild | `background-image` im `style` des `.ref__bild` |
+
+**Zwei Bilder** statt einem: ein zweites `<div class="ref__bild">` daneben
+stellen, das Raster teilt die Spalte von selbst.
+
+**Die Gewerke** nutzen dieselben Farben wie die Liste unter „Über uns" und wie
+die interne Crewplanung:
+
+```
+Technische Leitung #8a8a8a   Licht #4a7fb5   Ton #5a9e6f
+Rigging #c0713a              AV / Video #7c5cbf   Logistik #b5862a
+```
+
+Ein Eintrag sieht so aus:
+
+```html
+<li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
+```
+
+Steht in einem Projekt noch `<li class="trades__item offen">`, ist die Liste
+nicht ausgefüllt. Solche Einträge erscheinen rot und gestrichelt – das ist
+Absicht, damit sie nicht versehentlich live gehen.
+
+## AGB
+
+`site/agb.html` steht bereit, ist aber **noch ohne Inhalt**. Die Seite ist
+angelegt, gestaltet und aus der Fußzeile aller fünf Seiten verlinkt – es fehlt
+nur der Text.
+
+Zum Einsetzen: in `agb.html` den rot gestrichelten Block
+`<p class="offen offen--block">` durch den AGB-Text ersetzen. Die Auszeichnung
+ist dieselbe wie in Impressum und Datenschutz, mehr als diese fünf Elemente
+braucht es nicht:
+
+```html
+<h2>1. Geltungsbereich</h2>     <!-- Hauptabschnitte -->
+<h3>Unterpunkt</h3>
+<p>Absatz</p>
+<ul><li>Aufzählung</li></ul>
+<strong>Hervorhebung</strong>
+```
+
+Danach zwei Handgriffe, die leicht vergessen werden:
+
+- In `agb.html` `<meta name="robots" content="noindex, follow">` auf
+  `index, follow` ändern.
+- In `sitemap.xml` einen Eintrag für `https://nova-works.de/agb.html`
+  ergänzen, `changefreq yearly`, `priority 0.2` wie bei den anderen
+  Rechtstexten.
+
+Solange kein Text drinsteht, bleibt beides bewusst so: Eine leere Seite soll
+weder im Index noch in der Sitemap auftauchen.
+
+## Gelber Akzent im Kontaktbereich
+
+Ein früherer Entwurf ließ die ganze Seite im Kontaktbereich auf Signalgelb
+umschlagen – so wie es die alte Seite macht. Das war zu viel: Die Fläche
+dominierte alles andere. Jetzt bleibt die Seite durchgehend dunkel, und das
+Gelb setzt nur einen Akzent.
+
+Zwei Bausteine, beide in `#kontakt`:
+
+- `.kontakt__schein` – ein warmer Schein hinter der Überschrift, der über die
+  vorhandene Reveal-Mechanik einblendet, sobald der Abschnitt ins Bild kommt.
+  Größe und Stärke stehen im Stylesheet als `min(620px, 58%)` und `.15` Alpha.
+- Eine schmale gelbe Marke links an der Überschrift, ein Verlauf von
+  Signalgelb nach durchsichtig.
+
+Die frühere Umschaltung über `data-schema` ist damit vollständig entfernt –
+aus dem Stylesheet, aus `main.js` und aus dem Markup. Wer sie zurückholen
+will, findet sie in der Historie bis Commit `c72dbac`.
 
 ## Laufband der Leistungsfelder
 
