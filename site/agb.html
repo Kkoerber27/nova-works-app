@@ -7,14 +7,14 @@
 <title>AGB - Nova Works</title>
 <meta name="description" content="Allgemeine Geschäftsbedingungen der NovaWorks GmbH, Ettlingen.">
 <link rel="canonical" href="https://nova-works.de/agb.html">
-<meta name="robots" content="noindex, follow">
+<meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0b0b0c">
 
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=9">
+<link rel="stylesheet" href="assets/css/style.css?v=10">
 
 <script>document.documentElement.classList.add('js');</script>
 </head>
@@ -58,31 +58,341 @@
 <main id="main">
   <section class="legal">
     <div class="shell">
-      <div class="legal__inner">
+      <div class="legal__inner legal--agb">
         <h1>Allgemeine Geschäftsbedingungen</h1>
 
-        <!-- ===================================================================
-             HIER DEN AGB-TEXT EINSETZEN.
-
-             Der Hinweis darunter (<p class="offen offen--block">) faellt dabei
-             ersatzlos weg - er ist nur da, damit die Seite nicht versehentlich
-             mit leerem Rumpf live geht.
-
-             Auszeichnung wie in Impressum und Datenschutz:
-               <h2>  fuer die Hauptabschnitte, etwa "1. Geltungsbereich"
-               <h3>  fuer Unterpunkte
-               <p>   fuer Absaetze
-               <ul><li> fuer Aufzaehlungen
-               <strong> fuer Hervorhebungen
-             Mehr braucht es nicht, das Stylesheet kennt diese Elemente.
-             ================================================================ -->
-
-        <p class="offen offen--block">
-          <strong>Diese Seite hat noch keinen Inhalt.</strong>
-          Der AGB-Text fehlt und muss vor dem Livegang eingesetzt werden.
-          Bis dahin ist die Seite über <code>robots</code> auf noindex gestellt
-          und nicht in der Sitemap.
+        <p class="agb__kopf">
+          VERMIETUNG · VERMITTLUNG · DIENSTLEISTUNG · VERKAUF<br>
+          <span>Version 1.0 · Stand 16. August 2026</span>
         </p>
+
+        <p class="agb__geltung">
+          Gültig ausschließlich gegenüber Unternehmern im Sinne des § 14 BGB
+        </p>
+
+        <nav class="agb__inhalt" aria-label="Inhalt der AGB">
+          <ol>
+            <li><a href="#teil-1">Teil I <span>Allgemeine Bestimmungen</span></a> <b>§§ 1–9</b></li>
+            <li><a href="#teil-2">Teil II <span>Vermietung</span></a> <b>§§ 10–22</b></li>
+            <li><a href="#teil-3">Teil III <span>Dienstleistungen und Personaleinsatz</span></a> <b>§§ 23–27</b></li>
+            <li><a href="#teil-4">Teil IV <span>Vermittlung (Agenturleistungen)</span></a> <b>§§ 28–30</b></li>
+            <li><a href="#teil-5">Teil V <span>Verkauf und Installation</span></a> <b>§§ 31–34</b></li>
+            <li><a href="#teil-6">Teil VI <span>Schlussbestimmungen</span></a> <b>§§ 35–36</b></li>
+          </ol>
+        </nav>
+
+        <h2 id="teil-1">TEIL I. ALLGEMEINE BESTIMMUNGEN</h2>
+
+        <h3 id="p1">§ 1 Geltungsbereich, Kundenkreis</h3>
+        <p>(1) Diese Allgemeinen Geschäftsbedingungen (nachfolgend „AGB“) gelten für alle Verträge zwischen der Nova Works GmbH (nachfolgend „Nova Works“) und ihren Kunden über die Vermietung von Veranstaltungstechnik, über die Vermittlung von Technik, Personal und sonstigen Leistungen Dritter, über Dienst- und Werkleistungen einschließlich des Einsatzes von Personal sowie über den Verkauf und die Installation von Ware.</p>
+        <p>(2) Diese AGB gelten ausschließlich gegenüber Unternehmern im Sinne des § 14 BGB, juristischen Personen des öffentlichen Rechts und öffentlich-rechtlichen Sondervermögen. Gegenüber Verbrauchern im Sinne des § 13 BGB finden sie keine Anwendung.</p>
+        <p>(3) Teil I gilt für sämtliche Verträge. Teil II gilt ergänzend für Mietverträge, Teil III ergänzend für Dienst- und Werkverträge einschließlich des Personaleinsatzes, Teil IV ergänzend für Vermittlungsleistungen, Teil V ergänzend für Kaufverträge und Installationen. Widersprechen sich Teil I und die Teile II bis V, gehen die Teile II bis V vor.</p>
+        <p>(4) Diese AGB gelten auch für alle künftigen gleichartigen Verträge mit demselben Kunden, ohne dass es einer erneuten Einbeziehung bedarf, sofern Nova Works bei Vertragsschluss auf ihre Geltung hingewiesen hat.</p>
+        <p>(5) Abweichende, entgegenstehende oder ergänzende Bedingungen des Kunden werden nicht Vertragsbestandteil, es sei denn, Nova Works stimmt ihrer Geltung ausdrücklich in Textform zu. Das gilt auch dann, wenn Nova Works die Leistung in Kenntnis solcher Bedingungen vorbehaltlos erbringt.</p>
+        <p>(6) Individuell getroffene Vereinbarungen haben Vorrang vor diesen AGB (§ 305b BGB).</p>
+
+        <h3 id="p2">§ 2 Angebot, Vertragsschluss, Form</h3>
+        <p>(1) Angebote von Nova Works sind freibleibend, soweit sie nicht ausdrücklich als verbindlich bezeichnet sind. Angaben zu Verfügbarkeiten stehen bis zur Auftragsbestätigung unter dem Vorbehalt der Zwischenvermietung.</p>
+        <p>(2) Die Bestellung des Kunden ist ein bindendes Vertragsangebot, das Nova Works innerhalb von 14 Kalendertagen nach Zugang annehmen kann. Die Annahme erfolgt durch Auftragsbestätigung in Textform oder durch Erbringung der Leistung.</p>
+        <p>(3) Der Leistungsumfang ergibt sich aus der Auftragsbestätigung von Nova Works einschließlich ihrer Anlagen, insbesondere aus der dort ausgewiesenen Geräte- und Leistungsliste. Nachträglich gewünschte Leistungen führt Nova Works nur aus, wenn sie diese gesondert bestätigt hat; sie werden zusätzlich vergütet.</p>
+        <p>(4) Soweit diese AGB oder der Vertrag Textform vorsehen, genügt eine Erklärung per E-Mail, Telefax oder auf einem sonstigen lesbaren, dauerhaften Datenträger im Sinne des § 126b BGB. Einer eigenhändigen Unterschrift bedarf es nicht.</p>
+        <p>(5) Änderungen und Ergänzungen des Vertrages sollen in Textform erfolgen. Die Wirksamkeit mündlicher Abreden bleibt unberührt.</p>
+        <p>(6) Zusagen, die von den vertraglichen Vereinbarungen abweichen, insbesondere Preisnachlässe und Leistungserweiterungen, bedürfen der Bestätigung durch die Geschäftsführung von Nova Works oder durch eine hierzu ausdrücklich bevollmächtigte Person. Auf Verlangen teilt Nova Works dem Kunden mit, wer bevollmächtigt ist.</p>
+
+        <h3 id="p3">§ 3 Leistungserbringung durch Dritte, Zumietung, Fabrikatsvorbehalt</h3>
+        <p>(1) Nova Works ist berechtigt, ihre Leistungen ganz oder teilweise durch Dritte zu erbringen. Sie ist insbesondere berechtigt, den Mietgegenstand oder Teile davon bei Dritten anzumieten (Zumietung) und Subunternehmer sowie freie Mitarbeiter einzusetzen. Nova Works bleibt in diesen Fällen Vertragspartner des Kunden und hat ein Verschulden dieser Personen wie eigenes zu vertreten (§ 278 BGB).</p>
+        <p>(2) <strong>Eigengeschäft als Regelfall.</strong> Nova Works handelt im eigenen Namen und für eigene Rechnung, es sei denn, eine Leistung ist im Angebot oder in der Auftragsbestätigung ausdrücklich als „Vermittlung“ gekennzeichnet. Für ausdrücklich als Vermittlung gekennzeichnete Leistungen gilt Teil IV.</p>
+        <p>(3) <strong>Fabrikatsvorbehalt.</strong> Geschuldet ist die vereinbarte technische Spezifikation und Leistungsfähigkeit, nicht ein bestimmtes Fabrikat, Modell oder Baujahr. Nova Works ist berechtigt, gleichwertige Geräte zu stellen, deren Funktion, Leistungsmerkmale und äußeres Erscheinungsbild dem vereinbarten Standard entsprechen. Ist ein bestimmtes Fabrikat ausdrücklich vereinbart, insbesondere aufgrund eines Künstler- oder Produktionsriders, ist eine Abweichung nur mit Zustimmung des Kunden in Textform zulässig; Nova Works zeigt beabsichtigte Abweichungen unverzüglich an.</p>
+        <p>(4) <strong>Selbstbelieferung.</strong> Nova Works übernimmt kein Beschaffungsrisiko. Wird Nova Works trotz Abschlusses eines inhaltsgleichen Deckungsgeschäfts mit einem zuverlässigen Lieferanten oder Vorvermieter aus von ihr nicht zu vertretenden Gründen nicht oder nicht rechtzeitig beliefert, ist sie berechtigt, vom Vertrag zurückzutreten, soweit sie auch gleichwertigen Ersatz nach Absatz 3 nicht zu zumutbaren Bedingungen beschaffen kann. Nova Works unterrichtet den Kunden unverzüglich und erstattet bereits erbrachte Gegenleistungen. Weitergehende Ansprüche des Kunden nach § 6 bleiben unberührt.</p>
+        <p>(5) Nova Works ist berechtigt, Teilleistungen zu erbringen, soweit dies für den Kunden zumutbar ist und ihm hierdurch keine Mehrkosten entstehen.</p>
+
+        <h3 id="p4">§ 4 Preise, Zahlungsbedingungen, Sicherheiten</h3>
+        <p>(1) Alle Preise verstehen sich netto zuzüglich der jeweils geltenden gesetzlichen Umsatzsteuer.</p>
+        <p>(2) Transport, Fracht, Porto, Zoll, Versicherung, Abgaben, Übernachtungs- und Reisekosten sowie sonstige Nebenkosten werden gesondert berechnet, soweit nichts anderes vereinbart ist.</p>
+        <p>(3) Rechnungen sind ohne Abzug innerhalb von 14 Kalendertagen ab Rechnungsdatum bargeldlos auf das in der Rechnung genannte Konto zu zahlen. Maßgeblich für die Rechtzeitigkeit ist der Zahlungseingang bei Nova Works. Barzahlungen nimmt Nova Works nicht entgegen.</p>
+        <p>(4) Bei Erstaufträgen ist die Vergütung vor Leistungsbeginn vollständig im Voraus zu zahlen, soweit nichts anderes vereinbart ist. Nova Works ist berechtigt, Vorauszahlung oder Sicherheitsleistung auch in laufender Geschäftsbeziehung zu verlangen, wenn nach Vertragsschluss Umstände bekannt werden, die die Zahlungsfähigkeit des Kunden erheblich zu gefährden geeignet sind.</p>
+        <p>(5) <strong>Fremdkostenvorschuss.</strong> Soweit Nova Works zur Erfüllung des Vertrages Leistungen Dritter beauftragt, insbesondere Zumietungen, Subunternehmer, Transporte oder Übernachtungen, kann sie hierfür einen Vorschuss in Höhe der voraussichtlich anfallenden Fremdkosten verlangen. Der Vorschuss wird mit der Schlussrechnung verrechnet.</p>
+        <p>(6) Nova Works kann für die Dauer des Vertragsverhältnisses eine Kaution bis zur Höhe der Wiederbeschaffungskosten der überlassenen Gegenstände unter Berücksichtigung von deren Alter und Zustand verlangen. Die Kaution wird nach Vertragsende und vollständiger Rückgabe unverzinst zurückgezahlt, soweit Nova Works keine Ansprüche mehr zustehen.</p>
+
+        <h3 id="p5">§ 5 Verzug, Aufrechnung, Zurückbehaltung</h3>
+        <p>(1) Zahlt der Kunde nicht innerhalb der vereinbarten Frist, kommt er ohne weitere Mahnung in Verzug.</p>
+        <p>(2) Im Verzugsfall schuldet der Kunde Verzugszinsen in Höhe von neun Prozentpunkten über dem Basiszinssatz sowie eine Pauschale von 40 Euro (§ 288 Abs. 2 und Abs. 5 BGB). Die Geltendmachung eines weitergehenden Verzugsschadens bleibt vorbehalten; die Pauschale wird auf einen geschuldeten Schadensersatz angerechnet, soweit dieser in Rechtsverfolgungskosten begründet ist.</p>
+        <p>(3) Unberechtigt vorgenommene Skontoabzüge werden nachgefordert. Zugesagte Skonti setzen die vollständige und fristgerechte Zahlung sämtlicher fälliger Forderungen voraus.</p>
+        <p>(4) Der Kunde kann nur mit Gegenforderungen aufrechnen, die unbestritten, rechtskräftig festgestellt oder entscheidungsreif sind oder die aus demselben Vertragsverhältnis stammen.</p>
+        <p>(5) Ein Zurückbehaltungsrecht kann der Kunde nur ausüben, soweit sein Gegenanspruch auf demselben Vertragsverhältnis beruht oder unbestritten oder rechtskräftig festgestellt ist. § 320 BGB und die gesetzlichen Rechte des Kunden wegen nicht erbrachter oder mangelhafter Leistung bleiben unberührt.</p>
+
+        <h3 id="p6">§ 6 Haftung</h3>
+        <p>(1) Nova Works haftet unbeschränkt</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span>bei Vorsatz und grober Fahrlässigkeit,</span></li>
+          <li><span class="agb__bst">b)</span><span>für Schäden aus der Verletzung des Lebens, des Körpers oder der Gesundheit, die auf einer fahrlässigen oder vorsätzlichen Pflichtverletzung von Nova Works, ihrer gesetzlichen Vertreter oder ihrer Erfüllungsgehilfen beruhen,</span></li>
+          <li><span class="agb__bst">c)</span><span>im Umfang einer übernommenen Garantie oder eines übernommenen Beschaffungsrisikos,</span></li>
+          <li><span class="agb__bst">d)</span><span>bei arglistigem Verschweigen eines Mangels und</span></li>
+          <li><span class="agb__bst">e)</span><span>nach den Vorschriften des Produkthaftungsgesetzes.</span></li>
+        </ul>
+        <p>(2) Bei einfach fahrlässiger Verletzung einer wesentlichen Vertragspflicht ist die Haftung der Höhe nach auf den bei Vertragsschluss vorhersehbaren, vertragstypisch eintretenden Schaden begrenzt. Wesentliche Vertragspflichten sind Pflichten, deren Erfüllung die ordnungsgemäße Durchführung des Vertrages überhaupt erst ermöglicht und auf deren Einhaltung der Kunde regelmäßig vertrauen darf.</p>
+        <p>(3) Im Übrigen ist die Haftung von Nova Works ausgeschlossen.</p>
+        <p>(4) Die vorstehenden Haftungsbeschränkungen gelten auch zugunsten der gesetzlichen Vertreter, Mitarbeiter, freien Mitarbeiter und sonstigen Erfüllungsgehilfen von Nova Works.</p>
+        <p>(5) Eine Änderung der gesetzlichen Beweislastverteilung zum Nachteil des Kunden ist hiermit nicht verbunden.</p>
+        <p>(6) <strong>Ausschluss der verschuldensunabhängigen Mietmängelhaftung.</strong> Die Haftung von Nova Works für Mängel, die bereits bei Vertragsschluss vorhanden waren, ohne dass Nova Works sie zu vertreten hat (§ 536a Abs. 1 Alt. 1 BGB), ist ausgeschlossen. Absatz 1 bleibt unberührt.</p>
+        <p>(7) <strong>Vermittelte Leistungen.</strong> Für die Erbringung von Leistungen, die Nova Works ausdrücklich nur vermittelt hat, haftet Nova Works nicht; insoweit gilt § 29.</p>
+
+        <h3 id="p7">§ 7 Höhere Gewalt</h3>
+        <p>(1) Ereignisse höherer Gewalt, die Nova Works die Leistung wesentlich erschweren oder unmöglich machen, berechtigen sie, die Erfüllung ihrer Verpflichtungen um die Dauer der Behinderung zuzüglich einer angemessenen Anlaufzeit hinauszuschieben. Dem Kunden stehen dieselben Rechte für seine Verpflichtungen zu.</p>
+        <p>(2) Als höhere Gewalt gelten insbesondere Naturereignisse einschließlich Sturm, Unwetter, Hochwasser und Blitzschlag, Feuer, Erdbeben, Krieg, Aufruhr, Terroranschläge und vergleichbare Sicherheitslagen, Epidemien und Pandemien einschließlich der zu ihrer Bekämpfung ergriffenen behördlichen Maßnahmen, behördliche Versammlungs- und Veranstaltungsverbote, Streik und rechtmäßige Aussperrung, großflächige Ausfälle der öffentlichen Strom-, Telekommunikations- oder Verkehrsinfrastruktur sowie sonstige unvorhersehbare, außergewöhnliche Ereignisse, die die betroffene Partei auch bei Anwendung äußerster, nach den Umständen zumutbarer Sorgfalt nicht abwenden kann.</p>
+        <p>(3) Die betroffene Partei unterrichtet die andere Partei unverzüglich in Textform über Eintritt, voraussichtliche Dauer und Auswirkungen des Ereignisses und weist es auf Verlangen nach.</p>
+        <p>(4) Dauert die Behinderung länger als 30 Kalendertage oder steht fest, dass sie über den vereinbarten Leistungszeitraum hinaus andauert, ist jede Partei zum Rücktritt berechtigt. Bereits erbrachte Leistungen sind zu vergüten. Weitergehende Ansprüche wegen der durch höhere Gewalt bedingten Verzögerung oder Nichterfüllung bestehen nicht.</p>
+        <p>(5) <strong>Abgrenzung.</strong> Kann Nova Works ihre Leistung erbringen und ist lediglich der Kunde an deren Verwendung gehindert, gelten nicht dieser Paragraph, sondern § 12 (Verwendungsrisiko) und § 13 (Stornierung).</p>
+
+        <h3 id="p8">§ 8 Vertraulichkeit, Datenschutz, Referenznennung</h3>
+        <p>(1) Beide Parteien behandeln den Inhalt des Vertrages sowie die ihnen bei der Vertragsdurchführung bekannt gewordenen nicht offenkundigen Informationen der anderen Partei vertraulich. Ausgenommen sind Informationen, die offenkundig sind, die der empfangenden Partei bereits bekannt waren oder deren Offenlegung gesetzlich, behördlich oder gerichtlich angeordnet ist. Die Verpflichtung besteht für drei Jahre nach Vertragsende fort.</p>
+        <p>(2) Nova Works darf Zulieferern und Vorvermietern diejenigen Angaben mitteilen, die zur Durchführung des Auftrags erforderlich sind, insbesondere Veranstaltungsort, Zeitraum und Einsatzzweck.</p>
+        <p>(3) Nova Works ist berechtigt, das durchgeführte Projekt unter Nennung des Kunden und unter Verwendung von Bild- und Tonaufnahmen zu Referenzzwecken zu nennen, soweit der Kunde dem nicht in Textform widerspricht. Rechte Dritter, insbesondere an Bühnenbild, Marken und künstlerischen Darbietungen, bleiben unberührt.</p>
+        <p>(4) Informationen zur Verarbeitung personenbezogener Daten durch Nova Works enthält die Datenschutzerklärung unter https://nova-works.de/datenschutzerklaerung/.</p>
+
+        <h3 id="p9">§ 9 Abtretung</h3>
+        <p>Der Kunde kann Ansprüche aus diesem Vertrag nur mit vorheriger Zustimmung von Nova Works in Textform abtreten. § 354a HGB bleibt unberührt.</p>
+
+        <h2 id="teil-2">TEIL II. VERMIETUNG</h2>
+
+        <h3 id="p10">§ 10 Mietgegenstand, Mietzeit</h3>
+        <p>(1) Gegenstand des Mietvertrages sind die im Auftrag, in der Auftragsbestätigung oder im Mietlieferschein aufgeführten Geräte und Zubehörteile (nachfolgend „Mietgegenstand“).</p>
+        <p>(2) Der Kunde erwirbt keine Eigentumsrechte am Mietgegenstand.</p>
+        <p>(3) Die Mietzeit beginnt mit der Auslieferung beim Kunden beziehungsweise mit der Bereitstellung zum vereinbarten Abholtermin am von Nova Works benannten Übergabeort. Sie endet mit der Rückholung durch Nova Works beziehungsweise mit der Rückgabe am vereinbarten Rückgabeort. Verzögert sich die Rückholung aus Gründen, die Nova Works zu vertreten hat, endet die Mietzeit mit dem vereinbarten Rückholtermin.</p>
+        <p>(4) Wird die vereinbarte Mietzeit ohne Zustimmung von Nova Works überschritten, schuldet der Kunde für die Dauer der Vorenthaltung eine Nutzungsentschädigung in Höhe der vereinbarten Miete (§ 546a BGB). Dem Kunden bleibt der Nachweis gestattet, dass kein oder ein wesentlich geringerer Schaden entstanden ist; Nova Works bleibt der Nachweis eines höheren Schadens vorbehalten. Entstehen Nova Works infolge der Verspätung Ansprüche eines Vorvermieters, gilt § 11 Abs. 4.</p>
+
+        <h3 id="p11">§ 11 Fremdgeräte, Eigentum Dritter</h3>
+        <p>(1) Der Mietgegenstand kann ganz oder teilweise im Eigentum Dritter stehen, insbesondere im Eigentum von Vorvermietern, bei denen Nova Works zugemietet hat (§ 3 Abs. 1). Nova Works weist die betroffenen Positionen auf Verlangen des Kunden aus.</p>
+        <p>(2) Die Pflichten des Kunden nach diesem Teil II, insbesondere nach den §§ 14, 15, 19, 20 und 22, gelten unabhängig davon, ob der Mietgegenstand im Eigentum von Nova Works oder eines Dritten steht. Sie bestehen zugleich im Interesse des jeweiligen Eigentümers.</p>
+        <p>(3) Soweit der Vorvermieter besondere Anforderungen an Handhabung, Versicherung, Kennzeichnung oder Rückgabe stellt, gibt Nova Works diese dem Kunden spätestens bei Übergabe in Textform weiter. Der Kunde beachtet diese Anforderungen wie eigene Vertragspflichten.</p>
+        <p>(4) <strong>Drittschaden.</strong> Nova Works ist berechtigt, Schäden, die dem Eigentümer des Mietgegenstandes entstehen, im eigenen Namen gegenüber dem Kunden geltend zu machen und Leistung an den Eigentümer zu verlangen. Der Kunde stellt Nova Works von Ansprüchen des Eigentümers frei, die auf einer von ihm zu vertretenden Ursache beruhen, einschließlich Ansprüchen wegen Mietausfalls und verspäteter Rückgabe. Die Freistellung umfasst die angemessenen Kosten der Rechtsverteidigung. § 6 bleibt unberührt.</p>
+        <p>(5) Eigentumskennzeichen von Nova Works oder Dritter dürfen weder entfernt noch unkenntlich gemacht werden.</p>
+
+        <h3 id="p12">§ 12 Verwendungsrisiko</h3>
+        <p>Die Miete ist auch dann in voller Höhe geschuldet, wenn der Mietgegenstand nicht oder nur in Bereitschaft eingesetzt wird oder wenn der Kunde aus einem in seiner Person oder in seinem Risikobereich liegenden Grund an der Ausübung seines Gebrauchsrechts gehindert ist (§ 537 Abs. 1 BGB). Nova Works lässt sich anrechnen, was sie infolge der Nichtinanspruchnahme an Aufwendungen erspart oder durch anderweitige Verwertung des Mietgegenstandes erlangt.</p>
+
+        <h3 id="p13">§ 13 Stornierung durch den Kunden</h3>
+        <p>(1) Tritt der Kunde aus Gründen, die Nova Works nicht zu vertreten hat, ganz oder teilweise vom Vertrag zurück, gelten die nachfolgenden Regelungen. Die Stornierung bedarf der Textform; maßgeblich ist der Zugang bei Nova Works.</p>
+        <p>(2) <strong>Mietleistungen.</strong> Für den auf die Vermietung entfallenden Anteil der vereinbarten Vergütung berechnet Nova Works bei Zugang der Stornierung</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span>mehr als 8 Wochen vor Beginn der Mietzeit: 15 Prozent,</span></li>
+          <li><span class="agb__bst">b)</span><span>mehr als 4 Wochen vor Beginn der Mietzeit: 25 Prozent,</span></li>
+          <li><span class="agb__bst">c)</span><span>mehr als 2 Wochen vor Beginn der Mietzeit: 50 Prozent,</span></li>
+          <li><span class="agb__bst">d)</span><span>mehr als 1 Woche vor Beginn der Mietzeit: 75 Prozent,</span></li>
+          <li><span class="agb__bst">e)</span><span>ab 1 Woche vor Beginn der Mietzeit: 90 Prozent.</span></li>
+        </ul>
+        <p>(3) <strong>Dienst- und Werkleistungen.</strong> Für den auf Dienst- und Werkleistungen entfallenden Anteil der Vergütung berechnet Nova Works die vereinbarte Vergütung abzüglich der infolge der Stornierung ersparten Aufwendungen und abzüglich dessen, was Nova Works durch anderweitigen Einsatz ihres Personals erwirbt oder zu erwerben böswillig unterlässt. Für noch nicht erbrachte Leistungen wird pauschal ein Betrag von 30 Prozent der auf diesen Teil entfallenden Vergütung berechnet.</p>
+        <p>(4) <strong>Fremdkosten.</strong> Von Nova Works im Kundenauftrag bereits beauftragte Fremdleistungen, insbesondere Zumietungen, Subunternehmer, freie Mitarbeiter, Transporte, Übernachtungen und vermittelte Leistungen, sind unabhängig von den Absätzen 2 und 3 in der tatsächlich entstandenen Höhe zu erstatten, soweit Nova Works sie nicht kostenfrei stornieren kann. Nova Works bemüht sich um kostenfreie Stornierung und weist die entstandenen Fremdkosten auf Verlangen nach.</p>
+        <p>(5) <strong>Vermittlungsprovision.</strong> Eine nach § 29 Abs. 5 verdiente Vermittlungsprovision bleibt im Fall der Stornierung bestehen.</p>
+        <p>(6) <strong>Nachweisvorbehalt.</strong> Dem Kunden bleibt in allen Fällen der Nachweis gestattet, dass Nova Works kein oder ein wesentlich geringerer Schaden entstanden ist. Nova Works bleibt der Nachweis eines höheren Schadens vorbehalten.</p>
+        <p>(7) Sagt der Kunde die Veranstaltung wegen eines Ereignisses höherer Gewalt im Sinne des § 7 Abs. 2 ab, ohne dass die Leistungsfähigkeit von Nova Works betroffen ist, gelten die Absätze 2 bis 6. § 313 BGB bleibt unberührt.</p>
+
+        <h3 id="p14">§ 14 Pflichten des Kunden, Handhabung</h3>
+        <p>(1) Der Kunde behandelt den Mietgegenstand pfleglich und verwendet ihn ausschließlich für den vertraglich vorgesehenen Zweck. Über den beabsichtigten Verwendungszweck erteilt er vollständig und wahrheitsgemäß Auskunft.</p>
+        <p>(2) Der Kunde stellt sicher, dass Transport, Aufbau, Bedienung und Abbau ausschließlich durch fachlich eingewiesenes Personal erfolgen. Die Anweisungen von Nova Works sowie die einschlägigen Sicherheitsvorschriften sind zu beachten. Bedienungs-, Aufbau- und Sicherheitsanleitungen übergibt Nova Works mit dem Mietgegenstand.</p>
+        <p>(3) Der Transport erfolgt auf Gefahr des Kunden, es sei denn, Nova Works führt ihn mit eigenen Transportmitteln oder durch von ihr beauftragte Transportunternehmen durch.</p>
+        <p>(4) Der Kunde sorgt für die erforderliche Stromversorgung, hält alle von Nova Works geforderten Anschlüsse entsprechend den geltenden Sicherheitsbestimmungen verfügbar und haftet für deren ordnungsgemäße Beschaffenheit.</p>
+        <p>(5) Bei Freiluftveranstaltungen schützt der Kunde den Mietgegenstand wirksam gegen Witterungseinflüsse, insbesondere durch geeignete Überdachung. Die zulässigen Windlasten der eingesetzten Konstruktionen und die mitgeteilten Abbruchkriterien sind einzuhalten. Über die Betriebseinstellung bei kritischen Witterungsbedingungen entscheidet der Kunde in Abstimmung mit dem Verantwortlichen für Veranstaltungstechnik; Nova Works ist berechtigt, den Betrieb ihrer Gewerke bei Überschreiten der Abbruchkriterien einzustellen.</p>
+        <p>(6) Der Kunde stellt während des gesamten Zeitraums der Veranstaltung einschließlich Aufbau-, Proben-, Abbau- und nutzungsfreier Zeiten sowie während der Nacht die Bewachung und Sicherung des Mietgegenstandes sicher. Von Nova Works eingesetztes Personal übernimmt diese Bewachung nicht.</p>
+        <p>(7) Eigenmächtige Reparatureingriffe und Reparaturversuche sind untersagt, soweit § 17 Abs. 7 nichts anderes bestimmt. Bei Zuwiderhandlung trägt der Kunde die Kosten der erforderlichen Instandsetzung.</p>
+
+        <h3 id="p15">§ 15 Weitervermietung, Rechte Dritter</h3>
+        <p>(1) <strong>Eigener Einsatz.</strong> Setzt der Kunde den Mietgegenstand selbst ein, auch zur Erfüllung eines eigenen Vertrages mit einem Dritten, und behält er dabei die tatsächliche Verfügungsgewalt, liegt keine Überlassung an Dritte vor. Dasselbe gilt für den Einsatz durch Erfüllungsgehilfen des Kunden, insbesondere durch dessen Mitarbeiter, beauftragte Dienstleister oder Subunternehmer. Einer Zustimmung von Nova Works bedarf es in diesen Fällen nicht.</p>
+        <p>(2) <strong>Überlassung an Dritte.</strong> Überlässt der Kunde den Mietgegenstand einem Dritten zum eigenständigen Gebrauch, insbesondere im Wege der Weitervermietung, bedarf dies der vorherigen Zustimmung von Nova Works in Textform (§ 540 Abs. 1 BGB). Die Zustimmung kann allgemein für die Geschäftsbeziehung oder für einzelne Vorgänge erteilt werden. Steht der Mietgegenstand im Eigentum eines Dritten, setzt die Zustimmung voraus, dass auch der Eigentümer zugestimmt hat.</p>
+        <p>(3) <strong>Pflichtenweitergabe.</strong> Bei einer nach Absatz 2 zugelassenen Überlassung erlegt der Kunde dem Dritten die Pflichten aus den §§ 11, 14, 18, 19 und 22 auf und stellt deren Einhaltung sicher. Der Kunde bleibt Nova Works gegenüber verantwortlich und hat ein Verschulden des Dritten wie eigenes zu vertreten (§ 540 Abs. 2 BGB).</p>
+        <p>(4) Verpfändung, Sicherungsübereignung und sonstige Belastung des Mietgegenstandes sind untersagt.</p>
+        <p>(5) Der Kunde schützt den Mietgegenstand vor Zugriffen Dritter. Er unterrichtet Nova Works unverzüglich telefonisch und in Textform, wenn Dritte auf den Mietgegenstand zugreifen, insbesondere bei Pfändungen und sonstigen Zwangsvollstreckungsmaßnahmen sowie bei einem Antrag auf Eröffnung des Insolvenzverfahrens über sein Vermögen, und übersendet unverzüglich die zur Rechtsverfolgung erforderlichen Unterlagen.</p>
+        <p>(6) Die Kosten von Maßnahmen zum Schutz der Eigentums- und Besitzrechte trägt der Kunde, soweit er den Zugriff Dritter zu vertreten hat. Dasselbe gilt für den Schaden, der durch den Ausfall des Mietgegenstandes infolge von Vollstreckungsmaßnahmen beim Kunden entsteht.</p>
+
+        <h3 id="p16">§ 16 Zustand des Mietgegenstandes, Mängel, Ausfall</h3>
+        <p>(1) Nova Works übergibt den Mietgegenstand in geprüftem, gebrauchstauglichem Zustand einschließlich der erforderlichen Prüfnachweise (§ 14 Abs. 7 BetrSichV) sowie der Bedienungs- und Aufbauanleitungen in deutscher Sprache. Bei zugemieteten Geräten übergibt Nova Works die vom Vorvermieter erhaltenen Nachweise.</p>
+        <p>(2) Bei Übergabe wird ein Übergabeprotokoll erstellt, in dem der Zustand des Mietgegenstandes dokumentiert wird. Offensichtliche, bei zumutbarer Sichtprüfung erkennbare Mängel zeigt der Kunde unverzüglich, spätestens innerhalb von 24 Stunden nach Übergabe, in Textform an; verdeckte Mängel unverzüglich nach Entdeckung. Die gesetzlichen Mängelrechte bleiben unberührt; das Unterlassen der Anzeige begründet lediglich die widerlegliche Vermutung, dass der Mangel bei Übergabe nicht vorlag.</p>
+        <p>(3) Fällt der Mietgegenstand während der Mietzeit ganz oder teilweise aus, zeigt der Kunde dies unverzüglich noch während der Veranstaltung an. Nova Works setzt den Mietgegenstand nach Kenntnis in angemessener Frist instand oder stellt gleichwertigen Ersatz.</p>
+        <p>(4) Für ein ohne Verschulden des Kunden ausgefallenes Gerät, das Nova Works nicht instand setzt oder ersetzt, entfällt die Miete für die Dauer des Ausfalls.</p>
+        <p>(5) Nova Works haftet nicht für ein Nichtfunktionieren des Mietgegenstandes, das auf der Verbindung mit nicht von Nova Works gestellten Geräten, auf einer vom Kunden oder von Dritten zu vertretenden Handhabung, auf Überlastung, auf einer unzureichend ausgelegten oder ausgefallenen Stromversorgung oder auf einem Eingriff des Kunden oder Dritter beruht. § 6 bleibt unberührt.</p>
+        <p>(6) Der Kunde kann gegenüber der Mietforderung nicht mindern. Sein bereicherungsrechtlicher Anspruch auf Rückzahlung überzahlter Miete bleibt unberührt.</p>
+        <p>(7) Wird Nova Works in einem Servicefall tätig, der nicht auf einem von ihr zu vertretenden Umstand beruht, kann sie die angefallenen Fahrt- und Arbeitskosten berechnen.</p>
+
+        <h3 id="p17">§ 17 Beschaffenheit von LED-Displaysystemen</h3>
+        <p>(1) <strong>Technologiebedingte Eigenschaft.</strong> LED-Displaysysteme bestehen aus mehreren Millionen einzeln angesteuerten Leuchtdioden. Nach dem Stand der Technik lässt sich der Ausfall einzelner Leuchtdioden über die gesamte Mietzeit herstellungs- und betriebsbedingt nicht ausschließen. Die Parteien vereinbaren daher die nachfolgende Beschaffenheit.</p>
+        <p>(2) <strong>Beschaffenheit bei Übergabe.</strong> Der Mietgegenstand ist bei Übergabe vertragsgemäß, wenn im aktiven Bildbereich</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span>höchstens 10 dauerhaft leuchtende Pixel je einer Million Pixel,</span></li>
+          <li><span class="agb__bst">b)</span><span>höchstens 20 dauerhaft dunkle Pixel je einer Million Pixel und</span></li>
+          <li><span class="agb__bst">c)</span><span>höchstens 50 defekte Subpixel je einer Million Pixel</span></li>
+        </ul>
+        <p class="agb__fort">vorliegen und kein Cluster im Sinne des Absatzes 4 besteht. Die für die konkret vermietete Konfiguration geltenden absoluten Werte weist Nova Works im Übergabeprotokoll aus.</p>
+        <p>(3) <strong>Beschaffenheit während der Mietzeit.</strong> Während der Mietzeit gelten die Werte des Absatzes 2 mit der Maßgabe, dass sie sich auf das Zweifache erhöhen.</p>
+        <p>(4) <strong>Stets Mangel.</strong> Unabhängig von den Absätzen 2 und 3 stellen einen Mangel dar:</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span>ein Cluster, das heißt drei oder mehr defekte Pixel innerhalb eines Bereichs von 5 mal 5 Pixeln,</span></li>
+          <li><span class="agb__bst">b)</span><span>der Ausfall zusammenhängender Pixelzeilen oder Pixelspalten,</span></li>
+          <li><span class="agb__bst">c)</span><span>der Ausfall eines vollständigen Moduls oder einer vollständigen Kachel,</span></li>
+          <li><span class="agb__bst">d)</span><span>Helligkeits- oder Farbabweichungen zwischen Modulen, die nach Kalibrierung einen Farbabstand von ΔE &gt; 3 überschreiten.</span></li>
+        </ul>
+        <p>(5) <strong>Prüfbedingungen.</strong> Maßgeblich ist die Betrachtung bei Betriebshelligkeit, senkrechter Blickrichtung und Anzeige von Vollflächentestbildern in Weiß, Schwarz, Rot, Grün und Blau aus einem Abstand von mindestens dem 1,5-fachen des Zahlenwerts des Pixelabstands in Millimetern, ausgedrückt in Metern, mindestens jedoch 3 Metern.</p>
+        <p>(6) <strong>Nahbereichs- und Kameraanwendungen.</strong> Beabsichtigt der Kunde eine Nutzung für Kameraaufnahmen im Nahbereich, für Broadcast oder für Virtual Production, zeigt er dies bei Vertragsschluss an. In diesem Fall gelten die Absätze 2 bis 5 nur, soweit die Parteien nichts Abweichendes vereinbaren.</p>
+        <p>(7) <strong>Ersatzmodule und Instandsetzung.</strong> Werden die Werte des Absatzes 3 während der Mietzeit überschritten, gilt Folgendes:</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span><strong>Ersatzmodule.</strong> Nova Works übergibt mit dem LED-System Ersatzmodule im Umfang von mindestens 3 Prozent der gelieferten Module, mindestens jedoch ein Ersatzmodul je gelieferter Modulart. Abweichend von § 14 Abs. 7 ist der Kunde berechtigt, betroffene Module durch diese Ersatzmodule zu ersetzen; der Austausch erfolgt fachgerecht durch eingewiesenes Personal.</span></li>
+          <li><span class="agb__bst">b)</span><span><strong>Technische Unterstützung.</strong> Nova Works hält während der vereinbarten Nutzungszeiten eine telefonische Erreichbarkeit für technische Unterstützung vor und benennt Rufnummer und Servicezeiten vor Übergabe.</span></li>
+          <li><span class="agb__bst">c)</span><span><strong>Nachlieferung.</strong> Reichen die übergebenen Ersatzmodule nicht aus, stellt Nova Works nach Anzeige durch den Kunden unverzüglich weitere Ersatzmodule bereit.</span></li>
+          <li><span class="agb__bst">d)</span><span><strong>Einsatz eigenen Personals.</strong> Setzt Nova Works am Veranstaltungsort eigenes Personal ein, veranlasst sie die Instandsetzung unverzüglich vor Ort. Im Übrigen schuldet sie eine Instandsetzung vor Ort nur bei gesonderter Vereinbarung.</span></li>
+          <li><span class="agb__bst">e)</span><span><strong>Nicht behebbare Überschreitung.</strong> Kann der vertragsgemäße Zustand nicht innerhalb angemessener Frist hergestellt werden, gilt § 16 Abs. 4.</span></li>
+        </ul>
+        <p>(8) <strong>Klarstellung.</strong> Die Absätze 1 bis 7 konkretisieren, welche Beeinträchtigungen die Tauglichkeit des Mietgegenstandes zum vertragsgemäßen Gebrauch nur unerheblich mindern (§ 536 Abs. 1 S. 3 BGB). Bei Überschreiten der vereinbarten Werte bleiben die gesetzlichen Mängelrechte unberührt. § 6 bleibt unberührt. Abweichende individuelle Beschaffenheitsvereinbarungen gehen vor.</p>
+
+        <h3 id="p18">§ 18 Software, Lizenzen und Daten</h3>
+        <p>(1) <strong>Nutzungsrecht.</strong> Enthält der Mietgegenstand Software, insbesondere bei Medienservern, Licht- und Medienpulten, Steuerungs-, Kalibrierungs- und Visualisierungssystemen, erhält der Kunde für die Dauer der Mietzeit ein einfaches, nicht übertragbares Recht, diese Software im Rahmen des vertragsgemäßen Gebrauchs zu nutzen. Weitergehende Rechte, insbesondere Eigentums- und Schutzrechte, werden nicht übertragen. Bei einer nach § 15 Abs. 2 zugelassenen Überlassung darf der Kunde das Nutzungsrecht im Umfang dieses Absatzes weitergeben, sofern er dem Dritten die Beschränkungen des Absatzes 2 auferlegt; eine weitergehende Unterlizenzierung ist unzulässig.</p>
+        <p>(2) <strong>Beschränkungen.</strong> Der Kunde darf die Software nicht vervielfältigen, verändern, übersetzen, dekompilieren oder zurückentwickeln, nicht auf andere Systeme übertragen und Dritten nicht außerhalb des vertragsgemäßen Gebrauchs zugänglich machen. Lizenzträger, insbesondere Dongles, Lizenzdateien und Aktivierungsschlüssel, dürfen weder entfernt noch ausgetauscht oder verändert werden. Die zwingenden gesetzlichen Befugnisse nach den §§ 69d, 69e UrhG bleiben unberührt.</p>
+        <p>(3) <strong>Drittlizenzen.</strong> Soweit Software Dritter eingesetzt wird, gelten deren Lizenzbedingungen ergänzend. Nova Works stellt sie auf Verlangen vor Übergabe zur Verfügung.</p>
+        <p>(4) <strong>Inhalte des Kunden.</strong> Der Kunde ist für die von ihm gespeicherten oder wiedergegebenen Inhalte und Daten verantwortlich und stellt sicher, dass er zu deren Nutzung und Wiedergabe berechtigt ist.</p>
+        <p>(5) <strong>Löschung.</strong> Der Kunde löscht seine Inhalte und Daten vor der Rückgabe vollständig. Kommt er dem nicht nach, ist Nova Works zur Löschung berechtigt; sie löscht verbliebene Inhalte spätestens innerhalb von 30 Tagen nach Rückgabe. Eine Pflicht zur Sicherung, Aufbewahrung oder Herausgabe von Inhalten und Daten des Kunden besteht nicht.</p>
+        <p>(6) <strong>Personenbezogene Daten.</strong> Enthalten die Inhalte des Kunden personenbezogene Daten, schließen die Parteien vor Übergabe eine Vereinbarung über die Auftragsverarbeitung nach Art. 28 DSGVO, soweit eine solche erforderlich ist. Der Kunde weist bei Vertragsschluss auf eine solche Verarbeitung hin.</p>
+        <p>(7) <strong>Freistellung.</strong> Der Kunde stellt Nova Works von Ansprüchen Dritter frei, die auf einer Verletzung der Absätze 2 bis 4 durch ihn oder durch eine Person beruhen, der er den Mietgegenstand überlassen hat, soweit Nova Works diese Ansprüche nicht selbst zu vertreten hat. Die Freistellung umfasst die angemessenen Kosten der Rechtsverteidigung. § 6 bleibt unberührt.</p>
+
+        <h3 id="p19">§ 19 Versicherung des Mietgegenstandes</h3>
+        <p>(1) Der Kunde versichert den Mietgegenstand auf eigene Kosten für die Dauer seiner Obhut gegen Beschädigung, Zerstörung, Verlust, Diebstahl, Feuer, Wasser, Sturm, Vandalismus und Transportschäden. Die Obhut beginnt mit Übergabe beziehungsweise Übernahme und endet mit Rückgabe beziehungsweise Rückholung; sie umfasst Transport, Auf- und Abbau, Betrieb, nutzungsfreie Zeiten und Zwischenlagerung.</p>
+        <p>(2) Der Versicherungsschutz muss ausdrücklich auch fremdes Eigentum umfassen (Fremdgeräte im Sinne des § 11) sowie Zeiträume, in denen der Kunde den Mietgegenstand nach § 15 Abs. 2 einem Dritten überlassen hat.</p>
+        <p>(3) Die Versicherungssumme muss mindestens dem im Mietvertrag oder Übergabeprotokoll ausgewiesenen Versicherungswert entsprechen.</p>
+        <p>(4) Der Kunde weist den Versicherungsschutz auf Verlangen vor Übergabe in Textform nach. Bis zum Nachweis ist Nova Works berechtigt, die Übergabe zu verweigern; hierdurch entstehende Verzögerungen hat der Kunde zu vertreten.</p>
+        <p>(5) Der Kunde tritt seine Ansprüche gegen den Versicherer wegen Schäden am Mietgegenstand bereits jetzt erfüllungshalber an Nova Works ab. Nova Works nimmt die Abtretung an und ist berechtigt, die Leistung an den Eigentümer weiterzuleiten.</p>
+        <p>(6) Die Versicherungspflicht des Kunden begründet keine Haftungsfreistellung oder Haftungserleichterung zugunsten von Nova Works.</p>
+
+        <h3 id="p20">§ 20 Haftung des Kunden für Schäden am Mietgegenstand</h3>
+        <p>(1) Der Kunde haftet für Beschädigung, Zerstörung und Verlust des Mietgegenstandes nach den gesetzlichen Vorschriften, soweit er die Ursache zu vertreten hat. Er hat auch das Verschulden seiner Mitarbeiter, seiner Erfüllungsgehilfen und der von ihm hinzugezogenen Dritten zu vertreten (§§ 278, 540 Abs. 2 BGB).</p>
+        <p>(2) Zu vertreten hat der Kunde insbesondere Schäden, die auf unsachgemäßer oder fahrlässiger Behandlung, auf einer Verwendung entgegen § 14, auf unzureichender Bewachung entgegen § 14 Abs. 6, auf unzureichendem Witterungsschutz entgegen § 14 Abs. 5 oder auf einer von ihm zu vertretenden Stromversorgung entgegen § 14 Abs. 4 beruhen.</p>
+        <p>(3) Veränderungen und Verschlechterungen durch vertragsgemäßen Gebrauch hat der Kunde nicht zu vertreten (§ 538 BGB). Hierzu zählen insbesondere der Verbrauch von Leuchtmitteln, die betriebsbedingte Degradation von LED- und Laserdioden, üblicher Kabel- und Case-Verschleiß sowie Verschmutzungen durch bestimmungsgemäßen Einsatz von Nebel- und Hazeranlagen.</p>
+        <p>(4) <strong>Bemessung des Schadens.</strong> Bei Beschädigung ersetzt der Kunde die erforderlichen Instandsetzungskosten. Bei Zerstörung oder Verlust ersetzt er die Kosten der Wiederbeschaffung einer Sache gleicher Art und Güte unter Berücksichtigung von Alter und Zustand (Abzug neu für alt). Übersteigen die Instandsetzungskosten die Wiederbeschaffungskosten, sind nur letztere zu ersetzen.</p>
+        <p>(5) <strong>Mietausfall.</strong> Für die Dauer der objektiv erforderlichen Instandsetzung oder Wiederbeschaffung ersetzt der Kunde den entgangenen Deckungsbeitrag; bei Fremdgeräten den vom Eigentümer berechneten Mietausfall im Rahmen des § 11 Abs. 4. Nova Works setzt vorrangig verfügbares Ersatzgerät ein, soweit ihr das möglich und zumutbar ist. Dem Kunden bleibt der Nachweis gestattet, dass kein oder ein wesentlich geringerer Schaden entstanden ist.</p>
+        <p>(6) <strong>Reinigung.</strong> Wird der Mietgegenstand in einem Zustand zurückgegeben, der eine über die übliche Aufbereitung hinausgehende Reinigung erfordert, trägt der Kunde die Mehrkosten. Absatz 3 bleibt unberührt.</p>
+
+        <h3 id="p21">§ 21 Rückgabe und Nachprüfung</h3>
+        <p>(1) Die Rückgabe erfolgt vollständig, gereinigt und ordnungsgemäß verpackt am vereinbarten Ort. § 18 Abs. 5 (Löschung von Inhalten und Daten) ist zu beachten.</p>
+        <p>(2) Bei der Rückgabe wird ein Rückgabeprotokoll erstellt. <strong>Die Rückgabe erfolgt stets unter dem Vorbehalt der technischen Nachprüfung.</strong> Eine Quittierung der Rückgabe stellt kein Anerkenntnis der Vollständigkeit oder Mangelfreiheit dar.</p>
+        <p>(3) Nova Works prüft den Mietgegenstand innerhalb von zehn Werktagen nach Rückerhalt und zeigt festgestellte Schäden und Fehlmengen innerhalb dieser Frist in Textform an. Nach Fristablauf kann sie Schäden und Fehlmengen nur noch geltend machen, wenn diese bei ordnungsgemäßer Prüfung nicht erkennbar waren.</p>
+        <p>(4) Bei zugemieteten Geräten beginnt die Frist des Absatzes 3 mit dem Rückerhalt durch den Vorvermieter, sofern die Geräte unmittelbar an diesen zurückgeführt werden. Nova Works leitet die Feststellungen des Vorvermieters unverzüglich weiter.</p>
+        <p>(5) Der Kunde ist berechtigt, bei der Nachprüfung anwesend zu sein und einen Sachverständigen hinzuzuziehen. Den Prüftermin teilt Nova Works auf Verlangen rechtzeitig mit.</p>
+        <p>(6) Holt Nova Works den Mietgegenstand am Veranstaltungsort ab, gelten die Absätze 2 bis 5 entsprechend.</p>
+
+        <h3 id="p22">§ 22 Sicherheitsrechtliche Verantwortung</h3>
+        <p>(1) <strong>Rolle des Kunden.</strong> Der Kunde teilt bei Vertragsschluss in Textform mit, in welcher Funktion der Mietgegenstand eingesetzt wird, insbesondere ob er selbst Veranstalter ist, ob er den Mietgegenstand zur Erfüllung eines eigenen Vertrages mit dem Veranstalter einsetzt oder ob er ihn nach § 15 Abs. 2 einem Dritten überlässt. Auf Verlangen benennt er Veranstalter und Veranstaltungsort. Unterbleibt die Mitteilung, treffen den Kunden die Pflichten dieses Paragraphen unmittelbar.</p>
+        <p>(2) <strong>Zuweisung im Verhältnis der Vertragsparteien.</strong> Die Pflichten nach den Absätzen 4 bis 7 treffen im Verhältnis zu Nova Works stets den Kunden. Ist der Kunde nicht selbst Veranstalter, erfüllt er sie, indem er sie dem Veranstalter oder dem Dritten vertraglich auferlegt und deren Einhaltung sicherstellt. Er bleibt Nova Works gegenüber verantwortlich und hat ein Verschulden des Veranstalters oder des Dritten wie eigenes zu vertreten (§ 540 Abs. 2 BGB). Diese Regelung setzt die Anforderung um, vor Gastspielen und vor der Nutzung durch Dritte zu klären, wer die Verantwortung trägt (§ 15 Abs. 2 DGUV Vorschrift 17).</p>
+        <p>(3) <strong>Öffentlich-rechtliche Verantwortung.</strong> Wer nach Bauordnungs-, Versammlungsstätten- und Arbeitsschutzrecht Betreiber, Veranstalter oder verantwortlicher Unternehmer ist, richtet sich nach den tatsächlichen Verhältnissen und wird durch diesen Vertrag nicht verändert. Dieser Paragraph regelt ausschließlich das Verhältnis der Vertragsparteien zueinander.</p>
+        <p>(4) Die Einholung aller erforderlichen Genehmigungen, Konzessionen und Anzeigen, die Anmeldung bei der GEMA sowie die Veranlassung und Kostentragung baurechtlicher und sicherheitstechnischer Abnahmen obliegen dem Kunden.</p>
+        <p>(5) Der Kunde stellt oder stellt sicher, dass gestellt wird, soweit nicht ausdrücklich als Leistung von Nova Works vereinbart,</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span>den Verantwortlichen für Veranstaltungstechnik nach den §§ 39, 40 der Versammlungsstättenverordnung des jeweiligen Landes,</span></li>
+          <li><span class="agb__bst">b)</span><span>den Laserschutzbeauftragten nach § 5 Abs. 2 OStrV beim Einsatz von Lasereinrichtungen der Klassen 3R, 3B oder 4,</span></li>
+          <li><span class="agb__bst">c)</span><span>die Schallpegelüberwachung und Protokollierung nach DIN 15905-5 in der jeweils geltenden Fassung sowie</span></li>
+          <li><span class="agb__bst">d)</span><span>eine koordinierende Person nach § 8 ArbSchG, wenn mehrere Unternehmen an der Veranstaltung beteiligt sind.</span></li>
+        </ul>
+        <p>(6) Der Kunde beachtet, dass eine Übertragung versammlungsstättenrechtlicher Betreiberpflichten auf den Veranstalter nur kumulativ wirkt und die Verantwortung des Betreibers unberührt lässt.</p>
+        <p>(7) <strong>Laserbetrieb.</strong> Beim Einsatz von Lasersystemen stellt der Kunde sicher, dass alle Personen, die optische Geräte auf der Veranstaltung betreiben, betreuen oder mit sich führen, auf die Gefahr von Schäden durch Laserstrahlung hingewiesen werden und dass geeignete Schutzmaßnahmen veranlasst werden, insbesondere Linsenabdeckungen. Geräte im unmittelbaren Strahlverlauf sind stets zu schützen. Das Mitführen von Laserpointern und vergleichbaren Gegenständen durch Gäste ist zu untersagen.</p>
+        <p>(8) Nova Works stellt den Mietgegenstand in geprüftem Zustand mit den erforderlichen Prüfnachweisen und Anleitungen zur Verfügung (§ 16 Abs. 1). Ihre eigenen Unternehmerpflichten für das von ihr eingesetzte Personal bleiben unberührt.</p>
+        <p>(9) <strong>Freistellung.</strong> Der Kunde stellt Nova Works von Ansprüchen Dritter frei, die darauf beruhen, dass der Kunde, der Veranstalter oder eine Person, der der Kunde den Mietgegenstand überlassen hat, die nach diesem Paragraphen oder nach § 14 bestehenden Pflichten verletzt hat, soweit Nova Works diese Ansprüche nicht selbst zu vertreten hat. Die Freistellung umfasst die angemessenen Kosten der Rechtsverteidigung. § 6 bleibt unberührt.</p>
+
+        <h2 id="teil-3">TEIL III. DIENSTLEISTUNGEN UND PERSONALEINSATZ</h2>
+
+        <h3 id="p23">§ 23 Leistungsgegenstand, Vertragstyp</h3>
+        <p>(1) Erbringt Nova Works Leistungen wie Planung, Auf- und Abbau, Rigging, Installation oder Inbetriebnahme, für die ein bestimmter Erfolg geschuldet ist, gilt Werkvertragsrecht.</p>
+        <p>(2) Erbringt Nova Works Leistungen wie den Einsatz von Technikern, Operating, Projektleitung oder Bereitschaft, für die kein bestimmter Erfolg geschuldet ist, gilt Dienstvertragsrecht.</p>
+        <p>(3) Nova Works weist die Leistungen im Angebot und in der Auftragsbestätigung getrennt aus.</p>
+
+        <h3 id="p24">§ 24 Abnahme werkvertraglicher Leistungen</h3>
+        <p>(1) Nova Works zeigt die Fertigstellung der Werkleistung in Textform an und fordert zur Abnahme auf.</p>
+        <p>(2) Der Kunde nimmt die Leistung innerhalb der gesetzten angemessenen Frist ab. Verweigert er die Abnahme innerhalb dieser Frist nicht unter Angabe mindestens eines Mangels, gilt die Leistung als abgenommen (§ 640 Abs. 2 BGB).</p>
+        <p>(3) Nimmt der Kunde die Leistung in Gebrauch, insbesondere durch Durchführung der Veranstaltung, gilt sie spätestens mit Beginn der Nutzung als abgenommen, soweit er nicht zuvor Mängel gerügt hat.</p>
+        <p>(4) Die Abnahme wird protokolliert. Vorbehalte wegen bekannter Mängel sind im Protokoll festzuhalten.</p>
+
+        <h3 id="p25">§ 25 Personaleinsatz, Subunternehmer, Abgrenzung zur Arbeitnehmerüberlassung</h3>
+        <p>(1) Nova Works erbringt ihre Leistungen mit eigenem Personal, mit freien Mitarbeitern und mit Subunternehmern in eigener Verantwortung. Sie bestimmt Auswahl, Anzahl, Einteilung und Austausch der eingesetzten Personen eigenverantwortlich. Ein Anspruch des Kunden auf den Einsatz einer bestimmten Person besteht nur bei ausdrücklicher Vereinbarung in Textform.</p>
+        <p>(2) Dem Kunden steht gegenüber dem von Nova Works eingesetzten Personal <strong>kein arbeitsrechtliches Weisungsrecht</strong> zu. Leistungsbezogene Anweisungen zum vereinbarten Gewerk erteilt der Kunde ausschließlich gegenüber dem von Nova Works benannten Projekt- oder Crewleiter.</p>
+        <p>(3) Das eingesetzte Personal wird nicht in die Arbeitsorganisation des Kunden eingegliedert. Es wird insbesondere nicht in Dienst- oder Schichtpläne des Kunden aufgenommen und nimmt nicht an dessen Personalgesprächen oder Betriebsveranstaltungen teil.</p>
+        <p>(4) Beabsichtigt der Kunde einen Einsatz, der über die Absätze 1 bis 3 hinausgeht, teilt er dies vor Einsatzbeginn mit. Ein solcher Einsatz bedarf einer gesonderten Vereinbarung.</p>
+        <p>(5) Der Kunde stellt Nova Works von sämtlichen Ansprüchen, Kosten und Nachteilen frei, die daraus entstehen, dass er entgegen den Absätzen 2 bis 4 Weisungen erteilt oder eine Eingliederung vornimmt.</p>
+        <p>(6) Der Kunde beachtet die Vorschriften des Arbeitszeitgesetzes und ermöglicht insbesondere die Einhaltung der gesetzlichen Ruhezeiten zwischen Auf- und Abbau, Probe und Veranstaltung. Führen kundenseitige Verzögerungen dazu, dass Ruhezeiten nicht eingehalten werden können, ist Nova Works berechtigt, den Einsatz zu unterbrechen oder zu beenden, ohne dass hierin eine Pflichtverletzung liegt.</p>
+
+        <h3 id="p26">§ 26 Rahmenbedingungen des Personaleinsatzes</h3>
+        <p>(1) Der Kunde sorgt für eine ungehinderte Durchfahrts- und Anlieferungsmöglichkeit für die benötigten Transportmittel und stellt während Aufbau, Veranstaltung und Abbau geeignete Parkmöglichkeiten zur Verfügung. Anfallende Kosten trägt der Kunde, auch wenn Nova Works sie verauslagt.</p>
+        <p>(2) Der Kunde stellt die Verpflegung des eingesetzten Personals sicher. Erfolgt dies nicht, berechnet Nova Works je Person und Tag eine Verpflegungspauschale in Höhe von 28 Euro netto zuzüglich gesetzlicher Umsatzsteuer. Bei Einsätzen im Ausland gilt die für das Einsatzland maßgebliche steuerliche Verpflegungspauschale.</p>
+        <p>(3) Ein vereinbarter Tagessatz umfasst einen Einsatz von bis zu zehn Arbeitsstunden. Darüber hinausgehende Stunden werden mit je einem Zehntel des Tagessatzes berechnet. Für Arbeit an Sonn- und Feiertagen sowie zwischen 23:00 und 06:00 Uhr berechnet Nova Works einen Zuschlag von 25 Prozent.</p>
+        <p>(4) Bei Einsätzen außerhalb des Tagespendelbereichs stellt der Kunde für jede eingesetzte Person eine Übernachtungsmöglichkeit im Einzelzimmer in einem Hotel mittlerer Kategorie deutschen Standards; andernfalls berechnet Nova Works die tatsächlich angefallenen Übernachtungskosten.</p>
+        <p>(5) <strong>Befestigungspunkte und Statik.</strong> Der Kunde übernimmt die volle Verantwortung für die Nova Works zugewiesenen Befestigungspunkte zur Errichtung hängender Konstruktionen, auch wenn diese ihm durch Dritte zugewiesen wurden. Auf Verlangen legt er einen Nachweis der Belastbarkeit durch eine hierzu befugte Person (Statiker, Architekt, Sachverständiger) in Textform vor. Nova Works ist berechtigt, den Aufbau zu verweigern, solange Unklarheiten über Belastbarkeit und Statik bestehen; hierdurch entstehende Verzögerungen hat der Kunde zu vertreten. Der Kunde stellt Nova Works von Ansprüchen Dritter frei, die auf mangelhaften bauseitigen Befestigungspunkten, Anschlüssen oder Bauteilen oder auf fehlerhaften statischen Angaben beruhen, soweit Nova Works diese Ansprüche nicht selbst zu vertreten hat. Die Freistellung umfasst die angemessenen Kosten der Rechtsverteidigung. § 6 bleibt unberührt.</p>
+        <p>(6) Der Kunde stellt für den gesamten Projektzeitraum einen kompetenten, weisungsbefugten Ansprechpartner.</p>
+        <p>(7) Installation und Betrieb erfolgen nach den örtlichen Gegebenheiten, den technischen Möglichkeiten und in Abstimmung mit der Leitung des Veranstaltungsortes. Zugesagte Auf- und Abbauzeiten sind Planwerte und können sich nach dem Veranstaltungsablauf verschieben; Nova Works teilt absehbare Abweichungen unverzüglich mit.</p>
+        <p>(8) Entstehen Nova Works durch vom Kunden zu vertretende Verzögerungen Wartezeiten, werden diese nach den vereinbarten Stundensätzen berechnet.</p>
+
+        <h3 id="p27">§ 27 Absage von Personalleistungen</h3>
+        <p>Sagt der Kunde bereits disponierte Personalleistungen ab, gilt § 13 Abs. 3 bis 6 entsprechend. Bereits verbindlich gebuchte freie Mitarbeiter und Subunternehmer gelten als Fremdkosten im Sinne des § 13 Abs. 4.</p>
+
+        <h2 id="teil-4">TEIL IV. VERMITTLUNG (AGENTURLEISTUNGEN)</h2>
+
+        <h3 id="p28">§ 28 Gegenstand der Vermittlung, Abgrenzung</h3>
+        <p>(1) Nova Works vermittelt auf Wunsch des Kunden Leistungen Dritter, insbesondere die Anmietung zusätzlicher Veranstaltungstechnik, den Einsatz von Fachpersonal, Transport- und Logistikleistungen, Bühnen- und Traversensysteme, Stromversorgung, Unterkünfte, Locations sowie künstlerische Leistungen.</p>
+        <p>(2) <strong>Kennzeichnung.</strong> Eine Vermittlung liegt nur vor, wenn Nova Works die betreffende Position im Angebot oder in der Auftragsbestätigung ausdrücklich als „Vermittlung“ ausweist und erkennbar im Namen und für Rechnung des Kunden handelt. In allen übrigen Fällen erbringt Nova Works die Leistung im eigenen Namen; dann gelten die Teile II, III und V sowie § 3.</p>
+        <p>(3) <strong>Vertragsverhältnisse.</strong> Bei der Vermittlung kommt der vermittelte Vertrag ausschließlich zwischen dem Kunden und dem Dritten zustande. Nova Works wird nicht Vertragspartei des vermittelten Vertrages und schuldet die vermittelte Leistung nicht.</p>
+        <p>(4) <strong>Vollmacht.</strong> Der Kunde bevollmächtigt Nova Works, im Rahmen des erteilten Auftrags die zur Vermittlung erforderlichen Erklärungen in seinem Namen abzugeben und entgegenzunehmen. Nova Works legt dem Kunden die wesentlichen Konditionen des vermittelten Vertrages, insbesondere Preis, Leistungsumfang, Zahlungs- und Stornobedingungen, vor Abschluss in Textform vor. Überschreitet Nova Works den erteilten Auftrag, wirkt der Abschluss nur mit Genehmigung des Kunden.</p>
+        <p>(5) <strong>Bedingungen des Dritten.</strong> Für den vermittelten Vertrag gelten die Bedingungen des Dritten, insbesondere dessen Zahlungs-, Storno- und Haftungsregelungen. Nova Works stellt sie dem Kunden auf Verlangen zur Verfügung.</p>
+
+        <h3 id="p29">§ 29 Pflichten und Haftung bei der Vermittlung, Provision</h3>
+        <p>(1) Nova Works schuldet die sorgfältige Auswahl des Dritten nach den ihr bekannten Umständen, die zutreffende Weitergabe der Anforderungen des Kunden sowie die unverzügliche Weiterleitung der Erklärungen beider Seiten.</p>
+        <p>(2) Nova Works haftet nicht für die Erbringung, die Qualität, die Rechtzeitigkeit oder die Mangelfreiheit der vermittelten Leistung und nicht für die Zahlungsfähigkeit oder Zuverlässigkeit des Dritten. Ansprüche wegen Nicht- oder Schlechterfüllung richten sich ausschließlich gegen den Dritten. § 6 Abs. 1 und 2 bleibt für eigene Pflichtverletzungen von Nova Works nach Absatz 1 unberührt.</p>
+        <p>(3) Nova Works tritt dem Kunden auf Verlangen ihre etwaigen eigenen Ansprüche gegen den Dritten ab, soweit sie hierüber verfügen kann und der Kunde den Schaden nicht selbst zu vertreten hat.</p>
+        <p>(4) <strong>Zahlung.</strong> Die Vergütung der vermittelten Leistung schuldet der Kunde unmittelbar dem Dritten, soweit nichts anderes vereinbart ist. Verauslagt Nova Works Beträge für den Kunden, sind diese unverzüglich zu erstatten; § 4 Abs. 5 bleibt unberührt.</p>
+        <p>(5) <strong>Provision.</strong> Für die Vermittlung erhält Nova Works die vereinbarte Vergütung; ist keine Vergütung ausdrücklich vereinbart, gilt eine Provision von 15 Prozent des Nettowerts der vermittelten Leistung als vereinbart. Der Anspruch entsteht mit dem Zustandekommen des vermittelten Vertrages und bleibt bestehen, wenn der Kunde den vermittelten Vertrag später aufhebt, storniert oder nicht durchführt, es sei denn, Nova Works hat dies zu vertreten.</p>
+        <p>(6) <strong>Umgehungsverbot.</strong> Schließt der Kunde innerhalb von zwölf Monaten nach der Vermittlung mit einem von Nova Works nachgewiesenen Dritten unmittelbar oder über verbundene Unternehmen einen gleichartigen Vertrag über ein anderes Projekt ab, ohne Nova Works zu beteiligen, steht Nova Works die Provision nach Absatz 5 gleichwohl zu, sofern der Abschluss auf ihrem Nachweis beruht. Dem Kunden bleibt der Nachweis gestattet, dass der Abschluss nicht auf dem Nachweis von Nova Works beruht.</p>
+
+        <h3 id="p30">§ 30 Künstlerische Leistungen, Abgaben und Rechte Dritter</h3>
+        <p>(1) Vermittelt Nova Works künstlerische oder publizistische Leistungen, obliegen dem Kunden als Veranstalter oder Verwerter sämtliche hiermit verbundenen Melde-, Abführungs- und Genehmigungspflichten, insbesondere die Künstlersozialabgabe nach dem KSVG, die Anmeldung und Vergütung gegenüber der GEMA und weiteren Verwertungsgesellschaften, die Ausländersteuer nach § 50a EStG sowie erforderliche Aufenthalts- und Arbeitserlaubnisse.</p>
+        <p>(2) Rider, technische und persönliche Anforderungen der vermittelten Künstler oder Dienstleister gibt Nova Works unverändert weiter. Für deren Erfüllung ist der Kunde verantwortlich, soweit Nova Works die betreffende Leistung nicht ausdrücklich selbst übernommen hat.</p>
+        <p>(3) Der Kunde stellt Nova Works von Ansprüchen und Abgabenforderungen Dritter frei, die auf einer Verletzung der Absätze 1 und 2 beruhen, soweit Nova Works diese nicht selbst zu vertreten hat. Die Freistellung umfasst die angemessenen Kosten der Rechtsverteidigung. § 6 bleibt unberührt.</p>
+
+        <h2 id="teil-5">TEIL V. VERKAUF UND INSTALLATION</h2>
+
+        <h3 id="p31">§ 31 Lieferung, Gefahrübergang</h3>
+        <p>(1) Lieferfristen sind unverbindlich, soweit sie nicht ausdrücklich als verbindlich vereinbart sind.</p>
+        <p>(2) Die Gefahr geht mit Übergabe der Ware an den Kunden oder, bei Versendung, mit Übergabe an den Spediteur, Frachtführer oder die sonst zur Ausführung der Versendung bestimmte Person über.</p>
+        <p>(3) Bei Installationen geht die Gefahr mit der Abnahme über; § 24 gilt entsprechend.</p>
+        <p>(4) § 3 Abs. 4 (Selbstbelieferung) gilt entsprechend.</p>
+
+        <h3 id="p32">§ 32 Eigentumsvorbehalt</h3>
+        <p>(1) Nova Works behält sich das Eigentum an der gelieferten Ware bis zur vollständigen Bezahlung sämtlicher Forderungen aus der laufenden Geschäftsbeziehung vor.</p>
+        <p>(2) Der Kunde ist berechtigt, die Vorbehaltsware im ordnungsgemäßen Geschäftsgang weiterzuveräußern. Er tritt die ihm aus der Weiterveräußerung zustehenden Forderungen bereits jetzt in Höhe des Rechnungswerts der Vorbehaltsware an Nova Works ab; Nova Works nimmt die Abtretung an. Der Kunde bleibt zur Einziehung ermächtigt, solange er seinen Zahlungsverpflichtungen nachkommt.</p>
+        <p>(3) Übersteigt der realisierbare Wert der Sicherheiten die zu sichernden Forderungen um mehr als zehn Prozent, gibt Nova Works auf Verlangen Sicherheiten nach ihrer Wahl frei.</p>
+        <p>(4) Der Kunde behandelt die Vorbehaltsware pfleglich, versichert sie ausreichend und unterrichtet Nova Works unverzüglich über Zugriffe Dritter; § 15 Abs. 5 gilt entsprechend.</p>
+        <p>(5) <strong>Einbau in Bauwerke.</strong> Den Parteien ist bekannt, dass der Eigentumsvorbehalt erlischt, wenn die Ware wesentlicher Bestandteil eines Grundstücks oder Gebäudes wird (§§ 946, 947 BGB). Für diesen Fall tritt der Kunde bereits jetzt seine Ansprüche gegen den Grundstückseigentümer, gegen seinen Auftraggeber und gegen Versicherer einschließlich des Anspruchs aus § 951 BGB in Höhe des Rechnungswerts der Ware an Nova Works ab; Nova Works nimmt die Abtretung an.</p>
+
+        <h3 id="p33">§ 33 Untersuchung und Mängelrüge</h3>
+        <p>(1) Der Kunde untersucht die Ware unverzüglich nach Ablieferung, soweit dies nach ordnungsgemäßem Geschäftsgang tunlich ist (§ 377 HGB).</p>
+        <p>(2) Offensichtliche Mängel sowie Falsch- und Mindermengen zeigt er innerhalb von drei Werktagen nach Ablieferung in Textform an, nicht offensichtliche Mängel innerhalb von drei Werktagen nach Entdeckung.</p>
+        <p>(3) Die Anzeige kann an jede von Nova Works benannte Kontaktadresse gerichtet werden.</p>
+        <p>(4) § 377 Abs. 5 HGB bleibt unberührt.</p>
+
+        <h3 id="p34">§ 34 Mängelansprüche beim Kauf</h3>
+        <p>(1) Ansprüche des Kunden wegen Mängeln der Ware verjähren in einem Jahr ab Ablieferung.</p>
+        <p>(2) Absatz 1 gilt nicht</p>
+        <ul class="agb__punkte">
+          <li><span class="agb__bst">a)</span><span>für Ware, die entsprechend ihrer üblichen Verwendungsweise für ein Bauwerk verwendet worden ist und dessen Mangelhaftigkeit verursacht hat, sowie für Bauwerke; insoweit gilt die gesetzliche Frist von fünf Jahren (§ 438 Abs. 1 Nr. 2 BGB),</span></li>
+          <li><span class="agb__bst">b)</span><span>für Schadensersatzansprüche nach § 6 Abs. 1,</span></li>
+          <li><span class="agb__bst">c)</span><span>bei arglistigem Verschweigen eines Mangels und im Umfang einer übernommenen Garantie,</span></li>
+          <li><span class="agb__bst">d)</span><span>für Ansprüche nach dem Produkthaftungsgesetz und</span></li>
+          <li><span class="agb__bst">e)</span><span>für Rückgriffsansprüche nach den §§ 445a, 445b, 478 BGB.</span></li>
+        </ul>
+        <p>(3) Bei Mängeln leistet Nova Works nach ihrer Wahl Nacherfüllung durch Beseitigung des Mangels oder durch Lieferung einer mangelfreien Sache.</p>
+        <p>(4) Beim Verkauf gebrauchter Ware werden Mängelansprüche ausgeschlossen, soweit nicht Absatz 2 Buchstaben b bis e eingreifen.</p>
+
+        <h2 id="teil-6">TEIL VI. SCHLUSSBESTIMMUNGEN</h2>
+
+        <h3 id="p35">§ 35 Rechtswahl, Erfüllungsort, Gerichtsstand</h3>
+        <p>(1) Für sämtliche Rechtsbeziehungen zwischen Nova Works und dem Kunden gilt ausschließlich das Recht der Bundesrepublik Deutschland unter Ausschluss des Übereinkommens der Vereinten Nationen über Verträge über den internationalen Warenkauf (CISG).</p>
+        <p>(2) Erfüllungsort für alle Verpflichtungen aus dem Vertragsverhältnis ist der Sitz von Nova Works, soweit nichts anderes vereinbart ist.</p>
+        <p>(3) Ist der Kunde Kaufmann, juristische Person des öffentlichen Rechts oder öffentlich-rechtliches Sondervermögen, ist ausschließlicher Gerichtsstand für alle Streitigkeiten aus oder im Zusammenhang mit dem Vertragsverhältnis Karlsruhe. Nova Works ist darüber hinaus berechtigt, am allgemeinen Gerichtsstand des Kunden zu klagen.</p>
+        <p>(4) Für Kunden mit Sitz außerhalb der Bundesrepublik Deutschland gelten vorrangig die anwendbaren staatsvertraglichen und unionsrechtlichen Regelungen, insbesondere Art. 25 der Verordnung (EU) Nr. 1215/2012.</p>
+
+        <h3 id="p36">§ 36 Schlussbestimmung</h3>
+        <p>(1) Sollten einzelne Bestimmungen dieser AGB unwirksam sein oder werden, bleibt die Wirksamkeit der übrigen Bestimmungen unberührt.</p>
+        <p>(2) Enthält der Vertrag eine Regelungslücke, die die Parteien bei Vertragsschluss nicht bedacht haben, werden sie diese im Wege der Vertragsanpassung schließen.</p>
 
       </div>
     </div>
@@ -103,6 +413,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=9" defer></script>
+<script src="assets/js/main.js?v=10" defer></script>
 </body>
 </html>

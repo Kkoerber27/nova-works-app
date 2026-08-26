@@ -1190,6 +1190,126 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .legal__inner a:hover { color: var(--signal); }
 .legal__inner strong { color: var(--text); font-weight: 500; }
 
+/* --- AGB ----------------------------------------------------------------
+   Sechsunddreissig Paragraphen auf einer Seite brauchen mehr Fuehrung als
+   Impressum und Datenschutz. Drei Dinge leisten das:
+
+   Die Paragraphenzeile bleibt weiss. In den anderen Rechtstexten ist h3
+   gelb - bei sechsunddreissig Stueck waere die Seite darueber wieder gelb,
+   und genau das soll sie nicht sein. Das Gelb bleibt dem Geltungshinweis
+   und den Verweisen vorbehalten.
+
+   Das Anspringen der Paragraphen deckt bereits scroll-padding-top: 6rem
+   am html-Element ab - so weit steht die feste Kopfzeile in die Seite
+   hinein. scroll-margin legt nur noch etwas Luft darueber; die beiden
+   Werte addieren sich. */
+
+.legal--agb { max-width: 78ch; }
+
+.legal--agb .agb__kopf {
+  margin: -1.5rem 0 2rem;
+  font-size: .82rem;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.legal--agb .agb__kopf span {
+  display: inline-block;
+  margin-top: .5rem;
+  letter-spacing: .1em;
+}
+
+/* Der einzige gelbe Akzent auf dieser Seite. */
+.legal--agb .agb__geltung {
+  position: relative;
+  margin: 0 0 2.5rem;
+  padding: .9rem 0 .9rem 1.25rem;
+  color: var(--text);
+  font-size: 1.02rem;
+}
+.legal--agb .agb__geltung::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  border-radius: 2px;
+  background: linear-gradient(to bottom, var(--signal), rgba(248, 248, 8, .15));
+}
+
+.legal--agb .agb__inhalt {
+  margin: 0 0 3.5rem;
+  padding: 1.5rem 0;
+  border-block: 1px solid var(--line);
+}
+.legal--agb .agb__inhalt ol {
+  margin: 0; padding: 0;
+  list-style: none;
+  display: grid;
+  gap: .55rem;
+}
+.legal--agb .agb__inhalt li {
+  display: flex;
+  align-items: baseline;
+  gap: .75rem;
+  margin: 0;
+  color: var(--text-faint);
+}
+.legal--agb .agb__inhalt a {
+  flex: 1 1 auto;
+  display: flex;
+  gap: .6rem;
+  text-decoration: none;
+  color: var(--text-faint);
+}
+.legal--agb .agb__inhalt a span { color: var(--text); }
+.legal--agb .agb__inhalt a:hover span,
+.legal--agb .agb__inhalt a:focus-visible span { color: var(--signal); }
+.legal--agb .agb__inhalt b {
+  flex: 0 0 auto;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.legal--agb h2 {
+  margin: 4.5rem 0 1.75rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--line);
+  font-size: clamp(1.05rem, 1.6vw, 1.25rem);
+  font-weight: 500;
+  letter-spacing: .1em;
+  scroll-margin-top: 1.5rem;
+}
+.legal--agb h2:first-of-type { border-top: 0; }
+
+.legal--agb h3 {
+  margin: 2.5rem 0 .85rem;
+  font-size: 1.06rem;
+  font-weight: 500;
+  color: var(--text);
+  scroll-margin-top: 1.5rem;
+}
+
+.legal--agb p { margin-bottom: 1.15em; }
+
+/* Die Buchstabenpunkte der PDF. Kein Aufzaehlungszeichen - der Buchstabe
+   ist das Zeichen und muss genau so stehen bleiben, wie er im Vertrag
+   steht, weil andere Paragraphen darauf verweisen. */
+.legal--agb .agb__punkte {
+  list-style: none;
+  margin: 0 0 1.25em;
+  padding-left: .25rem;
+}
+.legal--agb .agb__punkte li {
+  display: grid;
+  grid-template-columns: 1.75rem 1fr;
+  margin-bottom: .55rem;
+}
+.legal--agb .agb__bst { color: var(--text-faint); }
+
+/* Laeuft der Satz nach der Aufzaehlung weiter, haengt er an ihr statt auf
+   vollem Absatzabstand zu stehen (§ 17 Abs. 2). */
+.legal--agb .agb__punkte + .agb__fort { margin-top: -.7em; }
+
 /* =========================================================================
    Umbrueche
    ========================================================================= */
@@ -1247,4 +1367,25 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   body { background: #fff; color: #000; }
   .legal__inner h3, .legal__inner a { color: #000; }
   [data-reveal] { opacity: 1; transform: none; }
+
+  /* Die AGB werden ausgedruckt und abgeheftet. Auf Weiss muss deshalb der
+     ganze Satz schwarz stehen, nicht nur die Ueberschriften - der
+     Fliesstext ist auf dem Schirm bewusst gedaempft und waere sonst grau
+     bis unlesbar. Dazu die Umbrueche: jeder Teil beginnt auf einer neuen
+     Seite, keine Ueberschrift bleibt allein am Fuss stehen. */
+  /* Ein Strich fuer alles: Auf Papier ist jede Farbe im Satz schwarz.
+     Einzeln aufgezaehlt bliebe zwangslaeufig etwas uebrig - die
+     Hervorhebungen etwa tragen ihre eigene Regel mit hoeherem Gewicht. */
+  .legal--agb,
+  .legal--agb * { color: #000 !important; }
+  .legal--agb .agb__geltung::before { background: #000; }
+  .legal--agb h2,
+  .legal--agb .agb__inhalt { border-color: #999; }
+
+  .legal--agb h2 { break-before: page; break-after: avoid; }
+  .legal--agb h2:first-of-type { break-before: auto; }
+  .legal--agb h3 { break-after: avoid; }
+  .legal--agb p,
+  .legal--agb li { break-inside: avoid; }
+  .legal { padding-block: 0 2rem; }
 }
