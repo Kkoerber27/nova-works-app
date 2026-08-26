@@ -556,8 +556,12 @@ a { color: inherit; }
       position: absolute;
       /* Waagerecht exakt so breit wie die Zeilen - sonst landen dieselben
          Prozentwerte an anderer Stelle und Glanz und Einfaerbung laufen
-         auseinander. Senkrecht darf die Bahn ueberstehen. */
-      inset: -16% 0;
+         auseinander.
+
+         Senkrecht steht der Kasten bewusst weit ueber. Er braucht Luft, in
+         der die Bahn auslaufen kann, bevor sein Rand kommt - sonst sieht man
+         den Rand. */
+      inset: -40% 0;
       pointer-events: none;
       mix-blend-mode: screen;
       background-repeat: no-repeat;
@@ -582,13 +586,18 @@ a { color: inherit; }
 
          Eine Ellipse loest beides in einem Zug und braucht kein
          mask-composite, dessen Schreibweise sich zwischen den Browsern
-         unterscheidet. Der Mittelpunkt sitzt links, weil der Text links
-         steht: Ueber den Buchstaben traegt die Bahn voll, hinter dem Komma
-         faellt sie weich ab und ist vor dem Kastenrand verschwunden. */
-      -webkit-mask-image: radial-gradient(ellipse 66% 88% at 38% 50%,
-        #000 48%, rgba(0, 0, 0, .55) 76%, transparent 100%);
-      mask-image: radial-gradient(ellipse 66% 88% at 38% 50%,
-        #000 48%, rgba(0, 0, 0, .55) 76%, transparent 100%);
+         unterscheidet.
+
+         Entscheidend sind Mittelpunkt und Radien: Vom Mittelpunkt aus
+         gerechnet muss jeder Radius kleiner als der halbe Kasten sein,
+         damit die Maske INNERHALB des Kastens auf null geht. Bei 50 % / 50 %
+         und 44 % / 40 % ist sie waagerecht ab 6 % und 94 %, senkrecht ab
+         10 % und 90 % zu - ringsum bleibt Rand uebrig. Ist sie an einer
+         Seite noch offen, sieht man genau dort die Kante des Kastens. */
+      -webkit-mask-image: radial-gradient(ellipse 44% 40% at 50% 50%,
+        #000 46%, rgba(0, 0, 0, .55) 78%, transparent 100%);
+      mask-image: radial-gradient(ellipse 44% 40% at 50% 50%,
+        #000 46%, rgba(0, 0, 0, .55) 78%, transparent 100%);
       animation: lichtstrahl 9.5s linear 1.1s infinite;
     }
 
@@ -906,18 +915,24 @@ a { color: inherit; }
 #kontakt { position: relative; overflow: hidden; }
 #kontakt > .shell { position: relative; z-index: 1; }
 
+/* Dieselbe Regel wie beim Lichtstrahl im Kopfbild: Der Schein muss
+   INNERHALB seines Kastens auf null gehen. Der Abschnitt schneidet mit
+   overflow: hidden ab - stuende der Kasten wie vorher mit negativem
+   Abstand links heraus oder reichte die Ellipse bis an eine Kante,
+   laege dort eine sichtbare gerade Kante. Radien 46 % ab Mitte heisst:
+   ringsum bleiben 4 % Rand uebrig. */
 .kontakt__schein {
   position: absolute;
   top: clamp(2rem, 8vh, 6rem);
-  left: calc(var(--gutter) * -1);
-  width: min(620px, 58%);
+  left: clamp(1rem, 4vw, 5rem);
+  width: min(620px, 52%);
   aspect-ratio: 1.45;
   z-index: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse at 45% 42%,
-    rgba(248, 248, 8, .15)  0%,
-    rgba(248, 248, 8, .05) 40%,
-    rgba(248, 248, 8, 0)   74%);
+  background: radial-gradient(ellipse 46% 46% at 50% 50%,
+    rgba(248, 248, 8, .16)  0%,
+    rgba(248, 248, 8, .06) 44%,
+    rgba(248, 248, 8, 0)  100%);
 }
 
 /* Dazu eine schmale gelbe Marke an der Ueberschrift. */
