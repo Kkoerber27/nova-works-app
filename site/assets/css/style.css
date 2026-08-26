@@ -913,6 +913,21 @@ a { color: inherit; }
 }
 .offen .trades__dot { background: var(--danger); }
 
+/* Gleiche Kennzeichnung als Block, etwa fuer eine Seite ohne Inhalt. */
+.offen--block {
+  display: block;
+  padding: 1.15rem 1.35rem;
+  border: 1px dashed var(--danger);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  line-height: 1.6;
+}
+.offen--block strong { color: var(--danger); }
+.offen--block code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .9em;
+}
+
 /* =========================================================================
    Kontakt
    ========================================================================= */

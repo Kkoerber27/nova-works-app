@@ -15,6 +15,7 @@ site/                      ← das, was auf den Server kommt
 ├─ index.html              Startseite
 ├─ impressum.html          Rechtstext, 1:1 aus der alten Seite
 ├─ datenschutz.html        Rechtstext, 1:1 aus der alten Seite
+├─ agb.html                Allgemeine Geschäftsbedingungen – Text fehlt noch
 ├─ 404.html
 ├─ kontakt.php             Formular-Handler (verschickt die E-Mail)
 ├─ .htaccess               Weiterleitungen, Caching, Sicherheits-Header
@@ -227,6 +228,36 @@ Steht in einem Projekt noch `<li class="trades__item offen">`, ist die Liste
 nicht ausgefüllt. Solche Einträge erscheinen rot und gestrichelt – das ist
 Absicht, damit sie nicht versehentlich live gehen.
 
+## AGB
+
+`site/agb.html` steht bereit, ist aber **noch ohne Inhalt**. Die Seite ist
+angelegt, gestaltet und aus der Fußzeile aller fünf Seiten verlinkt – es fehlt
+nur der Text.
+
+Zum Einsetzen: in `agb.html` den rot gestrichelten Block
+`<p class="offen offen--block">` durch den AGB-Text ersetzen. Die Auszeichnung
+ist dieselbe wie in Impressum und Datenschutz, mehr als diese fünf Elemente
+braucht es nicht:
+
+```html
+<h2>1. Geltungsbereich</h2>     <!-- Hauptabschnitte -->
+<h3>Unterpunkt</h3>
+<p>Absatz</p>
+<ul><li>Aufzählung</li></ul>
+<strong>Hervorhebung</strong>
+```
+
+Danach zwei Handgriffe, die leicht vergessen werden:
+
+- In `agb.html` `<meta name="robots" content="noindex, follow">` auf
+  `index, follow` ändern.
+- In `sitemap.xml` einen Eintrag für `https://nova-works.de/agb.html`
+  ergänzen, `changefreq yearly`, `priority 0.2` wie bei den anderen
+  Rechtstexten.
+
+Solange kein Text drinsteht, bleibt beides bewusst so: Eine leere Seite soll
+weder im Index noch in der Sitemap auftauchen.
+
 ## Farbwechsel beim Scrollen
 
 Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Signalgelb – Schrift,
@@ -296,6 +327,8 @@ steht, ist eine Entscheidung, keine Programmierarbeit.
   Ebenso „Analyse-Tools und Tools von Drittanbietern". Beide Passagen
   beschreiben jetzt mehr Datenverarbeitung als tatsächlich stattfindet. Sollte
   jemand mit juristischem Blick durchgehen, bevor es live geht.
+- **Der AGB-Text.** Die Seite `agb.html` ist angelegt und verlinkt, der Rumpf
+  ist noch leer und rot markiert. Siehe Abschnitt „AGB".
 - **Fünf Fotos**, siehe oben.
 - **Die Gewerke in den Referenzen.** Bei allen drei Projekten steht dort noch
   der rote Platzhalter. Was Nova Works auf welcher Produktion gemacht hat,
