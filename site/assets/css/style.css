@@ -827,18 +827,33 @@ a { color: inherit; }
   gap: .7rem;
 }
 
+/* Rahmen und Foto sind getrennt: Der Rahmen steht, das Foto bewegt sich
+   darin. Deshalb liegt das Bild im inneren .ref__foto und nicht hier -
+   sonst wanderten Rand und Ecken mit. */
 .ref__bild {
+  position: relative;
   aspect-ratio: 3 / 2;
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   /* Feste Flaeche, damit ein fehlendes Foto kein Loch hinterlaesst. */
   background-color: #17171a;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  /* Beschnitten wird ueber clip-path, nicht ueber overflow: hidden.
+     overflow: hidden macht den Rahmen zu einem Scrollbereich - und view()
+     im Kind wuerde sich dann auf diesen Rahmen beziehen statt auf die
+     Seite. Da im Rahmen nichts zu scrollen ist, stuende die Bewegung
+     still. clip-path schneidet genauso sauber ab, ohne das auszuloesen. */
+  clip-path: inset(0 round var(--radius-lg));
   transition: border-color .4s var(--ease);
 }
 .ref:hover .ref__bild { border-color: var(--line-strong); }
+
+.ref__foto {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
 
 .ref__titel {
   margin: .75rem 0 1rem;
@@ -850,6 +865,64 @@ a { color: inherit; }
 .ref__text p:not(.eyebrow) {
   max-width: 46ch;
   color: var(--text-dim);
+}
+
+/* --- Bildtiefe beim Scrollen -------------------------------------------
+   Die Fotos stehen nicht still, solange sie im Bild sind: Sie fahren
+   langsam heran und wandern dabei ein Stueck nach oben. Dieselbe Bewegung
+   wie im Kopfbild, nur auf die Flaeche des jeweiligen Rahmens bezogen.
+
+   Gerechnet wird mit den eigenstaendigen Eigenschaften scale und
+   translate, nicht mit transform. Das ist Absicht: transform bleibt so
+   fuer das Ueberfahren mit der Maus frei, beide ueberlagern sich, statt
+   sich gegenseitig auszuknipsen.
+
+   Der Weg ist bemessen. Das Foto deckt den Rahmen nur, solange der
+   Ueberstand groesser bleibt als der Versatz - und der Ueberstand ist die
+   halbe Vergroesserung: Bei scale 1.22 stehen 11 Prozent auf jeder Seite
+   ueber, verschoben wird um hoechstens 7,5. Bleiben 3,5 Prozent Luft -
+   auf einem 233 Pixel hohen Rahmen rund 8 Pixel. Wer den Versatz erhoeht,
+   muss die Vergroesserung mitziehen, sonst blitzt der Rahmen durch.
+
+   15 Prozent Gesamtweg sind mit Absicht kein Hauch: Am Handy wandert die
+   Bildmitte damit rund 34 Pixel durch ihren Rahmen - man sieht es, ohne
+   dass die Seite unruhig wird. */
+
+@keyframes bild-tiefe {
+  from { scale: 1.22; translate: 0  7.5%; }
+  to   { scale: 1.32; translate: 0 -7.5%; }
+}
+
+/* Beide Bedingungen zusammen, nicht getrennt: Die Karten brauchen
+   timeline-scope. Kann ein Browser nur die Haelfte, blieben sie in der
+   Mitte der Bewegung stehen statt sich zu ruehren - dann ist es besser,
+   main.js macht die Arbeit fuer alles. Genau dieses Paar fragt main.js
+   noch einmal ab. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) and (timeline-scope: --pruefung) {
+    .ref__foto {
+      animation: bild-tiefe linear both;
+      animation-timeline: view(block);
+      /* Von dem Moment an, in dem das Bild unten hereinkommt, bis es oben
+         verschwindet - also ueber die ganze Zeit, in der man es sieht. */
+      animation-range: cover 0% cover 100%;
+    }
+
+    /* Die Karten liegen in einem waagerecht scrollenden Kasten. Damit ist
+       dieser Kasten fuer view() der naechste Scrollbereich - und weil er
+       senkrecht nichts zu scrollen hat, käme dort keine Bewegung zustande.
+       Deshalb spannt der Abschnitt selbst die Zeitachse auf und gibt sie
+       ueber timeline-scope nach innen weiter. Alle vier Karten atmen so
+       gemeinsam, waehrend der Abschnitt vorbeizieht. */
+    #services { view-timeline-name: --dienste-sicht; }
+    main { timeline-scope: --dienste-sicht; }
+
+    .card__media {
+      animation: bild-tiefe linear both;
+      animation-timeline: --dienste-sicht;
+      animation-range: cover 0% cover 100%;
+    }
+  }
 }
 
 /* --- Gewerke --------------------------------------------------------- */

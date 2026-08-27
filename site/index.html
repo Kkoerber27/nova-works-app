@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=10">
+<link rel="stylesheet" href="assets/css/style.css?v=11">
 
 <script>document.documentElement.classList.add('js');</script>
 
@@ -223,7 +223,9 @@
        sind ja dieselben Produktionen. Sobald es projekteigene Fotos gibt,
        hier den Pfad tauschen. Zwei Bilder pro Projekt gehen auch: einfach
        ein zweites <div class="ref__bild"> danebenstellen, das Raster teilt
-       die Spalte von selbst.
+       die Spalte von selbst. Der Rahmen traegt die Bildbeschreibung, das
+       innere <div class="ref__foto"> das Foto - getrennt, weil nur das
+       Foto sich beim Scrollen bewegt und der Rahmen stehen bleibt.
 
        Die Gewerke-Listen sind noch Platzhalter. Was Nova Works auf welchem
        Projekt gemacht hat, steht nirgends in den Unterlagen - deshalb hier
@@ -243,8 +245,9 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <div class="ref__bild" style="background-image:url('assets/img/live.jpg')"
-                 role="img" aria-label="Konfettischuss über der Bühne, volles Rund der Arena"></div>
+            <div class="ref__bild" role="img" aria-label="Konfettischuss über der Bühne, volles Rund der Arena">
+              <div class="ref__foto" style="background-image:url('assets/img/live.jpg')"></div>
+            </div>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Veltins-Arena, Gelsenkirchen</p>
@@ -260,8 +263,9 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <div class="ref__bild" style="background-image:url('assets/img/header.jpg')"
-                 role="img" aria-label="Sternbühne in der Arena, Ränge und Innenraum voll besetzt"></div>
+            <div class="ref__bild" role="img" aria-label="Sternbühne in der Arena, Ränge und Innenraum voll besetzt">
+              <div class="ref__foto" style="background-image:url('assets/img/header.jpg')"></div>
+            </div>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Arena-Tour</p>
@@ -277,8 +281,9 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <div class="ref__bild" style="background-image:url('assets/img/tv.jpg')"
-                 role="img" aria-label="Regieplatz mit Kameramonitoren vor der Bühne"></div>
+            <div class="ref__bild" role="img" aria-label="Regieplatz mit Kameramonitoren vor der Bühne">
+              <div class="ref__foto" style="background-image:url('assets/img/tv.jpg')"></div>
+            </div>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Sendung mit Publikum</p>
@@ -423,6 +428,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=10" defer></script>
+<script src="assets/js/main.js?v=11" defer></script>
 </body>
 </html>

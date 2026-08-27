@@ -261,6 +261,104 @@
     kasten.addEventListener('pointercancel', loslassen);
   });
 
+  /* ---------- Bildtiefe in den Abschnitten -------------------------------
+     Dieselbe Bewegung wie im Kopfbild, jetzt fuer die Referenzfotos und
+     die Karten: heranfahren und dabei ein Stueck nach oben wandern,
+     solange sie im Bild sind.
+
+     Auch hier macht das Stylesheet die Arbeit, wo der Browser
+     scrollgebundene Animationen kennt. Diese Schleife springt nur ein,
+     wo er es nicht tut.
+
+     Dieser Block steht mit Absicht HINTER dem Laufband: Erst dort
+     entstehen die Kopien der Karten. Stuende er davor, kennte er nur die
+     vier Originale - und ausgerechnet die stehen im Laufband dauerhaft
+     ausserhalb des Bildes, weil es in der mittleren Kopie laeuft.
+
+     Massgeblich ist nicht das Bild selbst, sondern sein Bezug: beim
+     Referenzfoto der Rahmen, bei den Karten der ganze Abschnitt. Genau so
+     rechnet auch das Stylesheet, und bei den Karten ist es der einzige
+     Weg - jede einzelne haette im waagerecht laufenden Band ihren eigenen,
+     staendig wechselnden Stand.
+
+     Die Zahlen stehen doppelt - hier und in @keyframes bild-tiefe. Wer
+     eine aendert, muss die andere mitziehen, sonst bewegen sich dieselben
+     Bilder je nach Browser verschieden weit. */
+
+  var kannSichtAnimation = window.CSS && CSS.supports &&
+                           CSS.supports('animation-timeline', 'view()') &&
+                           CSS.supports('timeline-scope', '--pruefung');
+
+  var TIEFE_SCALE = [1.22, 1.32];    /* von / bis                         */
+  var TIEFE_WEG   = [7.5, -7.5];     /* Prozent der eigenen Hoehe         */
+
+  if (!reduceMotion && !kannSichtAnimation && 'IntersectionObserver' in window) {
+    var gruppen = [];
+
+    Array.prototype.forEach.call(document.querySelectorAll('.ref__foto'), function (el) {
+      gruppen.push({ bezug: el.parentNode, elemente: [el], sichtbar: false });
+    });
+
+    var dienste = document.getElementById('services');
+    var karten = document.querySelectorAll('.card__media');
+    if (dienste && karten.length) {
+      gruppen.push({ bezug: dienste, sichtbar: false,
+                     elemente: Array.prototype.slice.call(karten) });
+    }
+
+    if (gruppen.length) {
+      var offen = 0;
+      var laeuftTiefe = false;
+
+      var zeichneTiefe = function () {
+        var hoehe = window.innerHeight || 1;
+        for (var i = 0; i < gruppen.length; i++) {
+          var g = gruppen[i];
+          if (!g.sichtbar) continue;
+          var r = g.bezug.getBoundingClientRect();
+          /* Genau der Bereich von animation-range: cover 0% cover 100% -
+             vom Hereinkommen unten bis zum Verschwinden oben. */
+          var anteil = (hoehe - r.top) / (hoehe + r.height);
+          anteil = anteil < 0 ? 0 : anteil > 1 ? 1 : anteil;
+          var gross = (TIEFE_SCALE[0] + anteil * (TIEFE_SCALE[1] - TIEFE_SCALE[0])).toFixed(4);
+          var weg = '0 ' + (TIEFE_WEG[0] + anteil * (TIEFE_WEG[1] - TIEFE_WEG[0])).toFixed(3) + '%';
+          for (var k = 0; k < g.elemente.length; k++) {
+            g.elemente[k].style.scale = gross;
+            g.elemente[k].style.translate = weg;
+          }
+        }
+        if (laeuftTiefe) window.requestAnimationFrame(zeichneTiefe);
+      };
+
+      var tiefeBeobachter = new IntersectionObserver(function (eintraege) {
+        for (var i = 0; i < eintraege.length; i++) {
+          for (var k = 0; k < gruppen.length; k++) {
+            if (gruppen[k].bezug !== eintraege[i].target) continue;
+            /* sichtbar startet auf false, nicht undefined: Der erste
+               Durchlauf meldet auch alles, was NICHT im Bild ist. Ohne den
+               gesetzten Ausgangswert zaehlte er diese Meldungen als
+               Abgaenge, der Zaehler geriete ins Minus und die Schleife
+               spraenge nie an. */
+            if (gruppen[k].sichtbar === eintraege[i].isIntersecting) break;
+            gruppen[k].sichtbar = eintraege[i].isIntersecting;
+            offen += gruppen[k].sichtbar ? 1 : -1;
+            break;
+          }
+        }
+        /* Ist nichts im Bild, rechnet auch nichts. */
+        if (offen > 0 && !laeuftTiefe) {
+          laeuftTiefe = true;
+          window.requestAnimationFrame(zeichneTiefe);
+        } else if (offen <= 0) {
+          laeuftTiefe = false;
+        }
+      }, { threshold: 0 });
+
+      for (var g2 = 0; g2 < gruppen.length; g2++) tiefeBeobachter.observe(gruppen[g2].bezug);
+    }
+  }
+
+
   /* ---------- Mobile-Navigation ------------------------------------------ */
 
   var toggle = document.querySelector('.nav-toggle');
