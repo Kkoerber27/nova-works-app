@@ -434,14 +434,25 @@ a { color: inherit; }
   border-bottom: 1px solid var(--line);
 }
 
+/* Der Claim traegt die Seite - deshalb mittig und im kraeftigeren
+   Schnitt. Die Schrift ist ein variabler Schnitt von 100 bis 900, 500 ist
+   also ein echtes Gewicht und kein vom Browser nachgezogenes Fett.
+
+   Mit dem Gewicht muss die Laufweite mit: -.035em war fuer den duennen
+   Schnitt gedacht, bei 500 stossen die Buchstaben dort aneinander. */
 .hero__title {
   font-size: var(--fs-hero);
-  font-weight: 300;
-  line-height: .86;
-  letter-spacing: -.035em;
+  font-weight: 500;
+  line-height: .88;
+  letter-spacing: -.022em;
   text-transform: uppercase;
+  text-align: center;
 }
-.hero__title span { display: block; }
+/* Auf schmalen Schirmen bricht jede Haelfte fuer sich um. Ohne balance
+   bleibt dabei ein Rest stehen ("MOMENTE, DIE / BLEIBEN,"); mit balance
+   verteilt der Browser die Woerter gleichmaessig auf die Zeilen. Kann er
+   es nicht, bricht er wie bisher - kein Schaden. */
+.hero__title span { display: block; text-wrap: balance; }
 .hero__title em {
   font-style: normal;
   color: var(--signal);
@@ -914,12 +925,15 @@ a { color: inherit; }
   border-radius: var(--radius-lg);
   /* Feste Flaeche, damit ein fehlendes Foto kein Loch hinterlaesst. */
   background-color: #17171a;
-  /* Beschnitten wird ueber clip-path, nicht ueber overflow: hidden.
-     overflow: hidden macht den Rahmen zu einem Scrollbereich - und view()
-     im Kind wuerde sich dann auf diesen Rahmen beziehen statt auf die
-     Seite. Da im Rahmen nichts zu scrollen ist, stuende die Bewegung
-     still. clip-path schneidet genauso sauber ab, ohne das auszuloesen. */
-  clip-path: inset(0 round var(--radius-lg));
+  /* overflow: clip, nicht hidden und nicht clip-path.
+     hidden macht den Rahmen zu einem Scrollbereich - view() im Kind
+     bezoege sich dann auf diesen Rahmen statt auf die Seite, und da im
+     Rahmen nichts zu scrollen ist, stuende die Bewegung still.
+     clip-path wiederum schneidet nur das Bild ab, nicht den Ueberlauf:
+     Das vergroesserte Foto zaehlte weiter zur Breite der Seite und liess
+     sie auf dem Handy um 17 px seitlich wackeln.
+     clip schneidet beides ab und ist trotzdem kein Scrollbereich. */
+  overflow: clip;
   transition: border-color .4s var(--ease);
 }
 .ref:hover .ref__bild { border-color: var(--line-strong); }
@@ -1334,6 +1348,14 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 }
 .legal__inner p,
 .legal__inner li { color: var(--text-dim); }
+
+/* Die Rechtstexte fuehren lange Fremdadressen als Linktext. Ohne diese
+   beiden Zeilen schiebt eine einzige davon die Seite am Handy auf 561
+   statt 390 px auf, und sie laesst sich seitlich verschieben. anywhere
+   statt break-word, weil eine Adresse fuer den Umbruch ein einziges Wort
+   ist und break-word sie erst am Ende der Zeile bricht. */
+.legal__inner { overflow-wrap: break-word; }
+.legal__inner a { overflow-wrap: anywhere; }
 .legal__inner ul { padding-left: 1.15rem; margin: 0 0 1.25em; }
 .legal__inner li { margin-bottom: .5rem; }
 .legal__inner a { color: var(--text); text-decoration-color: var(--text-faint); }
@@ -1404,13 +1426,19 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   margin: 0;
   color: var(--text-faint);
 }
+/* min-width: 0 an beiden Stellen ist Pflicht: Ein Flex-Kind schrumpft von
+   sich aus nicht unter seine Inhaltsbreite. Ohne das sprengt
+   "Dienstleistungen und Personaleinsatz" die Zeile, und die Seite wird
+   auf schmalen Schirmen breiter als das Fenster. */
 .legal--agb .agb__inhalt a {
   flex: 1 1 auto;
+  min-width: 0;
   display: flex;
   gap: .6rem;
   text-decoration: none;
   color: var(--text-faint);
 }
+.legal--agb .agb__inhalt a span { min-width: 0; }
 .legal--agb .agb__inhalt a span { color: var(--text); }
 .legal--agb .agb__inhalt a:hover span,
 .legal--agb .agb__inhalt a:focus-visible span { color: var(--signal); }
