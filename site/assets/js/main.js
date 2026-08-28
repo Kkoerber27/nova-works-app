@@ -86,6 +86,15 @@
   };
 
   if (hero) {
+    /* Sofort und synchron: Ab hier fuehrt dieses Skript den Auftritt, und
+       das Stylesheet darf die Zeilen und den Kopfbereich verstecken. Die
+       Klasse muss von hier kommen und nicht aus einem Schnipsel im Kopf
+       der Seite - sonst gibt es zwei Bedingungen, die auseinanderlaufen
+       koennen, und in der Vorschau tat sie das auch: Dort fehlte die
+       fremde Klasse, die Zeilen standen von Anfang an, es passierte
+       sichtbar nichts. */
+    hero.classList.add('hero--auftritt');
+
     var claim = hero.querySelector('.hero__title');
     var halbsaetze = claim ? claim.querySelectorAll(':scope > span') : [];
 

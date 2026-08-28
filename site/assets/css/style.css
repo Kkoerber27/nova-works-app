@@ -483,8 +483,12 @@ a { color: inherit; }
    Innenleben startet 130 Prozent tief - weit genug, dass auch mit Rand
    nichts hervorlugt.
 
-   Alles haengt an html.js: Ohne JavaScript wird nicht geschnitten, dann
-   soll der Claim schlicht dastehen statt unsichtbar zu bleiben. */
+   Alles haengt an .hero--auftritt. Diese Klasse setzt dasselbe Skript,
+   das auch die Zeilen schneidet - beides kommt also zwangslaeufig
+   zusammen oder gar nicht. Eine Klasse von woanders her (etwa ein
+   html.js aus einem Schnipsel im Kopf) waere eine zweite, unabhaengige
+   Bedingung: Wo die fehlt, stehen die Zeilen sofort auf ihrem Platz und
+   es passiert sichtbar nichts. Genau so war es in der Vorschau. */
 
 .hero__zeile {
   display: block;
@@ -493,13 +497,13 @@ a { color: inherit; }
   margin-block: -.09em;
 }
 
-html.js .hero__zeile-innen {
+.hero--auftritt .hero__zeile-innen {
   display: block;
   transform: translateY(130%);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  html.js .hero.is-ready .hero__zeile-innen {
+  .hero--auftritt.is-ready .hero__zeile-innen {
     transform: none;
     /* Kurz und hart heraus: Der Weg ist in den ersten Hundertsteln fast
        vorbei, danach setzt die Zeile nur noch auf. Das ist der Schlag. */
@@ -509,11 +513,11 @@ html.js .hero__zeile-innen {
 }
 
 /* Beim Neuschneiden nach einer Drehung darf nichts nachfahren. */
-html.js .hero.hero--ohne-fahrt .hero__zeile-innen { transition: none; }
+.hero--auftritt.hero--ohne-fahrt .hero__zeile-innen { transition: none; }
 
 /* Ruhe-Modus: kein Fahren, nur da sein. */
 @media (prefers-reduced-motion: reduce) {
-  html.js .hero__zeile-innen { transform: none; }
+  .hero--auftritt .hero__zeile-innen { transform: none; }
 }
 
 /* Das Hintergrundbild faehrt beim Scrollen langsam heran und tritt zurueck.
@@ -554,18 +558,18 @@ html.js .hero.hero--ohne-fahrt .hero__zeile-innen { transition: none; }
 /* Vorspann und Fuss blenden ein - der Claim nicht, der faehrt zeilenweise
    herein (siehe "Auftritt: Zeile fuer Zeile").
 
-   Der Ausgangszustand haengt an html.js. is-ready setzt main.js; ohne
-   JavaScript kaeme die Klasse nie, und der Kopfbereich bliebe dauerhaft
-   unsichtbar. So steht er dann einfach sofort da. */
-html.js .hero__meta,
-html.js .hero__foot {
+   Der Ausgangszustand haengt an .hero--auftritt, gesetzt von main.js.
+   Ohne JavaScript kaeme weder die noch is-ready, und der Kopfbereich
+   bliebe dauerhaft unsichtbar. So steht er dann einfach sofort da. */
+.hero--auftritt .hero__meta,
+.hero--auftritt .hero__foot {
   opacity: 0;
   transform: translateY(1.4rem);
   transition: opacity .9s var(--ease-out), transform .9s var(--ease-out);
 }
-html.js .hero.is-ready .hero__meta { opacity: 1; transform: none; transition-delay: .05s; }
+.hero--auftritt.is-ready .hero__meta { opacity: 1; transform: none; transition-delay: .05s; }
 /* Der Fuss kommt nach den Zeilen, nicht mit ihnen. */
-html.js .hero.is-ready .hero__foot { opacity: 1; transform: none; transition-delay: .62s; }
+.hero--auftritt.is-ready .hero__foot { opacity: 1; transform: none; transition-delay: .62s; }
 
 /* =========================================================================
    Abschnitte
