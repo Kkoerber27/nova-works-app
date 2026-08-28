@@ -1043,7 +1043,12 @@ a { color: inherit; }
 .lupe__bild,
 .lupe__knopf { pointer-events: auto; }
 
+/* grid-column: 2 ist Pflicht, nicht Zierde. Hat ein Projekt nur ein Bild,
+   sind beide Pfeile ausgeblendet - die Figur rutscht dann von selbst in
+   die erste Spalte, und die ist "auto", also so breit wie ihr Inhalt.
+   Das Bild stand damit klein am linken Rand statt gross in der Mitte. */
 .lupe__figur {
+  grid-column: 2;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
