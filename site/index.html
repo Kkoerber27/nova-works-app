@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=18">
+<link rel="stylesheet" href="assets/css/style.css?v=19">
 
 
 <script type="application/ld+json">
@@ -162,8 +162,12 @@
         <h2 class="section__title">Unsere Spielplätze. <em>Ihre Bühne.</em></h2>
       </div>
 
-      <!-- Laufband: die vier Felder wandern langsam durchs Bild und lassen
-           sich schieben. data-richtung="links" dreht die Laufrichtung um. -->
+      <!-- Laufband: die Felder wandern langsam durchs Bild und lassen sich
+           schieben. data-richtung="links" dreht die Laufrichtung um.
+
+           Ein Feld kommt dazu, indem man ein weiteres <article class="card">
+           einhaengt - main.js zaehlt sie selbst und legt die Kopien fuer den
+           Endloslauf danach an. Die Nummer im card__index laeuft mit. -->
       <div class="slider" data-slider data-richtung="rechts" data-reveal
            role="region" aria-label="Unsere Leistungsfelder" tabindex="0">
         <div class="slider__spur">
@@ -198,17 +202,6 @@
           <p class="card__text">
             Kamerataugliche Lösungen, sauberes Timing und höchste technische
             Standards für anspruchsvolle TV-Formate.
-          </p>
-        </article>
-
-        <article class="card">
-          <div class="card__media" style="background-image:url('assets/img/messe.jpg')" aria-hidden="true"></div>
-          <span class="card__index" aria-hidden="true">04</span>
-          <p class="card__kicker">Messe</p>
-          <h3 class="card__title">Marken im Raum</h3>
-          <p class="card__text">
-            Technik, die Marken sichtbar macht. Funktional, hochwertig und exakt
-            auf das Standkonzept abgestimmt.
           </p>
         </article>
 
@@ -501,7 +494,6 @@
               <label class="chip"><input type="checkbox" name="kategorie[]" value="Live"><span>Live</span></label>
               <label class="chip"><input type="checkbox" name="kategorie[]" value="Corporate Events"><span>Corporate Events</span></label>
               <label class="chip"><input type="checkbox" name="kategorie[]" value="TV"><span>TV</span></label>
-              <label class="chip"><input type="checkbox" name="kategorie[]" value="Messe"><span>Messe</span></label>
             </div>
           </fieldset>
 
@@ -596,6 +588,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=18" defer></script>
+<script src="assets/js/main.js?v=19" defer></script>
 </body>
 </html>

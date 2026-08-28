@@ -85,7 +85,7 @@ $nachricht = mb_substr($nachricht, 0, 5000);
 
 $kategorien = [];
 if (isset($_POST['kategorie']) && is_array($_POST['kategorie'])) {
-    $erlaubt = ['Live', 'Corporate Events', 'TV', 'Messe'];
+    $erlaubt = ['Live', 'Corporate Events', 'TV'];
     foreach ($_POST['kategorie'] as $k) {
         if (in_array($k, $erlaubt, true)) $kategorien[] = $k;
     }
