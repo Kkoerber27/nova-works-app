@@ -27,7 +27,11 @@
   --font: 'Zalando Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
           Helvetica, Arial, sans-serif;
 
-  --fs-hero:   clamp(2.5rem, 6.4vw, 8.5rem);
+  /* Die Staffel der bisherigen nova-works.de: 8vw, hoechstens 250 px,
+     am Tablet 10vw, am Handy 14vw. Am Handy also bewusst groesser im
+     Verhaeltnis zum Schirm - genau dort soll der Claim wuchten. Die drei
+     Stufen stehen weiter unten unter "Umbrueche". */
+  --fs-hero:   min(8vw, 250px);
   --fs-h2:     clamp(2rem, 4.6vw, 4.25rem);
   --fs-h3:     clamp(1.25rem, 1.9vw, 1.75rem);
   --fs-lead:   clamp(1.05rem, 1.35vw, 1.3rem);
@@ -434,17 +438,19 @@ a { color: inherit; }
   border-bottom: 1px solid var(--line);
 }
 
-/* Der Claim traegt die Seite - deshalb mittig und im kraeftigeren
-   Schnitt. Die Schrift ist ein variabler Schnitt von 100 bis 900, 500 ist
-   also ein echtes Gewicht und kein vom Browser nachgezogenes Fett.
+/* Der Claim traegt die Seite: mittig, im schwersten brauchbaren Schnitt
+   und dicht gesetzt. Die Schrift ist ein variabler Schnitt von 100 bis
+   900 - 800 ist also ein echtes Gewicht und kein vom Browser
+   nachgezogenes Fett.
 
-   Mit dem Gewicht muss die Laufweite mit: -.035em war fuer den duennen
-   Schnitt gedacht, bei 500 stossen die Buchstaben dort aneinander. */
+   Je schwerer der Schnitt, desto enger darf er stehen: Die Buchstaben
+   werden breiter, die Zwischenraeume von selbst kleiner. -.03em haelt
+   den Block zusammen, ohne dass die Formen ineinanderlaufen. */
 .hero__title {
   font-size: var(--fs-hero);
-  font-weight: 500;
-  line-height: .88;
-  letter-spacing: -.022em;
+  font-weight: 800;
+  line-height: .85;
+  letter-spacing: -.03em;
   text-transform: uppercase;
   text-align: center;
 }
@@ -452,175 +458,62 @@ a { color: inherit; }
    bleibt dabei ein Rest stehen ("MOMENTE, DIE / BLEIBEN,"); mit balance
    verteilt der Browser die Woerter gleichmaessig auf die Zeilen. Kann er
    es nicht, bricht er wie bisher - kein Schaden. */
-.hero__title span { display: block; text-wrap: balance; }
+/* Nur die beiden Halbsaetze, nicht jedes span darin. Der Nachkomme-Wahl
+   ohne > fielen auch die Woerter zum Opfer, die main.js beim Schneiden
+   einzeln setzt - jedes waere ein Block geworden und damit eine eigene
+   Zeile. Gemessen kam dann Wort fuer Wort statt Zeile fuer Zeile heraus. */
+.hero__title > span { display: block; text-wrap: balance; }
 .hero__title em {
   font-style: normal;
   color: var(--signal);
 }
 
-/* Ein Lichtstrahl wandert ueber den Claim - einmal nach dem Aufbau der
-   Seite, danach bei jedem Ueberfahren. Umgesetzt ueber einen Verlauf, der
-   auf die Buchstaben zugeschnitten wird und seitlich durchlaeuft.
+/* --- Auftritt: Zeile fuer Zeile ----------------------------------------
+   Der Claim baut sich zeilenweise auf - jede Zeile faehrt von unten in
+   ihren Kasten, kurz versetzt zur vorigen.
 
-   Der @supports-Rahmen ist Pflicht: Ohne background-clip: text waere die
-   Schrift durchsichtig und damit unsichtbar. Faellt der Rahmen weg, bleibt
-   der Claim schlicht weiss und gelb wie bisher. */
+   main.js schneidet die beiden Halbsaetze dafuer in ihre tatsaechlichen
+   Zeilen. Von Hand geht das nicht: Wo umbrochen wird, haengt von der
+   Breite ab - am Schirm zwei Zeilen, am Handy vier.
 
-@supports ((-webkit-background-clip: text) or (background-clip: text)) {
-  @media (prefers-reduced-motion: no-preference) {
-    .hero__title span,
-    .hero__title em {
-      background-repeat: no-repeat;
-      background-size: 220% 100%;
-      background-position: 135% 0;
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-      color: transparent;
-    }
+   Der Kasten schneidet ab, das Innenleben faehrt. Ohne den Rand am Kasten
+   wuerde er die Oberlaengen abschneiden: Bei Zeilenhoehe 0,85 ist der
+   Kasten niedriger als die Buchstaben hoch sind. Der Rand schafft Platz,
+   der negative Aussenabstand nimmt ihn dem Satzbild wieder weg, und das
+   Innenleben startet 130 Prozent tief - weit genug, dass auch mit Rand
+   nichts hervorlugt.
 
-    /* Weisser Teil: der Strahl faerbt ihn kurz ins Signalgelb.
-       Weiss kann nicht heller werden, deshalb ist der Strahl ein Farbton:
-       Signalgelb wandert ueber die weisse Zeile, Weiss ueber die gelbe.
+   Alles haengt an html.js: Ohne JavaScript wird nicht geschnitten, dann
+   soll der Claim schlicht dastehen statt unsichtbar zu bleiben. */
 
-       Die Grundfarbe darunter ist Pflicht - der Verlauf ist breiter als die
-       Flaeche und deckt sie beim Durchlaufen nicht ueberall ab. Ohne sie
-       waeren die Buchstaben dort durchsichtig, also unsichtbar.
+.hero__zeile {
+  display: block;
+  overflow: hidden;
+  padding-block: .09em;
+  margin-block: -.09em;
+}
 
-       Die Randstopps tragen bewusst dieselbe Farbe mit Alpha 0 statt
-       "transparent" - sonst mischt manche Rechnung ueber Grau. */
-    .hero__title span {
-      background-color: var(--text);
-      background-image: linear-gradient(100deg,
-        rgba(248, 248, 8, 0)   46%,
-        rgba(248, 248, 8, .95) 50%,
-        rgba(248, 248, 8, 0)   54%);
-    }
+html.js .hero__zeile-innen {
+  display: block;
+  transform: translateY(130%);
+}
 
-    /* Gelber Teil bekommt seinen eigenen Strahl, sonst verlaeuft er ins Weiss. */
-    .hero__title em {
-      background-color: var(--signal);
-      background-image: linear-gradient(100deg,
-        rgba(255, 255, 255, 0)   46%,
-        rgba(255, 255, 255, .92) 50%,
-        rgba(255, 255, 255, 0)   54%);
-    }
-
-    /* Der Weg ist genau bemessen: Bei 100 % steht das Band knapp links
-       neben der Zeile, bei -5 % knapp rechts daneben. Dazwischen liegt
-       genau ein Durchgang - keine verschenkte Strecke im Unsichtbaren.
-
-       Die Zeitkurve ist linear. Ein Scheinwerfer wandert gleichmaessig;
-       eine Ease-out-Kurve wuerde ihn durch die Zeile schiessen lassen und
-       danach im Unsichtbaren nachkriechen. */
-
-    /* Dauerlauf: ein Durchgang, dann acht Sekunden Ruhe.
-
-       Der Schatten ist der eigentliche Glanz. Weisse Buchstaben lassen sich
-       nicht aufhellen - was auf ihnen als Licht liest, ist der Hof
-       ringsherum. Er schwillt an, waehrend die Bahn die Zeile quert, und
-       faellt wieder ab. Der Ausgangswert ist bewusst ein Schatten mit Radius
-       null statt "none", sonst gibt es nichts zu ueberblenden. Die Radien
-       stehen in em, damit der Hof auf kleinen Schirmen mitschrumpft. */
-    @keyframes lichtstrahl {
-      0%   { background-position: 100% 0;  text-shadow: 0 0 0 rgba(248, 248, 8, 0); }
-      4%   { text-shadow: 0 0 .16em rgba(248, 248, 8, .18); }
-      8.5% { text-shadow: 0 0 .42em rgba(248, 248, 8, .46); }
-      13%  { text-shadow: 0 0 .16em rgba(248, 248, 8, .18); }
-      17%  { background-position: -5% 0;  text-shadow: 0 0 0 rgba(248, 248, 8, 0); }
-      100% { background-position: -5% 0;  text-shadow: 0 0 0 rgba(248, 248, 8, 0); }
-    }
-
-    /* Derselbe Durchgang noch einmal unter eigenem Namen - das ist Absicht.
-       Bleibt der Name gleich, startet der Browser die Animation nicht neu,
-       sondern rechnet nur die Zeiten um, und beim Ueberfahren passierte
-       nichts. */
-    @keyframes lichtstrahl-zwei {
-      0%   { background-position: 100% 0;  text-shadow: 0 0 0 rgba(248, 248, 8, 0); }
-      25%  { text-shadow: 0 0 .18em rgba(248, 248, 8, .20); }
-      50%  { text-shadow: 0 0 .42em rgba(248, 248, 8, .46); }
-      75%  { text-shadow: 0 0 .18em rgba(248, 248, 8, .20); }
-      100% { background-position: -5% 0;  text-shadow: 0 0 0 rgba(248, 248, 8, 0); }
-    }
-
-    .hero.is-ready .hero__title span,
-    .hero.is-ready .hero__title em { animation: lichtstrahl 9.5s linear 1.1s infinite; }
-
-    /* Ueberfahren zieht einen einzelnen Durchgang vor. */
-    .hero.is-ready .hero__title:hover span,
-    .hero.is-ready .hero__title:hover em { animation: lichtstrahl-zwei 1.15s linear; }
-
-    /* --- Der Glanz ---------------------------------------------------
-       Der Farbwechsel allein liest sich nicht als Licht. Darueber liegt
-       deshalb eine zweite Ebene: eine schmale Lichtbahn, die im
-       Aufhell-Modus (screen) mitwandert. Sie hellt die Buchstaben auf, die
-       sie gerade streift, und macht den Strahl selbst schwach sichtbar -
-       erst dadurch versteht man, was da passiert.
-
-       .hero__title bekommt bewusst KEINEN eigenen Stapelkontext, sonst
-       haette die Bahn nur das eigene Nichts als Untergrund und wuerde
-       nichts aufhellen. */
-    .hero__title { position: relative; }
-
-    .hero__title::after {
-      content: '';
-      position: absolute;
-      /* Waagerecht exakt so breit wie die Zeilen - sonst landen dieselben
-         Prozentwerte an anderer Stelle und Glanz und Einfaerbung laufen
-         auseinander.
-
-         Senkrecht steht der Kasten bewusst weit ueber. Er braucht Luft, in
-         der die Bahn auslaufen kann, bevor sein Rand kommt - sonst sieht man
-         den Rand. */
-      inset: -40% 0;
-      pointer-events: none;
-      mix-blend-mode: screen;
-      background-repeat: no-repeat;
-      background-size: 220% 100%;
-      background-position: 100% 0;
-      /* Zwei Lagen: ein schmaler heller Kern und ein breiter, schwacher
-         Hof. Zusammen ergibt das den Eindruck von Streulicht statt eines
-         aufgemalten Streifens. */
-      background-image:
-        linear-gradient(100deg,
-          rgba(255, 255, 235, 0)    47.6%,
-          rgba(255, 255, 225, .60)  50%,
-          rgba(255, 255, 235, 0)    52.4%),
-        linear-gradient(100deg,
-          rgba(255, 252, 214, 0)    45%,
-          rgba(255, 252, 214, .13)  50%,
-          rgba(255, 252, 214, 0)    55%);
-
-      /* Ohne Maske schneidet der Kasten die Bahn an allen vier Seiten
-         hart ab. Senkrecht laege dann eine helle Platte ueber der Zeile,
-         waagerecht risse der Strahl hinter dem Komma abrupt ab.
-
-         Eine Ellipse loest beides in einem Zug und braucht kein
-         mask-composite, dessen Schreibweise sich zwischen den Browsern
-         unterscheidet.
-
-         Entscheidend sind Mittelpunkt und Radien: Vom Mittelpunkt aus
-         gerechnet muss jeder Radius kleiner als der halbe Kasten sein,
-         damit die Maske INNERHALB des Kastens auf null geht. Bei 50 % / 50 %
-         und 44 % / 40 % ist sie waagerecht ab 6 % und 94 %, senkrecht ab
-         10 % und 90 % zu - ringsum bleibt Rand uebrig. Ist sie an einer
-         Seite noch offen, sieht man genau dort die Kante des Kastens. */
-      -webkit-mask-image: radial-gradient(ellipse 44% 40% at 50% 50%,
-        #000 46%, rgba(0, 0, 0, .55) 78%, transparent 100%);
-      mask-image: radial-gradient(ellipse 44% 40% at 50% 50%,
-        #000 46%, rgba(0, 0, 0, .55) 78%, transparent 100%);
-      animation: lichtstrahl 9.5s linear 1.1s infinite;
-    }
-
-    .hero.is-ready .hero__title:hover::after {
-      animation: lichtstrahl-zwei 1.15s linear;
-    }
-
-    /* Ausserhalb des Bildes ruht der Strahl. */
-    .hero.hero--weg .hero__title span,
-    .hero.hero--weg .hero__title em,
-    .hero.hero--weg .hero__title::after { animation-play-state: paused; }
+@media (prefers-reduced-motion: no-preference) {
+  html.js .hero.is-ready .hero__zeile-innen {
+    transform: none;
+    /* Kurz und hart heraus: Der Weg ist in den ersten Hundertsteln fast
+       vorbei, danach setzt die Zeile nur noch auf. Das ist der Schlag. */
+    transition: transform .58s cubic-bezier(.13, .9, .2, 1);
+    transition-delay: calc(var(--z, 0) * 90ms);
   }
+}
+
+/* Beim Neuschneiden nach einer Drehung darf nichts nachfahren. */
+html.js .hero.hero--ohne-fahrt .hero__zeile-innen { transition: none; }
+
+/* Ruhe-Modus: kein Fahren, nur da sein. */
+@media (prefers-reduced-motion: reduce) {
+  html.js .hero__zeile-innen { transform: none; }
 }
 
 /* Das Hintergrundbild faehrt beim Scrollen langsam heran und tritt zurueck.
@@ -658,17 +551,21 @@ a { color: inherit; }
 }
 
 /* Auftritt: erst Claim, dann Text, dann Zeile ------------------------- */
-.hero__meta,
-.hero__title span,
-.hero__foot {
+/* Vorspann und Fuss blenden ein - der Claim nicht, der faehrt zeilenweise
+   herein (siehe "Auftritt: Zeile fuer Zeile").
+
+   Der Ausgangszustand haengt an html.js. is-ready setzt main.js; ohne
+   JavaScript kaeme die Klasse nie, und der Kopfbereich bliebe dauerhaft
+   unsichtbar. So steht er dann einfach sofort da. */
+html.js .hero__meta,
+html.js .hero__foot {
   opacity: 0;
   transform: translateY(1.4rem);
   transition: opacity .9s var(--ease-out), transform .9s var(--ease-out);
 }
-.hero.is-ready .hero__meta        { opacity: 1; transform: none; transition-delay: .05s; }
-.hero.is-ready .hero__title span:nth-child(1) { opacity: 1; transform: none; transition-delay: .18s; }
-.hero.is-ready .hero__title span:nth-child(2) { opacity: 1; transform: none; transition-delay: .30s; }
-.hero.is-ready .hero__foot        { opacity: 1; transform: none; transition-delay: .46s; }
+html.js .hero.is-ready .hero__meta { opacity: 1; transform: none; transition-delay: .05s; }
+/* Der Fuss kommt nach den Zeilen, nicht mit ihnen. */
+html.js .hero.is-ready .hero__foot { opacity: 1; transform: none; transition-delay: .62s; }
 
 /* =========================================================================
    Abschnitte
@@ -1491,6 +1388,17 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 /* =========================================================================
    Umbrueche
    ========================================================================= */
+
+/* Die Groessenstaffel des Claims - dieselben Stufen wie auf der
+   bisherigen nova-works.de. Am Handy steht er mit 14vw am groessten im
+   Verhaeltnis zum Schirm: Dort hat er am wenigsten Platz und muss am
+   meisten wirken. */
+@media (max-width: 999px) {
+  :root { --fs-hero: 10vw; }
+}
+@media (max-width: 690px) {
+  :root { --fs-hero: 14vw; }
+}
 
 @media (max-width: 960px) {
   .nav, .masthead__cta { display: none; }

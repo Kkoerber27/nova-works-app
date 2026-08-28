@@ -10,15 +10,156 @@
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* ---------- Hero-Einstieg ---------------------------------------------
-     Ordnet den Blick: Claim zuerst, dann Fließtext, dann CTA.            */
+     Der Claim faehrt zeilenweise herein, danach Fliesstext und Schaltflaeche.
+
+     Dafuer muessen die beiden Halbsaetze in ihre tatsaechlichen Zeilen
+     zerlegt werden - von Hand geht das nicht, weil der Umbruch von der
+     Breite abhaengt: am Schirm zwei Zeilen, am Handy vier.
+
+     Der Weg dahin: jedes Wort einzeln setzen, die Oberkanten vergleichen,
+     nach Zeilen gruppieren, neu aufbauen. Ueber die Oberkante und nicht
+     ueber eine Breitenrechnung, weil der Browser den Umbruch ohnehin schon
+     gemacht hat - man muss ihn nur ablesen.
+
+     Woerter im gelben Halbsatz behalten ihr <em>: Ein <em> je Wort sieht
+     genauso aus wie eines um mehrere, die Auszeichnung ist hier reine
+     Farbe. Das erspart es, ein Element mitten im Wort aufzutrennen. */
 
   var hero = document.querySelector('.hero');
-  if (hero) {
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        hero.classList.add('is-ready');
+
+  var zeilenSchneiden = function (halb) {
+    var woerter = [];
+    Array.prototype.forEach.call(halb.childNodes, function (kn) {
+      var istEm = kn.nodeType === 1 && kn.tagName === 'EM';
+      (kn.textContent || '').split(/\s+/).forEach(function (w) {
+        if (w) woerter.push({ text: w, em: istEm });
       });
     });
+    if (!woerter.length) return 0;
+
+    var setzen = function (ziel, liste, einzeln) {
+      ziel.textContent = '';
+      var marken = [];
+      liste.forEach(function (w, i) {
+        if (i) ziel.appendChild(document.createTextNode(' '));
+        var s = document.createElement(w.em ? 'em' : 'span');
+        s.textContent = w.text;
+        ziel.appendChild(s);
+        marken.push(s);
+      });
+      return einzeln ? marken : null;
+    };
+
+    /* Erst provisorisch, nur um die Umbrueche abzulesen. */
+    var marken = setzen(halb, woerter, true);
+    var zeilen = [], letzteOberkante = null;
+    marken.forEach(function (s, i) {
+      var oben = Math.round(s.getBoundingClientRect().top);
+      /* Vier Pixel Toleranz: Buchstaben mit und ohne Oberlaenge sitzen
+         nicht auf die Nachkommastelle gleich. */
+      if (letzteOberkante === null || Math.abs(oben - letzteOberkante) > 4) {
+        zeilen.push([]);
+        letzteOberkante = oben;
+      }
+      zeilen[zeilen.length - 1].push(woerter[i]);
+    });
+
+    /* Und jetzt endgueltig: je Zeile ein Kasten mit fahrendem Innenleben.
+
+       Zwischen den Kaesten steht ein echtes Leerzeichen. Es ist unsichtbar
+       - zwischen zwei Bloecken erzeugt es keine Zeile -, aber ohne es
+       klebte der Text zusammen: "Momente,die bleiben,weil allespasst."
+       Genau so laese ihn ein Vorleseprogramm, und genau so landete er in
+       der Zwischenablage. */
+    halb.textContent = '';
+    zeilen.forEach(function (zeile, i) {
+      if (i) halb.appendChild(document.createTextNode(' '));
+      var aussen = document.createElement('span');
+      aussen.className = 'hero__zeile';
+      var innen = document.createElement('span');
+      innen.className = 'hero__zeile-innen';
+      setzen(innen, zeile, false);
+      aussen.appendChild(innen);
+      halb.appendChild(aussen);
+    });
+    return zeilen.length;
+  };
+
+  if (hero) {
+    var claim = hero.querySelector('.hero__title');
+    var halbsaetze = claim ? claim.querySelectorAll(':scope > span') : [];
+
+    var neuSchneiden = function () {
+      var nr = 0;
+      Array.prototype.forEach.call(halbsaetze, function (halb) {
+        zeilenSchneiden(halb);
+        Array.prototype.forEach.call(halb.querySelectorAll('.hero__zeile-innen'), function (innen) {
+          innen.style.setProperty('--z', nr++);
+        });
+      });
+      return nr;
+    };
+
+    /* Geschnitten wird erst, wenn die Schrift steht. Vorher misst man die
+       Ersatzschrift, und die bricht an anderer Stelle um - gemessen kam
+       dabei jedes Wort auf eine eigene Zeile heraus.
+
+       Die Notbremse nach 1,2 Sekunden ist fuer den Fall, dass die
+       Schriftdatei haengt: Dann faehrt der Claim lieber mit den Umbruechen
+       der Ersatzschrift herein, als gar nicht zu erscheinen. Kommt die
+       Schrift danach doch noch, wird still nachgeschnitten. */
+
+    var ohneFahrt = function (tun) {
+      hero.classList.add('hero--ohne-fahrt');
+      tun();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          hero.classList.remove('hero--ohne-fahrt');
+        });
+      });
+    };
+
+    var starten = function () {
+      neuSchneiden();
+      requestAnimationFrame(function () {
+        requestAnimationFrame(function () {
+          hero.classList.add('is-ready');
+        });
+      });
+    };
+
+    if (!halbsaetze.length) {
+      hero.classList.add('is-ready');
+    } else if (document.fonts && document.fonts.ready) {
+      var gestartet = false;
+      var einmal = function () {
+        if (gestartet) return;
+        gestartet = true;
+        starten();
+      };
+      document.fonts.ready.then(function () {
+        if (gestartet) ohneFahrt(neuSchneiden); else einmal();
+      });
+      window.setTimeout(einmal, 1200);
+    } else {
+      starten();
+    }
+
+    /* Dreht jemand das Geraet, stimmen die Umbrueche nicht mehr. Dann neu
+       schneiden - aber ohne die Fahrt noch einmal zu spielen: Der Auftritt
+       gehoert zum Ankommen auf der Seite, nicht zum Drehen des Telefons.
+       Nur eine echte Breitenaenderung zaehlt; auf dem Handy wandert beim
+       Scrollen die Adressleiste, und die aendert allein die Hoehe. */
+    if (halbsaetze.length) {
+      var letzteBreite = window.innerWidth;
+      var uhr = null;
+      window.addEventListener('resize', function () {
+        if (window.innerWidth === letzteBreite) return;
+        letzteBreite = window.innerWidth;
+        window.clearTimeout(uhr);
+        uhr = window.setTimeout(function () { ohneFahrt(neuSchneiden); }, 180);
+      });
+    }
   }
 
   /* ---------- Bildtiefe im Hero -----------------------------------------
@@ -33,14 +174,6 @@
 
   var kannScrollAnimation = window.CSS && CSS.supports &&
                             CSS.supports('animation-timeline', 'scroll()');
-
-  /* Der Lichtstrahl ueber dem Claim laeuft im Dauerlauf. Ausserhalb des
-     Bildes soll er ruhen - das Stylesheet haelt ihn ueber .hero--weg an. */
-  if (hero && 'IntersectionObserver' in window) {
-    new IntersectionObserver(function (eintraege) {
-      hero.classList.toggle('hero--weg', !eintraege[0].isIntersecting);
-    }, { threshold: 0 }).observe(hero);
-  }
 
   var heroBild = document.querySelector('.hero__media');
 
