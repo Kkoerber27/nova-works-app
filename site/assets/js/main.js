@@ -281,9 +281,16 @@
      Weg - jede einzelne haette im waagerecht laufenden Band ihren eigenen,
      staendig wechselnden Stand.
 
-     Die Zahlen stehen doppelt - hier und in @keyframes bild-tiefe. Wer
-     eine aendert, muss die andere mitziehen, sonst bewegen sich dieselben
-     Bilder je nach Browser verschieden weit. */
+     An derselben Schleife haengt der Farbtausch der Ueberschriften. Der
+     Rechenweg ist fuer beides derselbe - wie weit ist dieser Kasten durchs
+     Bild gewandert - nur was am Ende damit geschieht, unterscheidet sich.
+     Deshalb bringt jede Gruppe ihre eigene Setzfunktion mit, statt dass
+     die Schleife Fallunterscheidungen trifft.
+
+     Die Zahlen stehen doppelt - hier und in @keyframes bild-tiefe
+     beziehungsweise titel-tausch. Wer eine aendert, muss die andere
+     mitziehen, sonst bewegt sich dasselbe je nach Browser verschieden
+     weit. */
 
   var kannSichtAnimation = window.CSS && CSS.supports &&
                            CSS.supports('animation-timeline', 'view()') &&
@@ -295,16 +302,56 @@
   if (!reduceMotion && !kannSichtAnimation && 'IntersectionObserver' in window) {
     var gruppen = [];
 
+    /* Bilder: heranfahren und ein Stueck nach oben wandern. */
+    var bildSetzer = function (elemente) {
+      return function (anteil) {
+        var gross = (TIEFE_SCALE[0] + anteil * (TIEFE_SCALE[1] - TIEFE_SCALE[0])).toFixed(4);
+        var weg = '0 ' + (TIEFE_WEG[0] + anteil * (TIEFE_WEG[1] - TIEFE_WEG[0])).toFixed(3) + '%';
+        for (var i = 0; i < elemente.length; i++) {
+          elemente[i].style.scale = gross;
+          elemente[i].style.translate = weg;
+        }
+      };
+    };
+
     Array.prototype.forEach.call(document.querySelectorAll('.ref__foto'), function (el) {
-      gruppen.push({ bezug: el.parentNode, elemente: [el], sichtbar: false });
+      gruppen.push({ bezug: el.parentNode, sichtbar: false, setze: bildSetzer([el]) });
     });
 
     var dienste = document.getElementById('services');
     var karten = document.querySelectorAll('.card__media');
     if (dienste && karten.length) {
       gruppen.push({ bezug: dienste, sichtbar: false,
-                     elemente: Array.prototype.slice.call(karten) });
+                     setze: bildSetzer(Array.prototype.slice.call(karten)) });
     }
+
+    /* Ueberschriften: 0 ist der Entwurfszustand, 1 der getauschte. Die
+       Punkte sind Zeile fuer Zeile dieselben wie in @keyframes
+       titel-tausch - erst gibt die eine Haelfte das Gelb ab, dann nimmt
+       es die andere auf. Gemischt wird im Stylesheet; hier fallen nur die
+       beiden Zahlen. */
+    var TAUSCH_EINS = [[0, 1], [.22, 1], [.32, 0], [.42, 0], [.68, 0], [.78, 0], [.88, 1], [1, 1]];
+    var TAUSCH_ZWEI = [[0, 1], [.22, 1], [.32, 1], [.42, 0], [.68, 0], [.78, 1], [.88, 1], [1, 1]];
+
+    /* Zwischen zwei Punkten linear - genau das, was linear in der
+       CSS-Animation auch tut. */
+    var aufKurve = function (punkte, anteil) {
+      for (var i = 1; i < punkte.length; i++) {
+        if (anteil > punkte[i][0]) continue;
+        var a = punkte[i - 1], b = punkte[i];
+        var spanne = b[0] - a[0];
+        if (spanne <= 0) return b[1];
+        return a[1] + (b[1] - a[1]) * (anteil - a[0]) / spanne;
+      }
+      return punkte[punkte.length - 1][1];
+    };
+
+    Array.prototype.forEach.call(document.querySelectorAll('.section__title'), function (el) {
+      gruppen.push({ bezug: el, sichtbar: false, setze: function (anteil) {
+        el.style.setProperty('--tausch-eins', aufKurve(TAUSCH_EINS, anteil).toFixed(4));
+        el.style.setProperty('--tausch-zwei', aufKurve(TAUSCH_ZWEI, anteil).toFixed(4));
+      } });
+    });
 
     if (gruppen.length) {
       var offen = 0;
@@ -320,12 +367,7 @@
              vom Hereinkommen unten bis zum Verschwinden oben. */
           var anteil = (hoehe - r.top) / (hoehe + r.height);
           anteil = anteil < 0 ? 0 : anteil > 1 ? 1 : anteil;
-          var gross = (TIEFE_SCALE[0] + anteil * (TIEFE_SCALE[1] - TIEFE_SCALE[0])).toFixed(4);
-          var weg = '0 ' + (TIEFE_WEG[0] + anteil * (TIEFE_WEG[1] - TIEFE_WEG[0])).toFixed(3) + '%';
-          for (var k = 0; k < g.elemente.length; k++) {
-            g.elemente[k].style.scale = gross;
-            g.elemente[k].style.translate = weg;
-          }
+          g.setze(anteil);
         }
         if (laeuftTiefe) window.requestAnimationFrame(zeichneTiefe);
       };

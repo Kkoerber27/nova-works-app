@@ -677,6 +677,83 @@ a { color: inherit; }
 }
 .section__title em { font-style: normal; color: var(--signal); }
 
+/* --- Farbtausch der Ueberschriften -------------------------------------
+   Jede Abschnitts-Ueberschrift ist zweigeteilt: ein weisser und ein gelber
+   Halbsatz. Waehrend sie durchs Bild wandert, tauschen die beiden ihre
+   Farbe und nehmen sie wieder zurueck.
+
+   Die beiden Haelften wechseln NACHEINANDER, nicht gleichzeitig. Das ist
+   der Kern: Bei einer gemeinsamen Blende waeren auf halbem Weg beide
+   gleich blass, die Ueberschrift verlore genau in der Bewegung ihre
+   Zweiteilung. So gibt stattdessen die eine Haelfte das Gelb ab, und erst
+   danach nimmt die andere es auf - dazwischen steht die Zeile kurz ganz
+   in Weiss. Nebenbei liegt damit nie mehr Gelb auf der Seite als im
+   Entwurf, nur an anderer Stelle.
+
+   Getrieben wird das von zwei Zahlen, die beide auf der Ueberschrift
+   laufen und an die Haelften vererbt werden: 0 ist der Entwurfszustand,
+   1 der getauschte. Vererbung statt zweier eigener Animationen, damit die
+   Haelften zwangslaeufig im selben Takt bleiben - eine eigene Zeitachse
+   im em liefe bei zweizeiligen Ueberschriften messbar hinterher, weil das
+   em eine Zeile tiefer sitzt.
+
+   @property ist dafuer Pflicht: Ohne die Anmeldung als Zahl kennt der
+   Browser nur Zeichenketten und wuerde springen statt zu blenden.
+
+   Der Entwurfszustand liegt in der Mitte des Wegs: von 42 bis 68 Prozent
+   steht die Ueberschrift im Lesebereich des Schirms. Getauscht wird beim
+   Herein- und beim Hinauswandern. */
+
+@property --tausch-eins {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+@property --tausch-zwei {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@keyframes titel-tausch {
+  0%   { --tausch-eins: 1; --tausch-zwei: 1; }
+  22%  { --tausch-eins: 1; --tausch-zwei: 1; }
+  32%  { --tausch-eins: 0; --tausch-zwei: 1; }
+  42%  { --tausch-eins: 0; --tausch-zwei: 0; }
+  68%  { --tausch-eins: 0; --tausch-zwei: 0; }
+  78%  { --tausch-eins: 0; --tausch-zwei: 1; }
+  88%  { --tausch-eins: 1; --tausch-zwei: 1; }
+  100% { --tausch-eins: 1; --tausch-zwei: 1; }
+}
+
+/* Dieselbe Bedingung wie bei der Bildtiefe, Wort fuer Wort - und dieselbe,
+   die main.js abfragt. So laeuft immer genau einer der beiden Wege: Liefe
+   beides, ueberschriebe die Animation ohnehin den von main.js gesetzten
+   Wert, und niemand wuesste beim Suchen, welcher Weg gerade greift. */
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) and (timeline-scope: --pruefung) {
+    .section__title {
+      animation: titel-tausch linear both;
+      animation-timeline: view(block);
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+/* Das Mischen selbst steht ausserhalb: Es gilt fuer beide Wege. Der eine
+   laesst die beiden Zahlen vom Browser laufen, der andere setzt sie aus
+   main.js - gerechnet wird hier. */
+@supports (color: color-mix(in oklab, #000, #fff)) {
+  .section__title {
+    color: color-mix(in oklab, var(--text),
+                     var(--signal) calc(var(--tausch-eins, 0) * 100%));
+  }
+  .section__title em {
+    color: color-mix(in oklab, var(--signal),
+                     var(--text) calc(var(--tausch-zwei, 0) * 100%));
+  }
+}
+
 /* Reveal beim Scrollen ------------------------------------------------ */
 [data-reveal] {
   opacity: 0;
