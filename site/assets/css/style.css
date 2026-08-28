@@ -1028,7 +1028,13 @@ a { color: inherit; }
 .lupe__rahmen {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  align-items: center;
+  /* stretch, nicht center: Nur so bekommt die Figur eine feste Hoehe, und
+     nur dann hat "max-height: 100%" am Bild etwas, worauf es sich
+     beziehen kann. Mit center war die Figur so hoch wie ihr Inhalt, die
+     Angabe lief ins Leere - ein hochformatiges Foto stand dann mit 1600
+     px in einem 900 px hohen Fenster und ragte oben und unten heraus.
+     Die Knoepfe setzen sich einzeln wieder in die Mitte. */
+  align-items: stretch;
   gap: clamp(.5rem, 2vw, 1.5rem);
   height: 100%;
   padding: clamp(3.5rem, 8vh, 5rem) clamp(.75rem, 3vw, 2.5rem) clamp(1.5rem, 5vh, 3rem);
@@ -1042,6 +1048,7 @@ a { color: inherit; }
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
   margin: 0;
+  height: 100%;
   min-height: 0;
   justify-items: center;
 }
@@ -1053,6 +1060,7 @@ a { color: inherit; }
    dem Bild. */
 .lupe__bild {
   display: block;
+  align-self: center;
   max-width: 100%;
   max-height: 100%;
   min-height: 0;
@@ -1079,6 +1087,7 @@ a { color: inherit; }
 .lupe__knopf {
   display: grid;
   place-items: center;
+  align-self: center;
   width: 3rem;
   height: 3rem;
   padding: 0;
