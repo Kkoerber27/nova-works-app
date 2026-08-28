@@ -839,6 +839,84 @@ a { color: inherit; }
 }
 .ref:hover .ref__bild { border-color: var(--line-strong); }
 
+/* Der Rahmen ist ein Schalter - er muss aussehen wie vorher der Kasten.
+   width: 100% ist noetig, weil ein button sonst nur so breit wird wie
+   sein Inhalt, und der Inhalt ist absolut gesetzt, also nichts. */
+.ref__bild {
+  width: 100%;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: zoom-in;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.ref__bild:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+
+/* Heranfahren beim Ueberfahren. Ueber transform, weil scale und translate
+   schon der Bildtiefe beim Scrollen gehoeren - die beiden ueberlagern
+   sich, statt sich auszuknipsen. */
+.ref__bild:hover .ref__foto,
+.ref__bild:focus-visible .ref__foto {
+  transform: scale(1.06);
+}
+.ref__foto { transition: transform .5s var(--ease-out); }
+
+/* Das Zeichen sagt, dass hier etwas zu holen ist: eine Lupe, die erst
+   beim Ueberfahren auftaucht. Gezeichnet aus zwei Formen - Kreis und
+   Griff -, damit keine Bilddatei dafuer noetig ist. */
+.ref__zeichen {
+  position: absolute;
+  right: 1rem;
+  bottom: 1rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  background: rgba(11, 11, 12, .72);
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  transform: translateY(.4rem);
+  transition: opacity .35s var(--ease), transform .35s var(--ease-out);
+  pointer-events: none;
+}
+.ref__zeichen::before {
+  content: '';
+  position: absolute;
+  left: .78rem; top: .78rem;
+  width: .95rem; height: .95rem;
+  border: 2px solid var(--text);
+  border-radius: 50%;
+}
+.ref__zeichen::after {
+  content: '';
+  position: absolute;
+  right: .72rem; bottom: .72rem;
+  width: .55rem; height: 2px;
+  background: var(--text);
+  transform: rotate(45deg);
+  transform-origin: right center;
+}
+.ref__bild:hover .ref__zeichen,
+.ref__bild:focus-visible .ref__zeichen {
+  opacity: 1;
+  transform: none;
+}
+
+/* Ohne JavaScript bleibt hier eine schlichte Liste von Verweisen auf die
+   Bilddateien stehen. main.js blendet sie aus, sobald es den Rahmen zum
+   Schalter gemacht hat. */
+.ref__bilder {
+  margin: .6rem 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-small);
+}
+.ref__bilder a { color: var(--text-faint); }
+.ref__bilder a:hover { color: var(--signal); }
+
 .ref__foto {
   position: absolute;
   inset: 0;
@@ -915,6 +993,161 @@ a { color: inherit; }
       animation-range: cover 0% cover 100%;
     }
   }
+}
+
+/* =========================================================================
+   Grossansicht der Projektbilder
+   ========================================================================= */
+
+/* Das <dialog> deckt die ganze Flaeche ab, damit ein Klick daneben es
+   schliessen kann - die Pruefung dafuer steht in main.js und fragt, ob
+   der Treffer ausserhalb von .lupe__rahmen lag. Deshalb keine Groesse
+   nach Inhalt, sondern Vollbild mit durchsichtigem Grund. */
+.lupe {
+  width: 100%;
+  max-width: none;
+  height: 100%;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  overflow: hidden;
+}
+.lupe::backdrop {
+  background: rgba(6, 6, 7, .88);
+  backdrop-filter: blur(10px);
+}
+
+/* Der Rahmen fuellt die ganze Flaeche, damit das Bild in der Mitte sitzt -
+   und laesst Klicks trotzdem durch. Sonst gaebe es kein "daneben": Jeder
+   Treffer auf den Rand laege im Rahmen, und die Ansicht liesse sich nur
+   ueber Escape und das Kreuz schliessen. Bild und Knoepfe nehmen ihre
+   Klicks einzeln wieder an. */
+.lupe__rahmen {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(.5rem, 2vw, 1.5rem);
+  height: 100%;
+  padding: clamp(3.5rem, 8vh, 5rem) clamp(.75rem, 3vw, 2.5rem) clamp(1.5rem, 5vh, 3rem);
+  pointer-events: none;
+}
+.lupe__bild,
+.lupe__knopf { pointer-events: auto; }
+
+.lupe__figur {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: 1rem;
+  margin: 0;
+  min-height: 0;
+  justify-items: center;
+}
+
+/* Das Bild fuellt, was der Kasten hergibt, ohne sein Verhaeltnis zu
+   verlieren und ohne ueber den Rand zu wachsen. min-height: 0 an den
+   Eltern ist dafuer Pflicht - ein Rasterfeld gibt sonst nie unter seine
+   Inhaltsgroesse nach, und ein hohes Bild schoebe die Zeile darunter aus
+   dem Bild. */
+.lupe__bild {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  object-fit: contain;
+  border-radius: var(--radius);
+  background: var(--ink-raised);
+}
+
+.lupe__zeile {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: .35rem 1rem;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+}
+.lupe__zaehler {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .08em;
+  color: var(--text-faint);
+}
+
+.lupe__knopf {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: rgba(18, 18, 19, .8);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color .3s var(--ease), background .3s var(--ease);
+}
+.lupe__knopf:hover { border-color: var(--line-strong); background: var(--ink-raised); }
+.lupe__knopf:focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; }
+.lupe__knopf[hidden] { display: none; }
+
+/* Die Zeichen sind gezeichnet, nicht gesetzt: zwei Striche als Kreuz,
+   zwei als Pfeilspitze. Das spart eine Schriftart oder Bilddatei nur fuer
+   drei Symbole. */
+.lupe__knopf::before,
+.lupe__knopf::after {
+  content: '';
+  position: absolute;
+  width: .85rem;
+  height: 2px;
+  background: currentColor;
+  border-radius: 2px;
+}
+.lupe__knopf { position: relative; }
+.lupe__zu::before { transform: rotate(45deg); }
+.lupe__zu::after  { transform: rotate(-45deg); }
+
+.lupe__blaettern::before,
+.lupe__blaettern::after {
+  width: .7rem;
+  transform-origin: right center;
+}
+.lupe__vor::before      { transform: translateX(-.1rem) rotate(45deg); }
+.lupe__vor::after       { transform: translateX(-.1rem) rotate(-45deg); }
+.lupe__zurueck::before  { transform: translateX(.25rem) rotate(-135deg); }
+.lupe__zurueck::after   { transform: translateX(.25rem) rotate(135deg); }
+
+.lupe__zu {
+  position: absolute;
+  top: clamp(.75rem, 3vh, 1.5rem);
+  right: clamp(.75rem, 3vw, 2.5rem);
+  z-index: 1;
+}
+
+/* Am Handy ist neben dem Bild keine Spalte fuer Pfeile uebrig. Dort
+   liegen sie deshalb auf halber Hoehe am linken und rechten Rand, ueber
+   dem Bild statt daneben - so bleibt die ganze Breite fuer das Foto.
+
+   Sie aus dem Raster zu nehmen ist Absicht: Im Raster liessen sie sich
+   nur nebeneinander unter die Zeile setzen, und dann sassen beide in
+   derselben Zelle. */
+@media (max-width: 620px) {
+  .lupe__rahmen {
+    grid-template-columns: minmax(0, 1fr);
+    padding-inline: 1rem;
+  }
+  .lupe__figur { grid-column: 1; grid-row: 1; width: 100%; }
+  .lupe__blaettern {
+    position: absolute;
+    top: 50%;
+    margin-top: -1.5rem;
+    background: rgba(11, 11, 12, .78);
+    backdrop-filter: blur(6px);
+  }
+  .lupe__zurueck { left: .75rem; }
+  .lupe__vor { right: .75rem; }
 }
 
 /* --- Gewerke --------------------------------------------------------- */

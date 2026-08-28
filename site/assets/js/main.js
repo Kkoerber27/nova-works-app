@@ -543,6 +543,118 @@
   }
 
 
+  /* ---------- Grossansicht der Projektbilder -----------------------------
+     Ein Klick auf ein Referenzbild oeffnet die Galerie des Projekts.
+
+     Woher die Bilder kommen: aus der Liste <ul class="ref__bilder"> unter
+     dem Rahmen. Sie steht im Quelltext und ist ohne JavaScript eine ganz
+     normale Liste von Verweisen auf die Bilddateien - erst hier wird sie
+     ausgeblendet und das Bild darueber zum Schalter. Der Linktext ist die
+     Bildbeschreibung und wird als alt-Text uebernommen.
+
+     Hoechstens drei Bilder je Projekt. Steht ein viertes in der Liste,
+     bleibt es weg statt die Ansicht zu ueberladen.
+
+     Das <dialog> uebernimmt Escape, die Fokusfalle und die Rueckkehr des
+     Fokus. Selbst gebaut werden muss nur, was es nicht kennt: blaettern,
+     der Klick neben das Bild und das Wischen mit dem Finger.            */
+
+  var lupe = document.querySelector('[data-lupe]');
+
+  if (lupe && typeof lupe.showModal === 'function') {
+    var lupeBild    = lupe.querySelector('[data-lupe-bild]');
+    var lupeTitel   = lupe.querySelector('[data-lupe-titel]');
+    var lupeZaehler = lupe.querySelector('[data-lupe-zaehler]');
+    var lupeRahmen  = lupe.querySelector('.lupe__rahmen');
+    var blaetternKnoepfe = lupe.querySelectorAll('[data-lupe-schritt]');
+
+    var HOECHSTENS = 3;
+    var bilder = [], stelle = 0, titel = '';
+
+    var zeigen = function (i) {
+      if (!bilder.length) return;
+      stelle = (i + bilder.length) % bilder.length;
+      lupeBild.src = bilder[stelle].src;
+      lupeBild.alt = bilder[stelle].alt;
+      lupeTitel.textContent = titel;
+      lupeZaehler.textContent = bilder.length > 1
+        ? (stelle + 1) + ' / ' + bilder.length : '';
+      /* Ein einzelnes Bild braucht keine Pfeile. */
+      Array.prototype.forEach.call(blaetternKnoepfe, function (k) {
+        k.hidden = bilder.length < 2;
+      });
+    };
+
+    var oeffnen = function (medien, ab) {
+      var liste = medien.querySelector('.ref__bilder');
+      if (!liste) return;
+      bilder = Array.prototype.slice
+        .call(liste.querySelectorAll('a'), 0, HOECHSTENS)
+        .map(function (a) {
+          return { src: a.getAttribute('href'), alt: a.textContent.trim() };
+        });
+      if (!bilder.length) return;
+      titel = liste.getAttribute('data-lupe-titel') || '';
+      zeigen(ab || 0);
+      lupe.showModal();
+    };
+
+    Array.prototype.forEach.call(document.querySelectorAll('.ref__media'), function (medien) {
+      var liste = medien.querySelector('.ref__bilder');
+      var schalter = medien.querySelector('[data-lupe-auf]');
+      if (!liste || !schalter) return;
+      /* Erst hier ausblenden: Ohne JavaScript bleibt die Liste stehen. */
+      liste.hidden = true;
+      schalter.addEventListener('click', function () { oeffnen(medien, 0); });
+    });
+
+    Array.prototype.forEach.call(blaetternKnoepfe, function (knopf) {
+      knopf.addEventListener('click', function () {
+        zeigen(stelle + parseInt(knopf.getAttribute('data-lupe-schritt'), 10));
+      });
+    });
+
+    lupe.querySelector('[data-lupe-zu]').addEventListener('click', function () {
+      lupe.close();
+    });
+
+    /* Klick daneben schliesst. Der Dialog selbst fuellt die ganze Flaeche,
+       Treffer ausserhalb von .lupe__rahmen sind also der Hintergrund. */
+    lupe.addEventListener('click', function (e) {
+      if (!lupeRahmen.contains(e.target)) lupe.close();
+    });
+
+    lupe.addEventListener('keydown', function (e) {
+      if (bilder.length < 2) return;
+      if (e.key === 'ArrowRight') { e.preventDefault(); zeigen(stelle + 1); }
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); zeigen(stelle - 1); }
+    });
+
+    /* Wischen. Nur waagerecht und erst ab einem klaren Weg - sonst
+       blaettert schon ein zittriger Tipp weiter. */
+    var startX = 0, startY = 0, wischt = false;
+    lupe.addEventListener('pointerdown', function (e) {
+      if (e.pointerType === 'mouse') return;
+      startX = e.clientX; startY = e.clientY; wischt = true;
+    });
+    lupe.addEventListener('pointerup', function (e) {
+      if (!wischt) return;
+      wischt = false;
+      var dx = e.clientX - startX, dy = e.clientY - startY;
+      if (bilder.length > 1 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        zeigen(stelle + (dx < 0 ? 1 : -1));
+      }
+    });
+
+    /* Beim Schliessen die Quelle loeschen, sonst haelt der Browser das
+       zuletzt gezeigte Bild im Speicher und blitzt es beim naechsten
+       Oeffnen kurz auf, bevor das richtige da ist. */
+    lupe.addEventListener('close', function () {
+      lupeBild.removeAttribute('src');
+      lupeBild.alt = '';
+    });
+  }
+
   /* ---------- Mobile-Navigation ------------------------------------------ */
 
   var toggle = document.querySelector('.nav-toggle');

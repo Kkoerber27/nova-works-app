@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=15">
+<link rel="stylesheet" href="assets/css/style.css?v=16">
 
 
 <script type="application/ld+json">
@@ -220,11 +220,16 @@
   <!-- ================= Referenzen ================= -->
   <!-- Die Bilder sind vorerst dieselben wie im Hero und auf den Karten - es
        sind ja dieselben Produktionen. Sobald es projekteigene Fotos gibt,
-       hier den Pfad tauschen. Zwei Bilder pro Projekt gehen auch: einfach
-       ein zweites <div class="ref__bild"> danebenstellen, das Raster teilt
-       die Spalte von selbst. Der Rahmen traegt die Bildbeschreibung, das
-       innere <div class="ref__foto"> das Foto - getrennt, weil nur das
-       Foto sich beim Scrollen bewegt und der Rahmen stehen bleibt.
+       hier den Pfad tauschen.
+
+       Jedes Projekt hat zurzeit ein Bild. Das zweite und dritte kommen in
+       die Liste <ul class="ref__bilder"> darunter, je ein <li> pro Bild;
+       das erste ist zugleich das sichtbare im Rahmen. Mehr als drei nimmt
+       die Grossansicht nicht - der Ueberschuss wird weggelassen.
+
+       Der Rahmen traegt den Schalter, das innere <span class="ref__foto">
+       das Foto - getrennt, weil nur das Foto sich bewegt und der Rahmen
+       stehen bleibt.
 
        Die Gewerke-Listen sind noch Platzhalter. Was Nova Works auf welchem
        Projekt gemacht hat, steht nirgends in den Unterlagen - deshalb hier
@@ -244,9 +249,24 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <div class="ref__bild" role="img" aria-label="Konfettischuss über der Bühne, volles Rund der Arena">
-              <div class="ref__foto" style="background-image:url('assets/img/live.jpg')"></div>
-            </div>
+            <button class="ref__bild" type="button" data-lupe-auf>
+              <span class="ref__foto" style="background-image:url('assets/img/live.jpg')"></span>
+              <span class="ref__zeichen" aria-hidden="true"></span>
+              <span class="visually-hidden">Bilder zu „DIE 80er live“ ansehen</span>
+            </button>
+
+            <!-- Die Galerie zu diesem Projekt: hoechstens drei Bilder, ein
+                 <li> je Bild, das erste ist das sichtbare im Rahmen. Der
+                 Linktext ist die Bildbeschreibung und wird in der
+                 Grossansicht als alt-Text uebernommen - er sollte also
+                 beschreiben, was zu sehen ist.
+
+                 main.js blendet die Liste aus und macht das Bild oben zum
+                 Schalter. Ohne JavaScript bleiben es schlichte Verweise auf
+                 die Bilddateien. -->
+            <ul class="ref__bilder" data-lupe-titel="DIE 80er live">
+              <li><a href="assets/img/live.jpg">Konfettischuss über der Bühne, volles Rund der Arena</a></li>
+            </ul>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Veltins-Arena, Gelsenkirchen</p>
@@ -262,9 +282,24 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <div class="ref__bild" role="img" aria-label="Sternbühne in der Arena, Ränge und Innenraum voll besetzt">
-              <div class="ref__foto" style="background-image:url('assets/img/header.jpg')"></div>
-            </div>
+            <button class="ref__bild" type="button" data-lupe-auf>
+              <span class="ref__foto" style="background-image:url('assets/img/header.jpg')"></span>
+              <span class="ref__zeichen" aria-hidden="true"></span>
+              <span class="visually-hidden">Bilder zu „Ehrlich Brothers — NO LIMITS“ ansehen</span>
+            </button>
+
+            <!-- Die Galerie zu diesem Projekt: hoechstens drei Bilder, ein
+                 <li> je Bild, das erste ist das sichtbare im Rahmen. Der
+                 Linktext ist die Bildbeschreibung und wird in der
+                 Grossansicht als alt-Text uebernommen - er sollte also
+                 beschreiben, was zu sehen ist.
+
+                 main.js blendet die Liste aus und macht das Bild oben zum
+                 Schalter. Ohne JavaScript bleiben es schlichte Verweise auf
+                 die Bilddateien. -->
+            <ul class="ref__bilder" data-lupe-titel="Ehrlich Brothers — NO LIMITS">
+              <li><a href="assets/img/header.jpg">Sternbühne in der Arena, Ränge und Innenraum voll besetzt</a></li>
+            </ul>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Arena-Tour</p>
@@ -280,9 +315,24 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <div class="ref__bild" role="img" aria-label="Regieplatz mit Kameramonitoren vor der Bühne">
-              <div class="ref__foto" style="background-image:url('assets/img/tv.jpg')"></div>
-            </div>
+            <button class="ref__bild" type="button" data-lupe-auf>
+              <span class="ref__foto" style="background-image:url('assets/img/tv.jpg')"></span>
+              <span class="ref__zeichen" aria-hidden="true"></span>
+              <span class="visually-hidden">Bilder zu „SWR3“ ansehen</span>
+            </button>
+
+            <!-- Die Galerie zu diesem Projekt: hoechstens drei Bilder, ein
+                 <li> je Bild, das erste ist das sichtbare im Rahmen. Der
+                 Linktext ist die Bildbeschreibung und wird in der
+                 Grossansicht als alt-Text uebernommen - er sollte also
+                 beschreiben, was zu sehen ist.
+
+                 main.js blendet die Liste aus und macht das Bild oben zum
+                 Schalter. Ohne JavaScript bleiben es schlichte Verweise auf
+                 die Bilddateien. -->
+            <ul class="ref__bilder" data-lupe-titel="SWR3">
+              <li><a href="assets/img/tv.jpg">Regieplatz mit Kameramonitoren vor der Bühne</a></li>
+            </ul>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Sendung mit Publikum</p>
@@ -413,6 +463,38 @@
 
 </main>
 
+<!-- ================= Grossansicht der Projektbilder =================
+     Ein natives <dialog>. Das bringt drei Dinge mit, die man sonst von
+     Hand bauen muesste und dabei leicht falsch baut: Escape schliesst,
+     der Fokus bleibt drin, und beim Schliessen springt er dorthin
+     zurueck, wo er herkam. main.js fuellt Bild, Zeile und Zaehler.
+
+     Die Knoepfe fuer vor und zurueck stehen hier, werden aber
+     ausgeblendet, solange ein Projekt nur ein Bild hat.            -->
+<dialog class="lupe" data-lupe aria-label="Bilder zum Projekt">
+  <div class="lupe__rahmen">
+    <button class="lupe__knopf lupe__zu" type="button" data-lupe-zu>
+      <span class="visually-hidden">Schließen</span>
+    </button>
+
+    <button class="lupe__knopf lupe__blaettern lupe__zurueck" type="button" data-lupe-schritt="-1">
+      <span class="visually-hidden">Vorheriges Bild</span>
+    </button>
+
+    <figure class="lupe__figur">
+      <img class="lupe__bild" data-lupe-bild alt="">
+      <figcaption class="lupe__zeile">
+        <span class="lupe__titel" data-lupe-titel></span>
+        <span class="lupe__zaehler" data-lupe-zaehler></span>
+      </figcaption>
+    </figure>
+
+    <button class="lupe__knopf lupe__blaettern lupe__vor" type="button" data-lupe-schritt="1">
+      <span class="visually-hidden">Nächstes Bild</span>
+    </button>
+  </div>
+</dialog>
+
 <footer class="footer">
   <div class="shell footer__grid">
     <a class="footer__logo" href="index.html" aria-label="Nova Works, zur Startseite">
@@ -427,6 +509,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=15" defer></script>
+<script src="assets/js/main.js?v=16" defer></script>
 </body>
 </html>
