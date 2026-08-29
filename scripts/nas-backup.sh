@@ -35,25 +35,49 @@ if [ -z "${NAS_BACKUP_DIR:-}" ]; then
   exit 1
 fi
 
-# Der wichtigste Test: Liegt das Ziel wirklich auf einem eingehängten Laufwerk?
-# Ist das NAS nicht verbunden, existiert der Pfad meist gar nicht — und ein
-# blindes mkdir würde eine Attrappe auf der internen Platte anlegen, die
-# monatelang unbemerkt "Backups" sammelt.
-if [ ! -d "$NAS_BACKUP_DIR" ]; then
-  log "FEHLER Zielordner existiert nicht: $NAS_BACKUP_DIR"
-  log "       NAS vermutlich nicht eingehängt. Es wird nichts geschrieben."
-  exit 1
-fi
-if [ ! -w "$NAS_BACKUP_DIR" ]; then
-  log "FEHLER Zielordner ist nicht beschreibbar: $NAS_BACKUP_DIR"
+# Der wichtigste Test: Hängt unter dem Ziel wirklich ein Laufwerk?
+#
+# Entschieden wird am nächsten Ordner, den es tatsächlich gibt. Ist das NAS nicht
+# verbunden, existiert unterhalb von /Volumes nichts — und /Volumes selbst liegt
+# auf der internen Platte. Ein blindes mkdir würde dort eine Attrappe anlegen,
+# die monatelang unbemerkt "Backups" sammelt.
+mountpoint_of() {
+  df -P "$1" 2>/dev/null | awk 'NR==2 {for (i=6; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : "")}'
+}
+
+PROBE="$NAS_BACKUP_DIR"
+while [ ! -d "$PROBE" ]; do
+  PARENT="$(dirname "$PROBE")"
+  [ "$PARENT" = "$PROBE" ] && break
+  PROBE="$PARENT"
+done
+MOUNT="$(mountpoint_of "$PROBE")"
+
+if [ "$MOUNT" = "/" ] && [ "${NAS_ALLOW_LOCAL:-0}" != "1" ]; then
+  if [ -d "$NAS_BACKUP_DIR" ]; then
+    log "FEHLER $NAS_BACKUP_DIR liegt auf der internen Platte (Mountpoint /), nicht auf dem NAS."
+  else
+    log "FEHLER $NAS_BACKUP_DIR existiert nicht, und der nächste vorhandene Ordner"
+    log "       ($PROBE) liegt auf der internen Platte — das NAS ist nicht eingehängt."
+  fi
+  log "       Es wird nichts geschrieben. 'ls /Volumes' zeigt, was gerade eingehängt ist."
+  log "       Ist es doch gewollt: NAS_ALLOW_LOCAL=1 in $ENV_FILE setzen."
   exit 1
 fi
 
-MOUNT="$(df -P "$NAS_BACKUP_DIR" 2>/dev/null | awk 'NR==2 {for (i=6; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : "")}')"
-if [ "$MOUNT" = "/" ] && [ "${NAS_ALLOW_LOCAL:-0}" != "1" ]; then
-  log "FEHLER $NAS_BACKUP_DIR liegt auf der internen Platte (Mountpoint /), nicht auf dem NAS."
-  log "       Das ist fast immer ein nicht eingehängtes Netzlaufwerk. Es wird nichts geschrieben."
-  log "       Ist es doch gewollt: NAS_ALLOW_LOCAL=1 in $ENV_FILE setzen."
+# Ab hier steht fest, dass unter dem Ziel ein eingehängtes Laufwerk liegt.
+# Fehlende Unterordner darf das Skript dann selbst anlegen.
+if [ ! -d "$NAS_BACKUP_DIR" ]; then
+  if mkdir -p "$NAS_BACKUP_DIR" 2>/dev/null; then
+    log "Zielordner angelegt: $NAS_BACKUP_DIR (unterhalb von $MOUNT)"
+  else
+    log "FEHLER Zielordner ließ sich nicht anlegen: $NAS_BACKUP_DIR"
+    exit 1
+  fi
+fi
+
+if [ ! -w "$NAS_BACKUP_DIR" ]; then
+  log "FEHLER Zielordner ist nicht beschreibbar: $NAS_BACKUP_DIR"
   exit 1
 fi
 

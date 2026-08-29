@@ -36,12 +36,16 @@ Vor dem Verlassen einmal von Hand prüfen:
 
 ### Wogegen die Sicherung absichert
 
-- **NAS nicht eingehängt.** Existiert `NAS_BACKUP_DIR` nicht, bricht der Lauf ab,
-  statt den Pfad anzulegen. Ein blindes `mkdir` würde eine Attrappe auf der
-  internen Platte erzeugen, die monatelang unbemerkt „Backups" sammelt.
-- **Pfad liegt doch lokal.** Zusätzlich wird der Mountpoint geprüft. Ist er `/`,
-  bricht der Lauf ab — auch wenn der Ordner existiert. Bewusst gewollt:
-  `NAS_ALLOW_LOCAL=1`.
+- **NAS nicht eingehängt.** Entschieden wird am nächsten Ordner, den es
+  tatsächlich gibt. Liegt der auf der internen Platte — bei einem nicht
+  verbundenen Laufwerk ist das `/Volumes` selbst —, bricht der Lauf ab und legt
+  nichts an. Ein blindes `mkdir` würde dort eine Attrappe erzeugen, die
+  monatelang unbemerkt „Backups" sammelt, während das NAS leer bleibt.
+- **Fehlende Unterordner** unterhalb eines nachweislich eingehängten Laufwerks
+  legt das Skript dagegen selbst an und vermerkt das im Protokoll. Der Mount
+  entscheidet, nicht der Ordner.
+- **Pfad liegt doch lokal.** Auch ein existierender Zielordner auf Mountpoint `/`
+  führt zum Abbruch. Bewusst gewollt: `NAS_ALLOW_LOCAL=1`.
 - **Leere Antwort von Supabase.** Dann wird nichts geschrieben, damit ein leeres
   Backup kein gutes überschreibt.
 - **Fremde Ordner.** Beim Aufräumen werden ausschließlich Verzeichnisse gelöscht,
