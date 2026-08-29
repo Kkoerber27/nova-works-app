@@ -31,8 +31,15 @@ if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
   . "$ENV_FILE"
 fi
+_file_key="${LEX_API_KEY:-}"
 [ -n "$_pre_key" ] && LEX_API_KEY="$_pre_key"
 export LEX_API_KEY
+
+# Nur melden, dass die Quelle die Umgebung ist — der Schlüssel selbst hat im
+# Protokoll nichts verloren.
+if [ -n "$_pre_key" ] && [ "$_pre_key" != "$_file_key" ]; then
+  log "Hinweis: LEX_API_KEY kommt aus der Umgebung und überschreibt $ENV_FILE."
+fi
 
 if [ ! -d "$REPO" ]; then
   log "FEHLER Repository nicht gefunden: $REPO"

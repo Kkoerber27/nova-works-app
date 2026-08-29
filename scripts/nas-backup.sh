@@ -31,9 +31,19 @@ if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
   . "$ENV_FILE"
 fi
+_file_dir="${NAS_BACKUP_DIR:-}"
 [ -n "$_pre_dir" ] && NAS_BACKUP_DIR="$_pre_dir"
 [ -n "$_pre_keep" ] && NAS_BACKUP_KEEP_DAYS="$_pre_keep"
 export NAS_BACKUP_DIR NAS_BACKUP_KEEP_DAYS
+
+# Ein aus der Umgebung geerbter Wert schlägt die Datei — praktisch beim Testen,
+# aber eine Falle, wenn er aus einer vergessenen Shell-Zuweisung stammt und die
+# frisch korrigierte Datei überstimmt. Deshalb wird er benannt.
+if [ -n "$_pre_dir" ] && [ "$_pre_dir" != "$_file_dir" ]; then
+  log "Hinweis: NAS_BACKUP_DIR kommt aus der Umgebung ($_pre_dir)"
+  log "         und überschreibt den Wert aus $ENV_FILE ($_file_dir)."
+  log "         Wenn das nicht gewollt ist: unset NAS_BACKUP_DIR"
+fi
 
 [ -d "$REPO" ] || { log "FEHLER Repository nicht gefunden: $REPO"; exit 1; }
 command -v node >/dev/null 2>&1 || { log "FEHLER 'node' nicht im PATH. PATH=$PATH"; exit 1; }
