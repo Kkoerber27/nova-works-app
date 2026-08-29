@@ -54,6 +54,7 @@ heißt fehlende Umgebungsvariable.
 |---|---|
 | `lex_list_open_invoices` | Offene, noch nicht abgelegte Rechnungen samt Projektnummer |
 | `lex_download_invoice_pdf` | PDF rendern lassen, herunterladen, lokal speichern |
+| `lex_match_project_folder` | Zwischen mehreren Ordnern derselben Projektnummer entscheiden |
 | `lex_mark_filed` | Vermerken, dass eine Rechnung abgelegt wurde |
 | `lex_filing_log` | Was wurde wann wohin abgelegt |
 
@@ -92,6 +93,16 @@ unter `26-0021` zwei.
 
 Eine im falschen Projekt abgelegte Rechnung fällt erst bei der Steuerprüfung auf.
 Deshalb meldet der Server solche Fälle, statt sich für eine Variante zu entscheiden.
+
+Bei mehrdeutiger Nummer hilft `lex_match_project_folder`: Es vergleicht die übrigen
+Wörter des Rechnungstextes mit den Ordnernamen — „Schlussrechnung 26-0007 Schalke"
+findet damit den Schalke-Ordner. Füllwörter wie „Rechnung" oder „GmbH" zählen nicht,
+Umlaute und Großschreibung stören nicht. Gewinnt keiner oder mehrere gleich gut,
+bleibt es bei `null`.
+
+Das ersetzt nicht den sprechenden Rechnungstitel: Steht dort nur „Schlussrechnung
+26-0007", gibt es nichts zu vergleichen. Der Ort im Titel löst das Problem an der
+Wurzel.
 
 ## Grenzen
 

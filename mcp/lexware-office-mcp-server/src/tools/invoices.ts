@@ -15,7 +15,7 @@ import {
   renderDocument,
 } from "../services/lexware.js";
 import { isFiled, listFiled, ledgerLocation, markFiled } from "../services/ledger.js";
-import { pdfFileName, resolveProjectNumber } from "../services/project.js";
+import { ordnerZuordnen, pdfFileName, resolveProjectNumber } from "../services/project.js";
 import type { InvoiceSummary } from "../types.js";
 
 interface ToolResult {
@@ -278,6 +278,105 @@ Error Handling:
           resolved.projektnummer
             ? `Ziel: \`Documents/Angebote/${resolved.projektnummer}_*/Rechnungen/Out\``
             : `⚠ Kein eindeutiges Ziel — ${resolved.hinweis ?? ""}`,
+        );
+        return lines.join("\n");
+      });
+    }),
+  );
+
+  server.registerTool(
+    "lex_match_project_folder",
+    {
+      title: "Projektordner zuordnen",
+      description: `Decide between several project folders that share one project number.
+
+Several NOVA WORKS folders can carry the same number — 26-0007 exists four times
+(80er Live, … Frankfurt, … Hamburg, … Schalke). This tool compares the remaining words of
+the invoice text with the folder names and picks the folder only when exactly one wins.
+
+Args:
+  - ordner (string[]): candidate folders, as names or SharePoint webUrls
+  - invoice_id (string, optional): read title, introduction and remark from this invoice
+  - text (string, optional): use this text instead of fetching an invoice
+  - response_format ('markdown' | 'json'): default 'markdown'
+
+Give either invoice_id or text.
+
+Returns (json):
+  {
+    "treffer": string|null,        // the chosen folder, null when undecidable
+    "projektnummer": string|null,
+    "hinweis": string,             // why it is undecidable, when it is
+    "kandidaten": [{ "ordner","name","punkte","passende_woerter" }]
+  }
+
+"treffer" stays null on a tie and when no word matches at all — then a human decides.
+Do not fall back to picking the first candidate.
+
+Examples:
+  - Invoice "Schlussrechnung 26-0007 Schalke" against the four 26-0007 folders
+    -> treffer = the Schalke folder
+  - Invoice "Schlussrechnung 26-0007" against the same four
+    -> treffer = null, because nothing distinguishes them`,
+      inputSchema: {
+        ordner: z
+          .array(z.string().min(1))
+          .min(1)
+          .describe("Candidate folders, as names or webUrls"),
+        invoice_id: z.string().optional().describe("Invoice to read the text from"),
+        text: z.string().optional().describe("Invoice text, instead of invoice_id"),
+        response_format: formatSchema,
+      },
+      annotations: {
+        readOnlyHint: true,
+        destructiveHint: false,
+        idempotentHint: true,
+        openWorldHint: true,
+      },
+    },
+    guard(async (params: {
+      ordner: string[];
+      invoice_id?: string;
+      text?: string;
+      response_format: "markdown" | "json";
+    }) => {
+      if ((params.invoice_id === undefined) === (params.text === undefined)) {
+        return fail("Gib entweder 'invoice_id' oder 'text' an, nicht beides und nicht keines.");
+      }
+
+      let text = params.text ?? "";
+      let projektnummer: string | null = null;
+      if (params.invoice_id) {
+        const invoice = await getInvoice(params.invoice_id);
+        text = [invoice.title, invoice.introduction, invoice.remark].filter(Boolean).join(" ");
+        projektnummer = resolveProjectNumber(invoice).projektnummer;
+      } else {
+        const treffer = /\b(\d{2}-\d{3,4})\b/.exec(text);
+        projektnummer = treffer ? treffer[1] : null;
+      }
+
+      const ergebnis = ordnerZuordnen(text, params.ordner, projektnummer ?? undefined);
+      const structured = {
+        treffer: ergebnis.treffer,
+        projektnummer,
+        ...(ergebnis.hinweis ? { hinweis: ergebnis.hinweis } : {}),
+        kandidaten: ergebnis.kandidaten,
+      };
+
+      return ok(params.response_format, structured, () => {
+        const lines = [`# Ordnerzuordnung${projektnummer ? ` für ${projektnummer}` : ""}`, ""];
+        lines.push(`Rechnungstext: ${text || "(leer)"}`, "");
+        for (const k of ergebnis.kandidaten) {
+          const mark = k.ordner === ergebnis.treffer ? "→" : " ";
+          lines.push(
+            `${mark} **${k.name}** — ${k.punkte} Treffer${k.passende_woerter.length ? ` (${k.passende_woerter.join(", ")})` : ""}`,
+          );
+        }
+        lines.push("");
+        lines.push(
+          ergebnis.treffer
+            ? `Zuordnung: \`${ergebnis.treffer}\``
+            : `⚠ Nicht zuzuordnen — ${ergebnis.hinweis ?? ""}`,
         );
         return lines.join("\n");
       });

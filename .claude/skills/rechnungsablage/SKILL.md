@@ -15,9 +15,15 @@ besteht aus vier Schritten pro Rechnung.
 2. Für jede Rechnung mit eindeutiger `projektnummer`:
    **`lex_download_invoice_pdf`** mit der `id` → gibt `pfad` und `dateiname` zurück.
 3. **Zielordner suchen** mit `sharepoint_folder_search` nach `Out`, und aus den
-   Treffern denjenigen nehmen, dessen `webUrl` das Muster
+   Treffern alle behalten, deren `webUrl` das Muster
    `Documents/Angebote/<projektnummer>_…/Rechnungen/Out` erfüllt.
    Fehlt der Ordner, mit `sharepoint_create_folder` unterhalb von `Rechnungen` anlegen.
+
+   Bleibt **mehr als einer** übrig — bei `26-0007` sind es vier —, dann
+   **`lex_match_project_folder`** mit der `invoice_id` und den gefundenen `webUrl`s
+   aufrufen. Es vergleicht die übrigen Wörter des Rechnungstextes mit den
+   Ordnernamen. Nur wenn `treffer` gesetzt ist, wird abgelegt; bei `null` bleibt die
+   Rechnung liegen. Nicht selbst den ersten Kandidaten nehmen.
 4. **Hochladen** mit `sharepoint_upload_file`, danach **`lex_mark_filed`** mit der
    `webUrl` der hochgeladenen Datei als `ablageort`.
 
@@ -30,9 +36,9 @@ Diese Fälle bleiben liegen und werden am Ende gesammelt gemeldet, statt geraten
 
 - **`projektnummer` ist `null`** — die Rechnung trägt keine oder mehrere Nummern.
   Der Grund steht in `hinweis`.
-- **Mehrere Ordner teilen sich die Nummer.** `26-0007` gibt es viermal
-  (80er Live, … Frankfurt, … Hamburg, … Schalke), `26-0021` zweimal. Wenn die Suche
-  mehr als einen passenden `Out`-Ordner liefert, ist das Ziel nicht bestimmbar.
+- **Mehrere Ordner teilen sich die Nummer** und `lex_match_project_folder` liefert
+  `treffer: null` — weil kein Wort des Rechnungstextes die Ordner unterscheidet oder
+  mehrere gleich gut passen. Der `hinweis` sagt, welcher Fall vorliegt.
 - **Eine Datei gleichen Namens liegt schon dort** und stammt erkennbar aus einer
   anderen Rechnung.
 
