@@ -21,9 +21,33 @@ Tagesordner auf dem NAS ab — eine Datei je Schlüssel plus `_manifest.json`.
 Danach in `~/.nova-works/env` das Ziel eintragen:
 
 ```bash
+export NAS_BACKUP_MODE="mount"
 export NAS_BACKUP_DIR="/Volumes/NAS/Backups/nova-works"
 export NAS_BACKUP_KEEP_DAYS="30"
 ```
+
+### Betriebsarten
+
+| `NAS_BACKUP_MODE` | Ziel | Prüfung |
+|---|---|---|
+| `mount` (Standard) | Eingehängtes Laufwerk, etwa das NAS | Mountpoint muss das Ziel umfassen |
+| `local` | Ordner auf der internen Platte, etwa in OneDrive | Kein Mount nötig, dafür Schutz vor untauglichen Zielen |
+
+`local` ist keine Abschaltung der Kontrolle, sondern eine andere. Abgelehnt werden
+dort: das Benutzerverzeichnis selbst, Pfade im Repository (das Backup landete
+sonst in der Versionsverwaltung), temporäre Verzeichnisse wie `/tmp` oder
+`/var/folders`, und Pfade, unter denen mehr als zwei Ebenen neu angelegt werden
+müssten — das ist fast immer ein Tippfehler.
+
+Für ein OneDrive-Ziel also:
+
+```bash
+export NAS_BACKUP_MODE="local"
+export NAS_BACKUP_DIR="$HOME/OneDrive - NOVA WORKS GmbH/Backups/nova-works"
+```
+
+Die frühere Schreibweise `NAS_ALLOW_LOCAL=1` gilt weiterhin und bedeutet
+`NAS_BACKUP_MODE="local"`.
 
 Andere Uhrzeit: `NOVA_HOUR=2 NOVA_MINUTE=0 ./scripts/install-nas-backup.sh`.
 Entfernen: `./scripts/install-nas-backup.sh --remove`.

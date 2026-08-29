@@ -32,8 +32,10 @@ touch "$ENV_FILE"; chmod 600 "$ENV_FILE"
 if ! grep -q "NAS_BACKUP_DIR" "$ENV_FILE" 2>/dev/null; then
   cat >> "$ENV_FILE" <<'ENVEOF'
 
-# Ziel der nächtlichen Sicherung. Muss auf dem eingehängten NAS liegen —
-# das Skript verweigert den Dienst, wenn der Pfad auf der internen Platte landet.
+# Betriebsart: "mount" (Standard) verlangt ein eingehängtes Laufwerk, "local"
+# erlaubt bewusst einen Ordner auf der internen Platte, etwa in OneDrive.
+export NAS_BACKUP_MODE="mount"
+# Ziel der nächtlichen Sicherung.
 export NAS_BACKUP_DIR=""
 # Wie viele Tagesordner aufgehoben werden (Standard 30).
 export NAS_BACKUP_KEEP_DAYS="30"

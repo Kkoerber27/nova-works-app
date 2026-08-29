@@ -35,67 +35,110 @@ if [ -z "${NAS_BACKUP_DIR:-}" ]; then
   exit 1
 fi
 
-# Der wichtigste Test: Hängt unter dem Ziel wirklich ein Laufwerk?
+# ── Betriebsart ────────────────────────────────────────────────────────────
 #
-# Entschieden wird am nächsten Ordner, den es tatsächlich gibt. Ist das NAS nicht
-# verbunden, existiert unterhalb von /Volumes nichts — und /Volumes selbst liegt
-# auf der internen Platte. Ein blindes mkdir würde dort eine Attrappe anlegen,
-# die monatelang unbemerkt "Backups" sammelt.
-mountpoint_of() {
-  df -P "$1" 2>/dev/null | awk 'NR==2 {for (i=6; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : "")}'
-}
+#   mount (Standard) – Ziel muss auf einem eingehängten Laufwerk liegen (NAS).
+#   local            – Ziel ist bewusst ein Ordner auf der internen Platte,
+#                      etwa ein synchronisierter OneDrive-Ordner.
+#
+# Beide Arten haben eigene Prüfungen; "local" ist keine Abschaltung der
+# Kontrolle, sondern eine andere Kontrolle.
+MODE="${NAS_BACKUP_MODE:-mount}"
+if [ -z "${NAS_BACKUP_MODE:-}" ] && [ "${NAS_ALLOW_LOCAL:-0}" = "1" ]; then
+  MODE="local"   # frühere Schreibweise, weiterhin gültig
+fi
+case "$MODE" in
+  mount|local) ;;
+  *) log "FEHLER NAS_BACKUP_MODE muss 'mount' oder 'local' sein, war: $MODE"; exit 1 ;;
+esac
 
-PROBE="$NAS_BACKUP_DIR"
+TARGET="${NAS_BACKUP_DIR%/}"
+case "$TARGET" in
+  /*) ;;
+  *) log "FEHLER NAS_BACKUP_DIR muss ein absoluter Pfad sein: $NAS_BACKUP_DIR"; exit 1 ;;
+esac
+
+# Nächster Ordner, den es tatsächlich gibt, und wie viele Ebenen darunter fehlen.
+PROBE="$TARGET"; LEVELS=0
 while [ ! -d "$PROBE" ]; do
   PARENT="$(dirname "$PROBE")"
   [ "$PARENT" = "$PROBE" ] && break
-  PROBE="$PARENT"
+  PROBE="$PARENT"; LEVELS=$((LEVELS + 1))
 done
+
+mountpoint_of() {
+  df -P "$1" 2>/dev/null | awk 'NR==2 {for (i=6; i<=NF; i++) printf "%s%s", $i, (i<NF ? " " : "")}'
+}
 MOUNT="$(mountpoint_of "$PROBE")"
 
-# Ein eingehängtes Laufwerk erkennt man daran, dass sein Mountpoint das Ziel
-# tatsächlich enthält: /Volumes/NAS umfasst /Volumes/NAS/Backups/...
-#
-# Fehlt das Laufwerk, bleibt als nächster vorhandener Ordner /Volumes übrig —
-# und dessen Mountpoint ist auf macOS /System/Volumes/Data, also gerade NICHT im
-# Ziel enthalten. Ein Vergleich nur gegen "/" ginge hier fehl: /Volumes liegt auf
-# der Datenpartition, nicht auf der Systemwurzel.
-EXTERN=1
-[ "$MOUNT" = "/" ] && EXTERN=0
-case "$NAS_BACKUP_DIR/" in
-  "$MOUNT"/*) ;;
-  *) EXTERN=0 ;;
-esac
+if [ "$MODE" = "mount" ]; then
+  # Ein eingehängtes Laufwerk erkennt man daran, dass sein Mountpoint das Ziel
+  # tatsächlich enthält: /Volumes/NAS umfasst /Volumes/NAS/Backups/...
+  #
+  # Fehlt das Laufwerk, bleibt als nächster vorhandener Ordner /Volumes übrig —
+  # dessen Mountpoint ist auf macOS /System/Volumes/Data und umfasst das Ziel
+  # gerade nicht. Ein Vergleich nur gegen "/" ginge hier fehl.
+  EXTERN=1
+  [ "$MOUNT" = "/" ] && EXTERN=0
+  case "$TARGET/" in
+    "$MOUNT"/*) ;;
+    *) EXTERN=0 ;;
+  esac
 
-if [ "$EXTERN" != "1" ] && [ "${NAS_ALLOW_LOCAL:-0}" != "1" ]; then
-  if [ -d "$NAS_BACKUP_DIR" ]; then
-    log "FEHLER $NAS_BACKUP_DIR liegt nicht auf einem eingehängten Laufwerk (Mountpoint: $MOUNT)."
-  else
-    log "FEHLER $NAS_BACKUP_DIR existiert nicht. Nächster vorhandener Ordner: $PROBE"
-    log "       Dessen Mountpoint ist $MOUNT und umfasst das Ziel nicht — das Laufwerk ist nicht eingehängt."
+  if [ "$EXTERN" != "1" ]; then
+    if [ -d "$TARGET" ]; then
+      log "FEHLER $TARGET liegt nicht auf einem eingehängten Laufwerk (Mountpoint: $MOUNT)."
+    else
+      log "FEHLER $TARGET existiert nicht. Nächster vorhandener Ordner: $PROBE"
+      log "       Dessen Mountpoint ist $MOUNT und umfasst das Ziel nicht — das Laufwerk ist nicht eingehängt."
+    fi
+    log "       Es wird nichts geschrieben. 'ls /Volumes' zeigt, was gerade eingehängt ist."
+    log "       Soll bewusst auf die interne Platte gesichert werden:"
+    log "       NAS_BACKUP_MODE=\"local\" in $ENV_FILE setzen."
+    exit 1
   fi
-  log "       Es wird nichts geschrieben. 'ls /Volumes' zeigt, was gerade eingehängt ist."
-  log "       Ist es doch gewollt: NAS_ALLOW_LOCAL=1 in $ENV_FILE setzen."
-  exit 1
-fi
-
-# Ab hier steht fest, dass unter dem Ziel ein eingehängtes Laufwerk liegt.
-# Fehlende Unterordner darf das Skript dann selbst anlegen.
-if [ ! -d "$NAS_BACKUP_DIR" ]; then
-  if mkdir -p "$NAS_BACKUP_DIR" 2>/dev/null; then
-    log "Zielordner angelegt: $NAS_BACKUP_DIR (unterhalb von $MOUNT)"
-  else
-    log "FEHLER Zielordner ließ sich nicht anlegen: $NAS_BACKUP_DIR"
+else
+  # Betriebsart local: kein Mount verlangt, dafür Schutz vor Tippfehlern und
+  # vor Zielen, an denen ein Backup nichts verloren hat.
+  if [ "$TARGET" = "$HOME" ] || [ "$TARGET" = "" ]; then
+    log "FEHLER Als Ziel taugt weder / noch das Benutzerverzeichnis selbst: $NAS_BACKUP_DIR"
+    exit 1
+  fi
+  case "$TARGET/" in
+    "$REPO"/*)
+      log "FEHLER Ziel liegt im Repository ($REPO). Das Backup landete sonst in der Versionsverwaltung."
+      exit 1 ;;
+    /tmp/*|/private/tmp/*|/var/folders/*)
+      log "FEHLER Ziel liegt in einem temporären Verzeichnis: $TARGET"
+      log "       Solche Ordner räumt das System weg — dort ist kein Backup sicher."
+      exit 1 ;;
+  esac
+  if [ "$LEVELS" -gt 2 ]; then
+    log "FEHLER Unterhalb von $PROBE müssten $LEVELS Ebenen neu angelegt werden."
+    log "       Das deutet auf einen Tippfehler im Pfad. Übergeordneten Ordner erst anlegen"
+    log "       oder NAS_BACKUP_DIR korrigieren."
     exit 1
   fi
 fi
 
-if [ ! -w "$NAS_BACKUP_DIR" ]; then
-  log "FEHLER Zielordner ist nicht beschreibbar: $NAS_BACKUP_DIR"
+# Ab hier steht die Betriebsart fest; fehlende Unterordner darf das Skript anlegen.
+if [ ! -d "$TARGET" ]; then
+  if mkdir -p "$TARGET" 2>/dev/null; then
+    log "Zielordner angelegt: $TARGET"
+  else
+    log "FEHLER Zielordner ließ sich nicht anlegen: $TARGET"
+    exit 1
+  fi
+fi
+
+if [ ! -w "$TARGET" ]; then
+  log "FEHLER Zielordner ist nicht beschreibbar: $TARGET"
   exit 1
 fi
 
-log "Start → $NAS_BACKUP_DIR (Mountpoint: $MOUNT)"
+NAS_BACKUP_DIR="$TARGET"; export NAS_BACKUP_DIR
+
+log "Start [$MODE] → $NAS_BACKUP_DIR (Mountpoint: $MOUNT)"
 if OUTPUT="$(node "$REPO/scripts/nas-backup.mjs" 2>&1)"; then
   log "OK $OUTPUT"
 else
