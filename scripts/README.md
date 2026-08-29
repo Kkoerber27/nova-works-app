@@ -9,6 +9,8 @@ Protokoll nach `~/.nova-works/`.
 | Rechnungsablage | alle 15 Min | `rechnungsablage.sh` | `~/.nova-works/rechnungsablage.log` |
 | NAS-Sicherung | nachts 03:15 | `nas-backup.sh` | `~/.nova-works/nas-backup.log` |
 
+Dazu `nas-restore.sh` für das Zurückspielen — von Hand, nicht geplant.
+
 ## NAS-Sicherung
 
 Liest alle `nw_*`-Schlüssel aus Supabase und legt sie als JSON in einem
@@ -88,3 +90,30 @@ Vor dem Verlassen einmal von Hand prüfen:
   Nicht gesichert sind SharePoint-Dateien und Lexware selbst.
 - Die Sicherung ist eine Kopie, keine Versionierung: Wird ein Fehler erst nach
   `NAS_BACKUP_KEEP_DAYS` Tagen bemerkt, ist der letzte gute Stand fort.
+
+## Zurückspielen
+
+```bash
+./scripts/nas-restore.sh --liste                 # welche Sicherungen gibt es
+./scripts/nas-restore.sh                         # Probelauf mit der neuesten
+./scripts/nas-restore.sh --datum 2026-08-20      # Probelauf mit einer älteren
+./scripts/nas-restore.sh --key nw_crew_planungen --schreiben
+```
+
+**Ohne `--schreiben` wird nichts verändert.** Der Probelauf vergleicht Sicherung und
+Supabase und zeigt, was abweicht, was fehlt und was identisch ist. Erst der zweite
+Aufruf mit `--schreiben` schreibt zurück.
+
+Vor jedem Schreiben legt das Skript den aktuellen Stand der betroffenen Schlüssel
+unter `_vor-wiederherstellung/<Zeitstempel>/` ab. Eine misslungene Wiederherstellung
+lässt sich damit rückgängig machen. Diese Ordner werden nie automatisch gelöscht —
+die Aufräumung der Sicherung fasst nur Verzeichnisse an, deren Name exakt ein Datum
+ist.
+
+`--key` beschränkt auf einzelne Schlüssel. Im Ernstfall ist das meist der richtige
+Weg: nur das zurückholen, was tatsächlich beschädigt ist, statt den ganzen Bestand
+auf einen alten Stand zu setzen.
+
+Abgewiesen werden: ein Datum ohne Sicherung, ein Schlüssel, den die Sicherung nicht
+enthält, ein Tagesordner ohne `_manifest.json` (unvollständige Sicherung) und
+Schlüssel ohne `nw_`-Präfix.
