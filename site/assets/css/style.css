@@ -918,12 +918,17 @@ a { color: inherit; }
 .ref__bilder a:hover { color: var(--signal); }
 .ref__nachweis { color: var(--text-faint); }
 
+/* Ein echtes <img>, kein Hintergrundbild - nur so greift loading="lazy".
+   object-fit: cover fuellt den Rahmen wie background-size: cover es tat,
+   object-position ersetzt background-position (das Festivalbild nutzt das,
+   weil es hochformatig ist). */
 .ref__foto {
   position: absolute;
   inset: 0;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
 }
 
 .ref__titel {

@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=23">
+<link rel="stylesheet" href="assets/css/style.css?v=24">
 
 
 <script type="application/ld+json">
@@ -220,9 +220,19 @@
        das erste ist zugleich das sichtbare im Rahmen. Mehr als drei nimmt
        die Grossansicht nicht - der Ueberschuss wird weggelassen.
 
-       Der Rahmen traegt den Schalter, das innere <span class="ref__foto">
+       Der Rahmen traegt den Schalter, das innere <img class="ref__foto">
        das Foto - getrennt, weil nur das Foto sich bewegt und der Rahmen
        stehen bleibt.
+
+       loading="lazy" ist der Grund fuer das <img>: Als Hintergrundbild laedt
+       der Browser jedes Foto sofort mit, auch die weit unten. Mit jedem
+       neuen Projekt waere die Seite so schwerer geworden. Jetzt laedt der
+       Browser sie erst, wenn man sich ihnen naehert - ohne JavaScript, von
+       sich aus.
+
+       alt bleibt leer: Der Schalter drumherum sagt bereits, worum es geht,
+       und die Bildbeschreibungen stehen in der Liste darunter. Zweimal
+       dasselbe vorgelesen zu bekommen hilft niemandem.
 
        Die Gewerke-Listen sind noch Platzhalter. Was Nova Works auf welchem
        Projekt gemacht hat, steht nirgends in den Unterlagen - deshalb hier
@@ -243,7 +253,8 @@
         <article class="ref" data-reveal>
           <div class="ref__media">
             <button class="ref__bild" type="button" data-lupe-auf>
-              <span class="ref__foto" style="background-image:url('assets/img/live.jpg')"></span>
+              <img class="ref__foto" src="assets/img/live.jpg" alt=""
+                   loading="lazy" decoding="async">
               <span class="ref__zeichen" aria-hidden="true"></span>
               <span class="visually-hidden">Bilder zu „DIE 80er live“ ansehen</span>
             </button>
@@ -305,7 +316,8 @@
         <article class="ref" data-reveal>
           <div class="ref__media">
             <button class="ref__bild" type="button" data-lupe-auf>
-              <span class="ref__foto" style="background-image:url('assets/img/header.jpg')"></span>
+              <img class="ref__foto" src="assets/img/header.jpg" alt=""
+                   loading="lazy" decoding="async">
               <span class="ref__zeichen" aria-hidden="true"></span>
               <span class="visually-hidden">Bilder zu „Ehrlich Brothers — NO LIMITS“ ansehen</span>
             </button>
@@ -350,7 +362,8 @@
         <article class="ref" data-reveal>
           <div class="ref__media">
             <button class="ref__bild" type="button" data-lupe-auf>
-              <span class="ref__foto" style="background-image:url('assets/img/tv.jpg')"></span>
+              <img class="ref__foto" src="assets/img/tv.jpg" alt=""
+                   loading="lazy" decoding="async">
               <span class="ref__zeichen" aria-hidden="true"></span>
               <span class="visually-hidden">Bilder zu „Public Viewing zum Eurovision Song Contest 2026“ ansehen</span>
             </button>
@@ -398,7 +411,8 @@
                    Buehne laege ausserhalb. 26 Prozent zeigt das Band von 16
                    bis 54 Prozent - Dach, Fontaenen, LED-Wand und die ersten
                    Reihen. -->
-              <span class="ref__foto" style="background-image:url('assets/img/rainbow.jpg');background-position:center 26%"></span>
+              <img class="ref__foto" src="assets/img/rainbow.jpg" alt=""
+                   loading="lazy" decoding="async" style="object-position:center 26%">
               <span class="ref__zeichen" aria-hidden="true"></span>
               <span class="visually-hidden">Bilder zu „Rainbow Festival“ ansehen</span>
             </button>
@@ -437,7 +451,8 @@
         <article class="ref" data-reveal>
           <div class="ref__media">
             <button class="ref__bild" type="button" data-lupe-auf>
-              <span class="ref__foto" style="background-image:url('assets/img/ikarus.jpg')"></span>
+              <img class="ref__foto" src="assets/img/ikarus.jpg" alt=""
+                   loading="lazy" decoding="async">
               <span class="ref__zeichen" aria-hidden="true"></span>
               <span class="visually-hidden">Bilder zu „Ikarus Festival“ ansehen</span>
             </button>
@@ -635,6 +650,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=23" defer></script>
+<script src="assets/js/main.js?v=24" defer></script>
 </body>
 </html>
