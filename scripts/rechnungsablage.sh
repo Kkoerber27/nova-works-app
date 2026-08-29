@@ -22,8 +22,15 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 # Ein beim Aufruf gesetzter Wert gewinnt aber gegen die Datei, sonst überschreibt
 # ein leeres "export LEX_API_KEY=" genau das, was jemand zum Testen gesetzt hat.
 _pre_key="${LEX_API_KEY:-}"
-# shellcheck source=/dev/null
-[ -f "$ENV_FILE" ] && . "$ENV_FILE"
+if [ -f "$ENV_FILE" ]; then
+  if ! bash -n "$ENV_FILE" 2>/dev/null; then
+    log "FEHLER $ENV_FILE ist syntaktisch fehlerhaft — meist ein nicht geschlossenes Anführungszeichen."
+    log "       Prüfen mit: bash -n $ENV_FILE"
+    exit 1
+  fi
+  # shellcheck source=/dev/null
+  . "$ENV_FILE"
+fi
 [ -n "$_pre_key" ] && LEX_API_KEY="$_pre_key"
 export LEX_API_KEY
 

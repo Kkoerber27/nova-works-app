@@ -20,8 +20,17 @@ export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 # überschreibt ein leeres "export NAS_BACKUP_DIR=" aus der Vorlage genau das,
 # was jemand gerade zum Testen in der Shell gesetzt hat.
 _pre_dir="${NAS_BACKUP_DIR:-}"; _pre_keep="${NAS_BACKUP_KEEP_DAYS:-}"
-# shellcheck source=/dev/null
-[ -f "$ENV_FILE" ] && . "$ENV_FILE"
+if [ -f "$ENV_FILE" ]; then
+  # Eine Datei mit unpaarigem Anführungszeichen bricht beim Einlesen ab und lässt
+  # alles darunter ungesetzt — ohne diese Prüfung sähe man nur den Folgefehler.
+  if ! bash -n "$ENV_FILE" 2>/dev/null; then
+    log "FEHLER $ENV_FILE ist syntaktisch fehlerhaft — meist ein nicht geschlossenes Anführungszeichen."
+    log "       Prüfen mit: bash -n $ENV_FILE"
+    exit 1
+  fi
+  # shellcheck source=/dev/null
+  . "$ENV_FILE"
+fi
 [ -n "$_pre_dir" ] && NAS_BACKUP_DIR="$_pre_dir"
 [ -n "$_pre_keep" ] && NAS_BACKUP_KEEP_DAYS="$_pre_keep"
 export NAS_BACKUP_DIR NAS_BACKUP_KEEP_DAYS
