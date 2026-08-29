@@ -562,9 +562,10 @@
   var lupe = document.querySelector('[data-lupe]');
 
   if (lupe && typeof lupe.showModal === 'function') {
-    var lupeBild    = lupe.querySelector('[data-lupe-bild]');
-    var lupeTitel   = lupe.querySelector('[data-lupe-titel]');
-    var lupeZaehler = lupe.querySelector('[data-lupe-zaehler]');
+    var lupeBild     = lupe.querySelector('[data-lupe-bild]');
+    var lupeTitel    = lupe.querySelector('[data-lupe-titel]');
+    var lupeNachweis = lupe.querySelector('[data-lupe-nachweis]');
+    var lupeZaehler  = lupe.querySelector('[data-lupe-zaehler]');
     var lupeRahmen  = lupe.querySelector('.lupe__rahmen');
     var blaetternKnoepfe = lupe.querySelectorAll('[data-lupe-schritt]');
 
@@ -577,6 +578,12 @@
       lupeBild.src = bilder[stelle].src;
       lupeBild.alt = bilder[stelle].alt;
       lupeTitel.textContent = titel;
+      /* Der Bildnachweis haengt am einzelnen Bild, nicht am Projekt. Hat
+         eines keinen, verschwindet die Zeile - sonst klaffte dort eine
+         Luecke mit Trennzeichen und nichts dazwischen. */
+      var nachweis = bilder[stelle].nachweis;
+      lupeNachweis.textContent = nachweis || '';
+      lupeNachweis.hidden = !nachweis;
       lupeZaehler.textContent = bilder.length > 1
         ? (stelle + 1) + ' / ' + bilder.length : '';
       /* Ein einzelnes Bild braucht keine Pfeile. */
@@ -589,10 +596,14 @@
       var liste = medien.querySelector('.ref__bilder');
       if (!liste) return;
       bilder = Array.prototype.slice
-        .call(liste.querySelectorAll('a'), 0, HOECHSTENS)
-        .map(function (a) {
-          return { src: a.getAttribute('href'), alt: a.textContent.trim() };
-        });
+        .call(liste.querySelectorAll('li'), 0, HOECHSTENS)
+        .map(function (eintrag) {
+          var a = eintrag.querySelector('a');
+          var n = eintrag.querySelector('.ref__nachweis');
+          return a ? { src: a.getAttribute('href'), alt: a.textContent.trim(),
+                       nachweis: n ? n.textContent.trim() : '' } : null;
+        })
+        .filter(Boolean);
       if (!bilder.length) return;
       titel = liste.getAttribute('data-lupe-titel') || '';
       zeigen(ab || 0);

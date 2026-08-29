@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=20">
+<link rel="stylesheet" href="assets/css/style.css?v=21">
 
 
 <script type="application/ld+json">
@@ -256,11 +256,16 @@
 
                  main.js blendet die Liste aus und macht das Bild oben zum
                  Schalter. Ohne JavaScript bleiben es schlichte Verweise auf
-                 die Bilddateien. -->
+                 die Bilddateien.
+
+                 Braucht ein Bild einen Bildnachweis, kommt hinter den Verweis
+                 ein <span class="ref__nachweis">. Er gehoert zum einzelnen
+                 Bild, nicht zum Projekt - so steht er in der Grossansicht nur
+                 dort, wo er hingehoert. -->
             <ul class="ref__bilder" data-lupe-titel="DIE 80er live">
               <li><a href="assets/img/live.jpg">Konfettischuss über der Bühne, volles Rund der Arena</a></li>
               <li><a href="assets/img/live-2.jpg">Blick vom Regieplatz mit Nova-Works-Pult über das Publikum zur Bühne, Flammen und LED-Wände im Einsatz</a></li>
-              <li><a href="assets/img/live-3.jpg">Blick aus dem Publikum auf die Bühne, Laser über dem vollen Rund, LED-Wände und vier Bildschirme</a></li>
+              <li><a href="assets/img/live-3.jpg">Blick aus dem Publikum auf die Bühne, Laser über dem vollen Rund, LED-Wände und vier Bildschirme</a> <span class="ref__nachweis">Foto: Julian Huke Photography</span></li>
             </ul>
           </div>
           <div class="ref__text">
@@ -565,6 +570,7 @@
       <img class="lupe__bild" data-lupe-bild alt="">
       <figcaption class="lupe__zeile">
         <span class="lupe__titel" data-lupe-titel></span>
+        <span class="lupe__nachweis" data-lupe-nachweis hidden></span>
         <span class="lupe__zaehler" data-lupe-zaehler></span>
       </figcaption>
     </figure>
@@ -589,6 +595,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=20" defer></script>
+<script src="assets/js/main.js?v=21" defer></script>
 </body>
 </html>

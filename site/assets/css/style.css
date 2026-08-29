@@ -916,6 +916,7 @@ a { color: inherit; }
 }
 .ref__bilder a { color: var(--text-faint); }
 .ref__bilder a:hover { color: var(--signal); }
+.ref__nachweis { color: var(--text-faint); }
 
 .ref__foto {
   position: absolute;
@@ -1088,6 +1089,11 @@ a { color: inherit; }
   letter-spacing: .08em;
   color: var(--text-faint);
 }
+
+/* Der Bildnachweis steht zwischen Projektname und Zaehler und tritt
+   zurueck - er gehoert zum Bild, ist aber nicht die Aussage. */
+.lupe__nachweis { color: var(--text-faint); }
+.lupe__nachweis[hidden] { display: none; }
 
 .lupe__knopf {
   display: grid;
