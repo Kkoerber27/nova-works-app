@@ -53,12 +53,26 @@ while [ ! -d "$PROBE" ]; do
 done
 MOUNT="$(mountpoint_of "$PROBE")"
 
-if [ "$MOUNT" = "/" ] && [ "${NAS_ALLOW_LOCAL:-0}" != "1" ]; then
+# Ein eingehängtes Laufwerk erkennt man daran, dass sein Mountpoint das Ziel
+# tatsächlich enthält: /Volumes/NAS umfasst /Volumes/NAS/Backups/...
+#
+# Fehlt das Laufwerk, bleibt als nächster vorhandener Ordner /Volumes übrig —
+# und dessen Mountpoint ist auf macOS /System/Volumes/Data, also gerade NICHT im
+# Ziel enthalten. Ein Vergleich nur gegen "/" ginge hier fehl: /Volumes liegt auf
+# der Datenpartition, nicht auf der Systemwurzel.
+EXTERN=1
+[ "$MOUNT" = "/" ] && EXTERN=0
+case "$NAS_BACKUP_DIR/" in
+  "$MOUNT"/*) ;;
+  *) EXTERN=0 ;;
+esac
+
+if [ "$EXTERN" != "1" ] && [ "${NAS_ALLOW_LOCAL:-0}" != "1" ]; then
   if [ -d "$NAS_BACKUP_DIR" ]; then
-    log "FEHLER $NAS_BACKUP_DIR liegt auf der internen Platte (Mountpoint /), nicht auf dem NAS."
+    log "FEHLER $NAS_BACKUP_DIR liegt nicht auf einem eingehängten Laufwerk (Mountpoint: $MOUNT)."
   else
-    log "FEHLER $NAS_BACKUP_DIR existiert nicht, und der nächste vorhandene Ordner"
-    log "       ($PROBE) liegt auf der internen Platte — das NAS ist nicht eingehängt."
+    log "FEHLER $NAS_BACKUP_DIR existiert nicht. Nächster vorhandener Ordner: $PROBE"
+    log "       Dessen Mountpoint ist $MOUNT und umfasst das Ziel nicht — das Laufwerk ist nicht eingehängt."
   fi
   log "       Es wird nichts geschrieben. 'ls /Volumes' zeigt, was gerade eingehängt ist."
   log "       Ist es doch gewollt: NAS_ALLOW_LOCAL=1 in $ENV_FILE setzen."

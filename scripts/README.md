@@ -37,8 +37,12 @@ Vor dem Verlassen einmal von Hand prüfen:
 ### Wogegen die Sicherung absichert
 
 - **NAS nicht eingehängt.** Entschieden wird am nächsten Ordner, den es
-  tatsächlich gibt. Liegt der auf der internen Platte — bei einem nicht
-  verbundenen Laufwerk ist das `/Volumes` selbst —, bricht der Lauf ab und legt
+  tatsächlich gibt: sein Mountpoint muss das Ziel enthalten. Bei einem
+  eingehängten Laufwerk ist das `/Volumes/NAS`, was `/Volumes/NAS/Backups/…`
+  umfasst. Fehlt das Laufwerk, bleibt `/Volumes` übrig — dessen Mountpoint ist
+  auf macOS `/System/Volumes/Data` und umfasst das Ziel gerade nicht. Ein
+  Vergleich nur gegen `/` griffe hier nicht: `/Volumes` liegt auf der
+  Datenpartition, nicht auf der Systemwurzel. Dann bricht der Lauf ab und legt
   nichts an. Ein blindes `mkdir` würde dort eine Attrappe erzeugen, die
   monatelang unbemerkt „Backups" sammelt, während das NAS leer bleibt.
 - **Fehlende Unterordner** unterhalb eines nachweislich eingehängten Laufwerks
