@@ -11,8 +11,13 @@ export interface VoucherListItem {
   updatedDate?: string;
   dueDate?: string;
   contactName?: string;
+  /** Gesamtwert des Belegs. Bei einer Schlussrechnung inklusive der bereits
+   *  gestellten Anzahlungen — also NICHT die offene Forderung. */
   totalAmount?: number;
+  /** Was tatsächlich noch aussteht. Das ist die Zahl, um die es geht. */
+  openAmount?: number;
   currency?: string;
+  archived?: boolean;
 }
 
 export interface VoucherListPage {
@@ -49,8 +54,13 @@ export interface InvoiceSummary {
   rechnungsnummer: string;
   datum: string;
   kunde: string;
-  betrag: number | null;
+  /** Offene Forderung — bei Schlussrechnungen deutlich unter dem Gesamtwert. */
+  offen: number | null;
+  /** Gesamtwert inklusive bereits gestellter Anzahlungen. */
+  betrag_brutto: number | null;
   waehrung: string;
+  faellig_am: string;
+  ueberfaellig: boolean;
   titel: string;
   /** Every distinct project number found in the invoice's text fields. */
   projektnummern: string[];

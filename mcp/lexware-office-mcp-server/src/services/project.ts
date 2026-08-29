@@ -59,7 +59,10 @@ export function pdfFileName(
 ): string {
   const day = (datum || "").slice(0, 10);
   const safe = (s: string) => s.replace(/[\\/:*?"<>|]/g, "-").trim();
-  const base = ["RE", safe(rechnungsnummer) || "ohne-Nummer", day, safe(kunde)]
+  // Die Nummer beginnt bei NOVA WORKS schon mit "RE" — kein zweites davorsetzen.
+  const nummer = safe(rechnungsnummer) || "ohne-Nummer";
+  const praefix = /^re/i.test(nummer) ? "" : "RE";
+  const base = [praefix, nummer, day, safe(kunde)]
     .filter(Boolean)
     .join("_")
     .replace(/_+/g, "_")

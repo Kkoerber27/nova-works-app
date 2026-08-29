@@ -63,9 +63,10 @@ function deDate(iso: string): string {
   return m ? `${m[3]}.${m[2]}.${m[1]}` : (iso ?? "");
 }
 
+const EURO = new Intl.NumberFormat("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 function euro(amount: number | null, currency: string): string {
   if (amount === null) return "";
-  return `${amount.toFixed(2).replace(".", ",")} ${currency || "EUR"}`;
+  return `${EURO.format(amount)} ${currency || "EUR"}`;
 }
 
 export function registerInvoiceTools(server: McpServer): void {
@@ -76,7 +77,15 @@ export function registerInvoiceTools(server: McpServer): void {
       description: `List invoices in Lexware Office and resolve the NOVA WORKS project number for each.
 
 Reads the voucher list, then fetches each invoice to look for a project number in its title,
-introduction and remark. Rate-limited to under two requests per second, so a page of 25
+introduction and remark.
+
+"offen" is the amount still outstanding and the number that matters. "betrag_brutto" is the
+total value of the document: on a Schlussrechnung it still contains the down payments and
+partial invoices already billed, so it is roughly double the real receivable. Report "offen",
+never "betrag_brutto", when someone asks what is still owed.
+
+Note that Lexware's status filter "open" also returns invoices whose own status is "overdue" —
+overdue is a sub-state of open, flagged separately as "ueberfaellig". Rate-limited to under two requests per second, so a page of 25
 invoices takes roughly fifteen seconds.
 
 Args:
@@ -90,6 +99,8 @@ Args:
 Returns (json):
   {
     "total": number, "count": number, "offset": number, "has_more": boolean,
+    "offen_summe": number,          // Summe der offenen Forderungen dieser Seite
+    "waehrung": string,
     "invoices": [{
       "id": string,                  // pass to lex_download_invoice_pdf
       "rechnungsnummer": string, "datum": string, "kunde": string,
@@ -154,19 +165,26 @@ Examples:
           rechnungsnummer: invoice.voucherNumber ?? row.voucherNumber ?? "",
           datum: (invoice.voucherDate ?? row.voucherDate ?? "").slice(0, 10),
           kunde: invoice.address?.name ?? row.contactName ?? "",
-          betrag: invoice.totalPrice?.totalGrossAmount ?? row.totalAmount ?? null,
+          // openAmount steht nur in der Belegliste, nicht in der Einzelrechnung.
+          offen: row.openAmount ?? null,
+          betrag_brutto: invoice.totalPrice?.totalGrossAmount ?? row.totalAmount ?? null,
           waehrung: invoice.totalPrice?.currency ?? row.currency ?? "EUR",
+          faellig_am: (row.dueDate ?? "").slice(0, 10),
+          ueberfaellig: row.voucherStatus === "overdue",
           titel: invoice.title ?? "",
           ...resolved,
           bereits_abgelegt: filed,
         });
       }
 
+      const offenSumme = invoices.reduce((s, i) => s + (i.offen ?? 0), 0);
       const structured = {
         total: page.totalElements ?? rows.length,
         count: invoices.length,
         offset: params.offset,
         has_more: rows.length > params.offset + params.limit,
+        offen_summe: offenSumme,
+        waehrung: invoices[0]?.waehrung ?? "EUR",
         invoices,
       };
 
@@ -174,13 +192,28 @@ Examples:
         if (!invoices.length) {
           return `# Offene Rechnungen\n\nAlle Rechnungen mit Status "${params.status}" sind bereits abgelegt.`;
         }
-        const lines = [`# Rechnungen "${params.status}" (${invoices.length})`, ""];
+        const lines = [
+          `# Rechnungen "${params.status}" (${invoices.length})`,
+          "",
+          `Offene Forderung gesamt: **${euro(offenSumme, structured.waehrung)}**`,
+          "",
+        ];
         for (const i of invoices) {
           const head = `**${i.rechnungsnummer || "(ohne Nummer)"}** · ${deDate(i.datum)} · ${i.kunde}`;
           lines.push(`## ${head}`);
           if (i.titel) lines.push(i.titel);
-          const money = euro(i.betrag, i.waehrung);
-          if (money) lines.push(`Betrag: ${money}`);
+          // Der Gesamtwert wird nur genannt, wenn er von der Forderung abweicht —
+          // bei Schlussrechnungen steckt darin die bereits gestellte Anzahlung.
+          const offen = euro(i.offen, i.waehrung);
+          if (offen) {
+            const abweichend = i.betrag_brutto !== null && i.offen !== i.betrag_brutto;
+            lines.push(
+              `Offen: ${offen}${abweichend ? ` (Gesamtwert ${euro(i.betrag_brutto, i.waehrung)}, Rest bereits fakturiert)` : ""}`,
+            );
+          }
+          if (i.faellig_am) {
+            lines.push(`Fällig: ${deDate(i.faellig_am)}${i.ueberfaellig ? " — **überfällig**" : ""}`);
+          }
           lines.push(
             i.projektnummer
               ? `Projekt: **${i.projektnummer}**`

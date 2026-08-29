@@ -52,7 +52,7 @@ heißt fehlende Umgebungsvariable.
 
 | Tool | Zweck |
 |---|---|
-| `lex_list_open_invoices` | Offene, noch nicht abgelegte Rechnungen samt Projektnummer |
+| `lex_list_open_invoices` | Offene, noch nicht abgelegte Rechnungen samt Projektnummer und offener Forderung |
 | `lex_download_invoice_pdf` | PDF rendern lassen, herunterladen, lokal speichern |
 | `lex_match_project_folder` | Zwischen mehreren Ordnern derselben Projektnummer entscheiden |
 | `lex_mark_filed` | Vermerken, dass eine Rechnung abgelegt wurde |
@@ -83,6 +83,28 @@ Der Lauf bricht mit einer Zeile im Protokoll ab, wenn das Repository fehlt, `cla
 nicht im PATH ist oder kein Schlüssel gesetzt wurde — und meldet „ABBRUCH: SharePoint-Tools
 nicht verfügbar", wenn der Microsoft-365-Connector im kopflosen Lauf fehlt. Dann wird
 nichts heruntergeladen und nichts als abgelegt vermerkt.
+
+## Offene Forderung, nicht Gesamtwert
+
+Eine Schlussrechnung führt zuerst die bereits gestellten Anzahlungen und Teilrechnungen
+auf und zieht sie unten wieder ab. `totalAmount` ist deshalb der Auftragswert, nicht
+das, was noch hereinkommt — bei einer Rechnung über 124.950 € mit halber Anzahlung
+stehen tatsächlich 62.475 € aus.
+
+Der Server weist beides getrennt aus:
+
+| Feld | Bedeutung |
+|---|---|
+| `offen` | Was noch aussteht (`openAmount` aus der Belegliste) |
+| `betrag_brutto` | Auftragswert inklusive bereits fakturierter Anzahlungen |
+
+Summiert und berichtet wird `offen`. `betrag_brutto` erscheint in der Lesefassung nur,
+wenn es abweicht — dann mit dem Zusatz, dass der Rest schon fakturiert ist.
+
+Zwei Eigenheiten der Schnittstelle, die dabei auffielen: `openAmount` liefert nur die
+Belegliste, nicht die Einzelrechnung. Und der Filter `voucherStatus=open` gibt auch
+Belege zurück, deren eigener Status `overdue` lautet — überfällig ist ein Unterfall von
+offen und wird als `ueberfaellig` gesondert ausgewiesen.
 
 ## Warum nie geraten wird
 
