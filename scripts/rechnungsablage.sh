@@ -19,8 +19,13 @@ log() { echo "[$(stamp)] $*" >>"$LOG"; }
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 # Der Lexware-Schlüssel kommt aus einer Datei, damit er nicht im Repository liegt.
+# Ein beim Aufruf gesetzter Wert gewinnt aber gegen die Datei, sonst überschreibt
+# ein leeres "export LEX_API_KEY=" genau das, was jemand zum Testen gesetzt hat.
+_pre_key="${LEX_API_KEY:-}"
 # shellcheck source=/dev/null
 [ -f "$ENV_FILE" ] && . "$ENV_FILE"
+[ -n "$_pre_key" ] && LEX_API_KEY="$_pre_key"
+export LEX_API_KEY
 
 if [ ! -d "$REPO" ]; then
   log "FEHLER Repository nicht gefunden: $REPO"

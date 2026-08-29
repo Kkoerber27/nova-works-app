@@ -15,8 +15,16 @@ mkdir -p "$(dirname "$LOG")"
 log() { echo "[$(date "+%Y-%m-%d %H:%M:%S")] $*" >>"$LOG"; }
 
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# Werte, die beim Aufruf schon gesetzt waren, gewinnen gegen die Datei. Sonst
+# überschreibt ein leeres "export NAS_BACKUP_DIR=" aus der Vorlage genau das,
+# was jemand gerade zum Testen in der Shell gesetzt hat.
+_pre_dir="${NAS_BACKUP_DIR:-}"; _pre_keep="${NAS_BACKUP_KEEP_DAYS:-}"
 # shellcheck source=/dev/null
 [ -f "$ENV_FILE" ] && . "$ENV_FILE"
+[ -n "$_pre_dir" ] && NAS_BACKUP_DIR="$_pre_dir"
+[ -n "$_pre_keep" ] && NAS_BACKUP_KEEP_DAYS="$_pre_keep"
+export NAS_BACKUP_DIR NAS_BACKUP_KEEP_DAYS
 
 [ -d "$REPO" ] || { log "FEHLER Repository nicht gefunden: $REPO"; exit 1; }
 command -v node >/dev/null 2>&1 || { log "FEHLER 'node' nicht im PATH. PATH=$PATH"; exit 1; }
