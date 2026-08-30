@@ -904,7 +904,11 @@
           '<a href="' + DATENSCHUTZ_URL + '">Datenschutzerklärung</a>.</p>' +
           '<ul class="einstellungen__liste">' + zeilen + '</ul>' +
           '<div class="einstellungen__wahl">' +
-            '<button class="btn btn--solid" type="button" data-einstellung="speichern">Auswahl speichern</button>' +
+            /* Auch hier alle drei gleich. "Auswahl speichern" ist zwar der
+               naheliegende Weg, aber daneben stehen "Allem zustimmen" und
+               "Alles ablehnen" - und sobald einer der drei hervorsticht,
+               faellt die Wahl nicht mehr allein beim Lesenden. */
+            '<button class="btn" type="button" data-einstellung="speichern">Auswahl speichern</button>' +
             '<button class="btn" type="button" data-einstellung="alle">Allem zustimmen</button>' +
             '<button class="btn" type="button" data-einstellung="keine">Alles ablehnen</button>' +
           '</div>' +
