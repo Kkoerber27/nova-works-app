@@ -818,7 +818,12 @@
         'messen und nichts nachzuladen. Sie können das hier trotzdem festlegen – ' +
         'nachzulesen in der <a href="' + DATENSCHUTZ_URL + '">Datenschutz&shy;erklärung</a>.</p>' +
         '<div class="zustimmung__wahl">' +
-          '<button class="btn btn--solid" type="button" data-zustimmung="alle">Zustimmen</button>' +
+          /* Beide gleich: nicht nur gleich gross, sondern auch gleich
+             gestaltet. Ein gelb gefuelltes "Zustimmen" neben einem
+             blassen "Ablehnen" lenkt die Wahl, und genau das soll es
+             hier nicht. Die Faerbung uebernimmt erst der Hover - fuer
+             beide gleich. */
+          '<button class="btn" type="button" data-zustimmung="alle">Zustimmen</button>' +
           '<button class="btn" type="button" data-zustimmung="keine">Ablehnen</button>' +
         '</div>' +
         '<button class="zustimmung__mehr" type="button" data-zustimmung="einstellungen">' +
