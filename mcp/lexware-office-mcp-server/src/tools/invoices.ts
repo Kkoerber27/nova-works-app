@@ -76,8 +76,11 @@ export function registerInvoiceTools(server: McpServer): void {
       title: "Offene Rechnungen auflisten",
       description: `List invoices in Lexware Office and resolve the NOVA WORKS project number for each.
 
-Reads the voucher list, then fetches each invoice to look for a project number in its title,
-introduction and remark.
+Reads the voucher list, then fetches each invoice to look for a project number — first in
+title, introduction and remark, and only if nothing is found there, in the line items. Many
+NOVA WORKS invoices carry it as "laut Angebot 26-0014" inside a position rather than in the
+header. "projektnummer_quelle" says which of the two it came from; a number found in a line
+item is worth a second look before filing.
 
 "offen" is the amount still outstanding and the number that matters. "betrag_brutto" is the
 total value of the document: on a Schlussrechnung it still contains the down payments and
@@ -107,6 +110,7 @@ Returns (json):
       "betrag": number|null, "waehrung": string, "titel": string,
       "projektnummern": string[],    // every number found
       "projektnummer": string|null,  // set only when exactly one was found
+      "projektnummer_quelle": "kopf"|"positionen"|null,
       "hinweis": string,             // present when projektnummer is null
       "bereits_abgelegt": boolean
     }]
@@ -216,7 +220,7 @@ Examples:
           }
           lines.push(
             i.projektnummer
-              ? `Projekt: **${i.projektnummer}**`
+              ? `Projekt: **${i.projektnummer}**${i.projektnummer_quelle === "positionen" ? " (aus den Positionen, nicht aus dem Titel)" : ""}`
               : `⚠ Projekt: unklar — ${i.hinweis ?? ""}`,
           );
           if (i.bereits_abgelegt) lines.push("_bereits abgelegt_");
@@ -429,6 +433,8 @@ Args:
   - invoice_id (string): the id that was filed
   - ablageort (string): where it landed, e.g. the SharePoint webUrl of the uploaded file
   - rechnungsnummer (string, optional), projektnummer (string, optional): for the log
+  - quelle ('hochgeladen'|'vorhanden'): 'vorhanden' when the PDF was already in the target
+    folder and was only adopted into the ledger, rather than uploaded (default 'hochgeladen')
   - response_format ('markdown' | 'json'): default 'markdown'
 
 Returns (json):
@@ -438,6 +444,10 @@ Returns (json):
         ablageort: z.string().min(1).describe("Where the PDF ended up"),
         rechnungsnummer: z.string().default("").describe("Invoice number, for the log"),
         projektnummer: z.string().optional().describe("Project it was filed under"),
+        quelle: z
+          .enum(["hochgeladen", "vorhanden"])
+          .default("hochgeladen")
+          .describe("'vorhanden' when the file was already in the folder and only adopted"),
         response_format: formatSchema,
       },
       annotations: {
@@ -452,6 +462,7 @@ Returns (json):
       ablageort: string;
       rechnungsnummer: string;
       projektnummer?: string;
+      quelle: "hochgeladen" | "vorhanden";
       response_format: "markdown" | "json";
     }) => {
       const entry = {
@@ -460,13 +471,14 @@ Returns (json):
         projektnummer: params.projektnummer ?? null,
         abgelegt_am: new Date().toISOString(),
         ablageort: params.ablageort,
+        quelle: params.quelle,
       };
       await markFiled(entry);
       return ok(
         params.response_format,
         { ...entry, ledger: ledgerLocation() },
         () =>
-          `✓ ${entry.rechnungsnummer || entry.invoice_id} als abgelegt vermerkt${entry.projektnummer ? ` (Projekt ${entry.projektnummer})` : ""}.\n\n${entry.ablageort}`,
+          `✓ ${entry.rechnungsnummer || entry.invoice_id} als abgelegt vermerkt${entry.projektnummer ? ` (Projekt ${entry.projektnummer})` : ""}${entry.quelle === "vorhanden" ? " — lag bereits dort" : ""}.\n\n${entry.ablageort}`,
       );
     }),
   );

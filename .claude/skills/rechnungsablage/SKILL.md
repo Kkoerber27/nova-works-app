@@ -24,7 +24,16 @@ besteht aus vier Schritten pro Rechnung.
    aufrufen. Es vergleicht die übrigen Wörter des Rechnungstextes mit den
    Ordnernamen. Nur wenn `treffer` gesetzt ist, wird abgelegt; bei `null` bleibt die
    Rechnung liegen. Nicht selbst den ersten Kandidaten nehmen.
-4. **Hochladen** mit `sharepoint_upload_file`, danach **`lex_mark_filed`** mit der
+4. **Erst nachsehen, ob sie schon da ist.** Mit `sharepoint_search` nach der
+   Rechnungsnummer suchen. Liegt bereits eine Datei zu dieser Nummer im Zielordner,
+   **nicht hochladen** — stattdessen `lex_mark_filed` mit deren `webUrl` und
+   `quelle: "vorhanden"` aufrufen und im Bericht erwähnen.
+
+   Das Protokoll kennt nur, was diese Automatik selbst getan hat. Von Hand abgelegte
+   Rechnungen sind ihm unbekannt, und ohne diese Prüfung würde sie beim ersten Lauf
+   allesamt überschreiben.
+
+5. **Hochladen** mit `sharepoint_upload_file`, danach **`lex_mark_filed`** mit der
    `webUrl` der hochgeladenen Datei als `ablageort`.
 
 `lex_mark_filed` erst nach erfolgreichem Upload aufrufen — sonst gilt eine Rechnung
@@ -41,6 +50,10 @@ Diese Fälle bleiben liegen und werden am Ende gesammelt gemeldet, statt geraten
   mehrere gleich gut passen. Der `hinweis` sagt, welcher Fall vorliegt.
 - **Eine Datei gleichen Namens liegt schon dort** und stammt erkennbar aus einer
   anderen Rechnung.
+- **Die Projektnummer stammt aus den Positionen** (`projektnummer_quelle:
+  "positionen"`) und der Betrag ist erheblich. Der Kopf schweigt dann, und ein
+  Positionstext wie „laut Angebot 26-0014" kann sich auch auf eine Vorleistung
+  beziehen. Im Bericht erwähnen und einmal bestätigen lassen.
 
 Eine falsch abgelegte Rechnung fällt erst bei der Steuerprüfung auf. Im Zweifel
 liegen lassen und fragen.

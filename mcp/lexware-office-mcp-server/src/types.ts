@@ -41,6 +41,8 @@ export interface Invoice {
   totalPrice?: { totalGrossAmount?: number; currency?: string };
   voucherStatus?: string;
   files?: { documentFileId?: string };
+  /** Positionen. Die Projektnummer steht oft hier statt im Kopf. */
+  lineItems?: Array<{ name?: string; description?: string }>;
 }
 
 /** GET /v1/invoices/{id}/document */
@@ -66,6 +68,8 @@ export interface InvoiceSummary {
   projektnummern: string[];
   /** The single project number to file under, or null when it is not unambiguous. */
   projektnummer: string | null;
+  /** Woher die Nummer stammt: aus Titel/Einleitung/Bemerkung oder aus den Positionen. */
+  projektnummer_quelle: "kopf" | "positionen" | null;
   /** Why no project number could be settled on, when that is the case. */
   hinweis?: string;
   bereits_abgelegt: boolean;
@@ -78,4 +82,6 @@ export interface LedgerEntry {
   projektnummer: string | null;
   abgelegt_am: string;
   ablageort: string;
+  /** Ob die Datei hochgeladen wurde oder schon dort lag. */
+  quelle?: "hochgeladen" | "vorhanden";
 }

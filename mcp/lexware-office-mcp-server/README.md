@@ -116,6 +116,12 @@ unter `26-0021` zwei.
 Eine im falschen Projekt abgelegte Rechnung fällt erst bei der Steuerprüfung auf.
 Deshalb meldet der Server solche Fälle, statt sich für eine Variante zu entscheiden.
 
+Die Nummer wird zuerst im Kopf gesucht — Titel, Einleitung, Bemerkung — und nur, wenn
+dort keine steht, in den Positionen. Viele Rechnungen tragen sie als „laut Angebot
+26-0014" in einer Position statt im Titel. `projektnummer_quelle` sagt, woher sie kam;
+der Kopf hat Vorrang, damit eine Position, die ein anderes Projekt erwähnt, keine
+bisher eindeutige Rechnung mehrdeutig macht.
+
 Bei mehrdeutiger Nummer hilft `lex_match_project_folder`: Es vergleicht die übrigen
 Wörter des Rechnungstextes mit den Ordnernamen — „Schlussrechnung 26-0007 Schalke"
 findet damit den Schalke-Ordner. Füllwörter wie „Rechnung" oder „GmbH" zählen nicht,

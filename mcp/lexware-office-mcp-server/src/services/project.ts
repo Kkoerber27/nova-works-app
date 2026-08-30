@@ -25,29 +25,59 @@ export function findProjectNumbers(...texts: Array<string | undefined>): string[
 export function resolveProjectNumber(
   invoice: Invoice,
   listItem?: VoucherListItem,
-): { projektnummern: string[]; projektnummer: string | null; hinweis?: string } {
-  const projektnummern = findProjectNumbers(
+): {
+  projektnummern: string[];
+  projektnummer: string | null;
+  projektnummer_quelle: "kopf" | "positionen" | null;
+  hinweis?: string;
+} {
+  // Der Kopf hat Vorrang. Erst wenn dort nichts steht, werden die Positionen
+  // durchsucht — sonst könnte eine Position, die ein anderes Projekt erwähnt,
+  // eine bisher eindeutige Rechnung mehrdeutig machen.
+  const kopf = findProjectNumbers(
     invoice.title,
     invoice.introduction,
     invoice.remark,
     listItem?.voucherNumber,
   );
 
-  if (projektnummern.length === 1) {
-    return { projektnummern, projektnummer: projektnummern[0] };
+  if (kopf.length === 1) {
+    return { projektnummern: kopf, projektnummer: kopf[0], projektnummer_quelle: "kopf" };
   }
-  if (!projektnummern.length) {
+  if (kopf.length > 1) {
     return {
-      projektnummern,
+      projektnummern: kopf,
       projektnummer: null,
-      hinweis:
-        "Keine Projektnummer in Titel, Einleitung oder Bemerkung gefunden. Nummer im Format 26-0007 in der Rechnung ergänzen, oder die Ablage von Hand entscheiden.",
+      projektnummer_quelle: null,
+      hinweis: `Mehrere Projektnummern im Rechnungskopf gefunden (${kopf.join(", ")}). Nicht automatisch ablegbar — die richtige von Hand wählen.`,
     };
   }
+
+  const positionen = findProjectNumbers(
+    ...(invoice.lineItems ?? []).flatMap((p) => [p.name, p.description]),
+  );
+  if (positionen.length === 1) {
+    return {
+      projektnummern: positionen,
+      projektnummer: positionen[0],
+      projektnummer_quelle: "positionen",
+    };
+  }
+  if (positionen.length > 1) {
+    return {
+      projektnummern: positionen,
+      projektnummer: null,
+      projektnummer_quelle: null,
+      hinweis: `Mehrere Projektnummern in den Positionen gefunden (${positionen.join(", ")}), im Kopf keine. Nicht automatisch ablegbar.`,
+    };
+  }
+
   return {
-    projektnummern,
+    projektnummern: [],
     projektnummer: null,
-    hinweis: `Mehrere Projektnummern gefunden (${projektnummern.join(", ")}). Nicht automatisch ablegbar — die richtige von Hand wählen.`,
+    projektnummer_quelle: null,
+    hinweis:
+      "Keine Projektnummer gefunden — weder in Titel, Einleitung und Bemerkung noch in den Positionen. Nummer im Format 26-0007 in der Rechnung ergänzen, oder die Ablage von Hand entscheiden.",
   };
 }
 
