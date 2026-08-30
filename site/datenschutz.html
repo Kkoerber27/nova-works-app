@@ -14,7 +14,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=24">
+<link rel="stylesheet" href="assets/css/style.css?v=25">
 
 </head>
 
@@ -25,7 +25,7 @@
 <header class="masthead is-stuck" id="masthead">
   <div class="shell masthead__inner">
     <a class="masthead__logo" href="index.html" aria-label="Nova Works, zur Startseite">
-      <img src="assets/img/logo-weiss.svg?v=24" alt="Nova Works" width="170" height="57">
+      <img src="assets/img/logo-weiss.svg?v=25" alt="Nova Works" width="170" height="57">
     </a>
 
     <nav class="nav" aria-label="Hauptnavigation">
@@ -62,9 +62,10 @@
              Diese Erklaerung beschreibt, was die Seite tatsaechlich tut -
              geprueft am Quelltext, nicht aus einem Muster uebernommen:
 
-               keine Cookies, kein localStorage, kein Tracking
+               keine Cookies, kein Tracking
                keine externen Verbindungen (Schrift, Bilder, Logo liegen lokal)
                ein Kontaktformular, das eine E-Mail verschickt und nichts speichert
+               ein einziger Eintrag im localStorage: die Einwilligungs-Entscheidung
 
              Wer an der Seite etwas aendert, das Daten beruehrt - ein Kartendienst,
              eine Schriftart von aussen, ein Statistikwerkzeug, ein Video-Einbett-
@@ -119,14 +120,18 @@
         Thema Datenschutz können Sie sich jederzeit an uns wenden.</p>
 
         <h3>Keine Cookies, keine Analyse, keine externen Dienste</h3>
-        <p>Diese Website setzt <strong>keine Cookies</strong> und speichert nichts
-        in Ihrem Browser. Sie bindet <strong>keine Analyse- oder
-        Tracking-Werkzeuge</strong> ein und verwendet keine Dienste zur Auswertung
-        Ihres Nutzungsverhaltens. Es werden auch <strong>keine Inhalte von fremden
-        Servern nachgeladen</strong>: Schriften, Bilder, Logo und Programmcode
-        liegen vollständig auf unserem eigenen Webspace. Beim Aufruf dieser Seite
-        entsteht deshalb keine Verbindung zu Dritten, und es ist keine
-        Einwilligung für Cookies erforderlich.</p>
+        <p>Diese Website setzt <strong>keine Cookies</strong>. Sie bindet
+        <strong>keine Analyse- oder Tracking-Werkzeuge</strong> ein und verwendet
+        keine Dienste zur Auswertung Ihres Nutzungsverhaltens. Es werden auch
+        <strong>keine Inhalte von fremden Servern nachgeladen</strong>: Schriften,
+        Bilder, Logo und Programmcode liegen vollständig auf unserem eigenen
+        Webspace. Beim Aufruf dieser Seite entsteht deshalb keine Verbindung zu
+        Dritten.</p>
+        <p>Das Einzige, was diese Website in Ihrem Browser ablegt, ist Ihre eigene
+        Entscheidung aus dem Einwilligungs-Hinweis – siehe
+        <a href="#einwilligung">„Ihre Entscheidung zur Einwilligung“</a>. Für
+        Analyse oder externe Inhalte ist zurzeit keine Einwilligung erforderlich,
+        weil es beides hier nicht gibt.</p>
 
         <h2>2. Hosting</h2>
         <p>Die Inhalte dieser Website werden bei einem externen Dienstleister
@@ -345,6 +350,30 @@
         abgeschlossener Bearbeitung Ihrer Anfrage). Zwingende gesetzliche
         Bestimmungen – insbesondere Aufbewahrungsfristen – bleiben unberührt.</p>
 
+        <h3 id="einwilligung">Ihre Entscheidung zur Einwilligung</h3>
+        <p>Beim ersten Aufruf blendet diese Website einen Hinweis ein, in dem Sie
+        zustimmen, ablehnen oder die Einstellungen im Einzelnen öffnen können.
+        Ihre Entscheidung wird im <strong>lokalen Speicher Ihres Browsers</strong>
+        (<em>localStorage</em>) unter dem Namen <code>nova-einwilligung</code>
+        abgelegt, damit der Hinweis nicht bei jedem Aufruf erneut erscheint.</p>
+        <p>Dabei gilt:</p>
+        <ul>
+          <li>Es handelt sich <strong>nicht um ein Cookie</strong>. Der Eintrag
+          bleibt in Ihrem Browser und wird bei keinem Seitenaufruf an unseren
+          Server oder an Dritte übertragen.</li>
+          <li>Gespeichert werden ausschließlich Ihre Auswahl, ein Zeitstempel und
+          eine Versionsnummer. Es entsteht <strong>keine Kennung</strong>, mit der
+          sich Ihr Gerät wiedererkennen ließe.</li>
+          <li>Rechtsgrundlage ist § 25 Abs. 2 Nr. 2 TDDDG: Das Speichern der
+          Entscheidung ist erforderlich, um den ausdrücklich gewünschten Dienst –
+          die Berücksichtigung Ihrer Wahl – bereitzustellen.</li>
+          <li>Sie können Ihre Entscheidung jederzeit ändern: über
+          <strong>„Datenschutz-Einstellungen“</strong> am Fuß jeder Seite oder
+          indem Sie die Website-Daten in Ihrem Browser löschen.</li>
+        </ul>
+        <p>Ist JavaScript in Ihrem Browser abgeschaltet, erscheint der Hinweis
+        nicht und es wird auch nichts gespeichert.</p>
+
         <h3>Anfrage per E-Mail oder Telefon</h3>
         <p>Wenn Sie uns per E-Mail oder Telefon kontaktieren, wird Ihre Anfrage
         inklusive aller daraus hervorgehenden personenbezogenen Daten (Name,
@@ -390,7 +419,7 @@
 <footer class="footer">
   <div class="shell footer__grid">
     <a class="footer__logo" href="index.html" aria-label="Nova Works, zur Startseite">
-      <img src="assets/img/logo-weiss.svg?v=24" alt="Nova Works" width="140" height="47" loading="lazy">
+      <img src="assets/img/logo-weiss.svg?v=25" alt="Nova Works" width="140" height="47" loading="lazy">
     </a>
     <p class="footer__meta">
       <span>© 2026 Nova Works.</span>
@@ -401,6 +430,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=24" defer></script>
+<script src="assets/js/main.js?v=25" defer></script>
 </body>
 </html>

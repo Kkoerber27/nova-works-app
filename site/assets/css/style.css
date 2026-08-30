@@ -1477,6 +1477,19 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .footer__meta a { text-decoration: none; transition: color .3s var(--ease); }
 .footer__meta a:hover { color: var(--signal); }
 
+/* Der Weg zurueck in die Einwilligung. main.js haengt ihn ein - ohne
+   JavaScript gibt es keine Einstellung, die er oeffnen koennte. */
+.footer__knopf {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: color .3s var(--ease);
+}
+.footer__knopf:hover, .footer__knopf:focus-visible { color: var(--signal); }
+
 /* =========================================================================
    Rechtstexte & 404
    ========================================================================= */
@@ -1516,6 +1529,16 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .legal__inner { overflow-wrap: break-word; }
 .legal__inner a { overflow-wrap: anywhere; }
 .legal__inner ul { padding-left: 1.15rem; margin: 0 0 1.25em; }
+/* Der Name eines Speichereintrags im Fliesstext - lesbar als das, was er
+   ist, ohne wie Programmcode zu wuchten. */
+.legal__inner code {
+  padding: .1em .4em;
+  border-radius: 4px;
+  background: var(--ink-raised);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .9em;
+  word-break: break-word;
+}
 .legal__inner li { margin-bottom: .5rem; }
 .legal__inner a { color: var(--text); text-decoration-color: var(--text-faint); }
 .legal__inner a:hover { color: var(--signal); }
@@ -1648,6 +1671,223 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .legal--agb .agb__punkte + .agb__fort { margin-top: -.7em; }
 
 /* =========================================================================
+   Einwilligung
+   =========================================================================
+   Der Balken unten und die Einstellungen dahinter. Beides baut main.js
+   zur Laufzeit - es soll auf jeder Seite gleich sein, und ohne
+   JavaScript gibt es nichts einzuwilligen, weil dann auch nichts
+   gespeichert wird.
+
+   Kein Sperrschirm ueber der Seite: Impressum und Datenschutzerklaerung
+   muessen erreichbar bleiben, auch solange die Frage offen ist. Der
+   Balken liegt deshalb ueber dem Inhalt, nicht davor.                  */
+
+.zustimmung {
+  position: fixed;
+  z-index: 200;
+  left: var(--gutter);
+  bottom: var(--gutter);
+  width: min(30rem, calc(100vw - 2 * var(--gutter)));
+  padding: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--ink-raised);
+  color: var(--text);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .55);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .zustimmung { animation: zustimmung-auf .5s var(--ease-out) both; }
+}
+@keyframes zustimmung-auf {
+  from { opacity: 0; transform: translateY(1.5rem); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Solange die Frage offen ist, bekommt die Fusszeile unten so viel Platz
+   dazu, wie der Balken hoch ist. Sonst deckt er am Handy genau die Zeile
+   ab, in der Impressum und Datenschutzerklaerung stehen - und die
+   muessen erreichbar bleiben, gerade solange nicht entschieden ist. */
+.hat-zustimmung .footer::after {
+  content: '';
+  display: block;
+  height: var(--zustimmung-hoehe, 0px);
+}
+
+.zustimmung__titel {
+  margin: 0 0 .5rem;
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.zustimmung__text {
+  margin: 0 0 1.25rem;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+.zustimmung__text a { color: var(--text); text-decoration: underline; text-underline-offset: .2em; }
+.zustimmung__text a:hover, .zustimmung__text a:focus-visible { color: var(--signal); }
+
+/* Zustimmen und Ablehnen stehen gleich gross nebeneinander - eine
+   Ablehnung darf nicht muehsamer sein als eine Zustimmung. */
+.zustimmung__wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.zustimmung__wahl .btn {
+  flex: 1 1 8rem;
+  justify-content: center;
+  padding: .8rem 1.2rem;
+}
+.zustimmung__wahl .btn::after { display: none; }
+
+.zustimmung__mehr {
+  margin-top: .9rem;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-decoration: underline;
+  text-underline-offset: .2em;
+  cursor: pointer;
+  transition: color .3s var(--ease);
+}
+.zustimmung__mehr:hover, .zustimmung__mehr:focus-visible { color: var(--signal); }
+
+/* --- Die Einstellungen ---------------------------------------------- */
+
+.einstellungen {
+  width: min(41rem, calc(100vw - 2rem));
+  max-width: none;
+  margin: auto;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--ink-raised);
+  color: var(--text);
+}
+.einstellungen::backdrop {
+  background: rgba(6, 6, 7, .82);
+  backdrop-filter: blur(8px);
+}
+.einstellungen__inhalt { padding: clamp(1.5rem, 4vw, 2.25rem); }
+.einstellungen__titel {
+  margin: 0 0 .6rem;
+  font-size: var(--fs-h3);
+  font-weight: 600;
+  letter-spacing: -.01em;
+}
+.einstellungen__text {
+  margin: 0 0 1.5rem;
+  font-size: var(--fs-small);
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+
+.einstellungen__liste {
+  list-style: none;
+  margin: 0 0 1.75rem;
+  padding: 0;
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.gruppe {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
+  padding: 1.1rem 1.2rem;
+  background: var(--ink);
+}
+.gruppe__name {
+  margin: 0 0 .3rem;
+  font-size: var(--fs-body);
+  font-weight: 500;
+}
+.gruppe__was {
+  margin: 0;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  color: var(--text-dim);
+}
+.gruppe__leer {
+  display: block;
+  margin-top: .45rem;
+  font-size: var(--fs-eyebrow);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+/* Der Schalter. Die Checkbox bleibt bedienbar und wird nur unsichtbar
+   darueber gelegt - so bringt sie Tastatur, Fokus und Vorlesen mit. */
+.schalter { position: relative; flex: none; }
+.schalter__feld {
+  position: absolute;
+  inset: 0;
+  width: 100%; height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.schalter__feld:disabled { cursor: default; }
+.schalter__spur {
+  display: block;
+  width: 2.75rem; height: 1.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 100px;
+  background: var(--ink-sunken);
+  transition: background-color .3s var(--ease), border-color .3s var(--ease);
+}
+.schalter__spur::before {
+  content: '';
+  display: block;
+  width: 1rem; height: 1rem;
+  margin: .19rem;
+  border-radius: 50%;
+  background: var(--text-faint);
+  transition: transform .3s var(--ease-out), background-color .3s var(--ease);
+}
+.schalter__feld:checked + .schalter__spur {
+  background: var(--signal);
+  border-color: var(--signal);
+}
+.schalter__feld:checked + .schalter__spur::before {
+  transform: translateX(1.25rem);
+  background: var(--ink);
+}
+.schalter__feld:focus-visible + .schalter__spur {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+}
+.schalter__feld:disabled + .schalter__spur { opacity: .55; }
+
+.einstellungen__wahl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.einstellungen__wahl .btn {
+  flex: 1 1 auto;
+  justify-content: center;
+  padding: .8rem 1rem;
+  white-space: nowrap;
+}
+.einstellungen__wahl .btn::after { display: none; }
+
+@media (max-width: 560px) {
+  .zustimmung { left: .75rem; right: .75rem; bottom: .75rem; width: auto; padding: 1.25rem; }
+  .gruppe { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* =========================================================================
    Umbrueche
    ========================================================================= */
 
@@ -1711,7 +1951,8 @@ textarea.field__input { min-height: 150px; resize: vertical; }
    ========================================================================= */
 
 @media print {
-  .masthead, .nav-drawer, .grain, .hero__media, .footer, .skip-link { display: none !important; }
+  .masthead, .nav-drawer, .grain, .hero__media, .footer, .skip-link,
+  .zustimmung, .einstellungen { display: none !important; }
   body { background: #fff; color: #000; }
   .legal__inner h3, .legal__inner a { color: #000; }
   [data-reveal] { opacity: 1; transform: none; }

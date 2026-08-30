@@ -709,8 +709,281 @@
     });
   }
 
+  /* ---------- Einwilligung ------------------------------------------------
+     Der Balken beim ersten Aufruf und die Einstellungen dahinter.
+
+     Wichtig zum Verstaendnis: Diese Seite setzt heute keine Cookies, laedt
+     nichts von fremden Servern und misst nichts. Es gibt also im Moment
+     nichts, wofuer eine Einwilligung noetig waere. Der Balken fragt
+     trotzdem - und die Einstellungen sagen bei jeder Gruppe offen, ob
+     darin ueberhaupt etwas steckt.
+
+     Damit die Frage nicht zur leeren Geste wird, haengt hier eine echte
+     Weiche: Wer spaeter etwas einbaut, das Einwilligung braucht, traegt es
+     in GRUPPEN ein, erhoeht STAND und fragt vor dem Laden
+
+         window.novaEinwilligung.erlaubt('statistik')
+
+     ab oder wartet auf das Ereignis 'nova:einwilligung' am Dokument. Das
+     Erhoehen von STAND macht alte Entscheidungen ungueltig - sonst wuerde
+     ein neuer Dienst unter einer Zustimmung mitlaufen, die ihn nie meinte.
+
+     Gespeichert wird die Entscheidung im localStorage, nicht in einem
+     Cookie: Sie bleibt damit im Browser und geht bei keinem Seitenaufruf
+     mit ans Netz. Das Speichern der Entscheidung selbst braucht keine
+     Einwilligung - ohne sie liesse sich die Frage nicht beantworten.
+
+     Ohne JavaScript entsteht nichts davon. Das ist kein Mangel: Dann wird
+     auch nichts gespeichert und nichts nachgeladen.                     */
+
+  /* Der Verweis auf die Datenschutzerklaerung kommt aus der Fusszeile der
+     Seite selbst. Die Startseite verlinkt relativ, die 404-Seite absolut -
+     und die kann unter jedem Pfad ausgeliefert werden. Selbst geraten
+     waere einer der beiden Faelle immer falsch. */
+  var DATENSCHUTZ_URL = (function () {
+    var v = document.querySelector('.footer__meta a[href$="datenschutz.html"]');
+    return v ? v.getAttribute('href') : 'datenschutz.html';
+  })();
+
+  var EINWILLIGUNG_SCHLUESSEL = 'nova-einwilligung';
+  var EINWILLIGUNG_STAND = 1;
+
+  var GRUPPEN = [
+    {
+      schluessel: 'notwendig',
+      pflicht: true,
+      name: 'Notwendig',
+      was: 'Ihre Entscheidung auf dieser Seite und der Spam-Schutz des ' +
+           'Kontaktformulars. Ohne das funktioniert die Seite nicht.'
+    },
+    {
+      schluessel: 'statistik',
+      name: 'Statistik',
+      was: 'Auswertung, wie die Seite genutzt wird.',
+      leer: true
+    },
+    {
+      schluessel: 'medien',
+      name: 'Externe Medien',
+      was: 'Inhalte von fremden Servern, etwa Karten oder Videos.',
+      leer: true
+    }
+  ];
+
+  (function () {
+    /* Der Speicher kann verweigern - privates Fenster, gesperrte Seitendaten.
+       Dann laeuft alles weiter, die Frage kommt nur beim naechsten Aufruf
+       erneut. Ein Absturz waere die schlechtere Antwort. */
+    var lesen = function () {
+      try {
+        var roh = window.localStorage.getItem(EINWILLIGUNG_SCHLUESSEL);
+        if (!roh) return null;
+        var wert = JSON.parse(roh);
+        if (!wert || wert.stand !== EINWILLIGUNG_STAND) return null;
+        return wert;
+      } catch (e) { return null; }
+    };
+
+    var schreiben = function (wahl) {
+      var wert = { stand: EINWILLIGUNG_STAND, zeit: new Date().toISOString(), wahl: wahl };
+      try {
+        window.localStorage.setItem(EINWILLIGUNG_SCHLUESSEL, JSON.stringify(wert));
+      } catch (e) { /* nicht speicherbar - dann eben nur fuer diesen Besuch */ }
+      stand = wert;
+      document.dispatchEvent(new CustomEvent('nova:einwilligung', { detail: wahl }));
+    };
+
+    var stand = lesen();
+
+    var alle = function (wert) {
+      var w = {};
+      GRUPPEN.forEach(function (g) { w[g.schluessel] = g.pflicht ? true : wert; });
+      return w;
+    };
+
+    /* --- Der Balken --- */
+
+    var balken = null;
+
+    var balkenBauen = function () {
+      balken = document.createElement('div');
+      balken.className = 'zustimmung';
+      balken.setAttribute('role', 'dialog');
+      balken.setAttribute('aria-modal', 'false');
+      balken.setAttribute('aria-labelledby', 'zustimmung-titel');
+      balken.innerHTML =
+        '<h2 class="zustimmung__titel" id="zustimmung-titel">Ihre Entscheidung</h2>' +
+        '<p class="zustimmung__text">Diese Seite kommt ohne Cookies, ohne Analyse ' +
+        'und ohne Inhalte von fremden Servern aus. Es gibt zurzeit also nichts zu ' +
+        'messen und nichts nachzuladen. Sie können das hier trotzdem festlegen – ' +
+        'nachzulesen in der <a href="' + DATENSCHUTZ_URL + '">Datenschutz&shy;erklärung</a>.</p>' +
+        '<div class="zustimmung__wahl">' +
+          '<button class="btn btn--solid" type="button" data-zustimmung="alle">Zustimmen</button>' +
+          '<button class="btn" type="button" data-zustimmung="keine">Ablehnen</button>' +
+        '</div>' +
+        '<button class="zustimmung__mehr" type="button" data-zustimmung="einstellungen">' +
+        'Einstellungen ansehen</button>';
+
+      /* Ganz vorn im Dokument, damit Tastatur und Vorleseprogramm die Frage
+         gleich erreichen - angezeigt wird sie trotzdem unten. Die
+         Sprungmarke bleibt das allererste Element. */
+      var sprung = document.querySelector('.skip-link');
+      if (sprung && sprung.nextSibling) document.body.insertBefore(balken, sprung.nextSibling);
+      else document.body.insertBefore(balken, document.body.firstChild);
+
+      platzMachen();
+      window.addEventListener('resize', platzMachen);
+
+      balken.addEventListener('click', function (e) {
+        var knopf = e.target.closest('[data-zustimmung]');
+        if (!knopf) return;
+        var was = knopf.getAttribute('data-zustimmung');
+        if (was === 'einstellungen') { einstellungenOeffnen(); return; }
+        schreiben(alle(was === 'alle'));
+        balkenWeg();
+      });
+    };
+
+    /* Der Balken liegt ueber der Seite. Damit er die Fusszeile nicht
+       verdeckt - Impressum und Datenschutzerklaerung stehen dort -,
+       waechst sie um seine Hoehe, solange die Frage offen ist. */
+    var platzMachen = function () {
+      if (!balken) return;
+      document.documentElement.classList.add('hat-zustimmung');
+      document.documentElement.style.setProperty(
+        '--zustimmung-hoehe', Math.ceil(balken.getBoundingClientRect().height) + 'px');
+    };
+
+    var balkenWeg = function () {
+      if (!balken) return;
+      balken.remove();
+      balken = null;
+      window.removeEventListener('resize', platzMachen);
+      document.documentElement.classList.remove('hat-zustimmung');
+      document.documentElement.style.removeProperty('--zustimmung-hoehe');
+    };
+
+    /* --- Die Einstellungen --- */
+
+    var schirm = null;
+
+    var einstellungenBauen = function () {
+      schirm = document.createElement('dialog');
+      schirm.className = 'einstellungen';
+      schirm.setAttribute('aria-labelledby', 'einstellungen-titel');
+
+      var zeilen = GRUPPEN.map(function (g) {
+        var an = g.pflicht || (stand && stand.wahl && stand.wahl[g.schluessel]);
+        return '<li class="gruppe">' +
+          '<div>' +
+            '<p class="gruppe__name">' + g.name + '</p>' +
+            '<p class="gruppe__was">' + g.was +
+              (g.leer ? '<span class="gruppe__leer">Zurzeit nicht im Einsatz</span>' : '') +
+            '</p>' +
+          '</div>' +
+          '<span class="schalter">' +
+            '<input class="schalter__feld" type="checkbox" data-gruppe="' + g.schluessel + '"' +
+              (an ? ' checked' : '') + (g.pflicht ? ' disabled' : '') +
+              ' aria-label="' + g.name + (g.pflicht ? ' – immer aktiv' : '') + '">' +
+            '<span class="schalter__spur" aria-hidden="true"></span>' +
+          '</span>' +
+        '</li>';
+      }).join('');
+
+      schirm.innerHTML =
+        '<div class="einstellungen__inhalt">' +
+          '<h2 class="einstellungen__titel" id="einstellungen-titel">Datenschutz-Einstellungen</h2>' +
+          '<p class="einstellungen__text">Hier steht, was diese Seite in Ihrem ' +
+          'Browser ablegen oder von außen holen darf. Was zurzeit nichts enthält, ' +
+          'ist als solches gekennzeichnet. Ausführlich in der ' +
+          '<a href="' + DATENSCHUTZ_URL + '">Datenschutzerklärung</a>.</p>' +
+          '<ul class="einstellungen__liste">' + zeilen + '</ul>' +
+          '<div class="einstellungen__wahl">' +
+            '<button class="btn btn--solid" type="button" data-einstellung="speichern">Auswahl speichern</button>' +
+            '<button class="btn" type="button" data-einstellung="alle">Allem zustimmen</button>' +
+            '<button class="btn" type="button" data-einstellung="keine">Alles ablehnen</button>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(schirm);
+
+      schirm.addEventListener('click', function (e) {
+        var knopf = e.target.closest('[data-einstellung]');
+        if (!knopf) return;
+        var was = knopf.getAttribute('data-einstellung');
+        var wahl;
+        if (was === 'speichern') {
+          wahl = {};
+          GRUPPEN.forEach(function (g) {
+            var feld = schirm.querySelector('[data-gruppe="' + g.schluessel + '"]');
+            wahl[g.schluessel] = g.pflicht ? true : !!(feld && feld.checked);
+          });
+        } else {
+          wahl = alle(was === 'alle');
+        }
+        schreiben(wahl);
+        schirm.close();
+        balkenWeg();
+      });
+
+      /* Beim Schliessen ohne Entscheidung - Escape, Klick daneben - bleibt
+         die Frage offen und der Balken kommt zurueck. Ein Wegklicken ist
+         keine Zustimmung. */
+      schirm.addEventListener('close', function () {
+        schirm.remove();
+        schirm = null;
+        if (!lesen() && !balken) balkenBauen();
+      });
+
+      schirm.addEventListener('mousedown', function (e) {
+        if (e.target === schirm) schirm.close();
+      });
+    };
+
+    var einstellungenOeffnen = function () {
+      if (schirm) return;
+      einstellungenBauen();
+      if (typeof schirm.showModal === 'function') schirm.showModal();
+      else schirm.setAttribute('open', '');
+    };
+
+    /* --- Der Weg zurueck aus der Fusszeile --- */
+
+    var meta = document.querySelector('.footer__meta');
+    if (meta) {
+      var zurueck = document.createElement('button');
+      zurueck.className = 'footer__knopf';
+      zurueck.type = 'button';
+      zurueck.textContent = 'Datenschutz-Einstellungen';
+      zurueck.addEventListener('click', einstellungenOeffnen);
+      meta.appendChild(zurueck);
+    }
+
+    /* --- Die Auskunft fuer alles, was spaeter dazukommt --- */
+
+    window.novaEinwilligung = {
+      erlaubt: function (schluessel) {
+        var s = lesen();
+        return !!(s && s.wahl && s.wahl[schluessel]);
+      },
+      stand: function () { return lesen(); },
+      oeffnen: einstellungenOeffnen,
+      zuruecksetzen: function () {
+        try { window.localStorage.removeItem(EINWILLIGUNG_SCHLUESSEL); } catch (e) {}
+        stand = null;
+        if (!balken) balkenBauen();
+      }
+    };
+
+    if (!stand) balkenBauen();
+  })();
+
   /* ---------- Kontaktformular -------------------------------------------- */
 
+  /* Achtung: Dieses return beendet nicht nur diesen Abschnitt, sondern das
+     ganze Skript. Auf Impressum, AGB, Datenschutz und 404 gibt es kein
+     Formular - alles, was hier darunter stuende, liefe dort nie. Neue
+     Bloecke gehoeren deshalb oberhalb dieser Zeile. */
   var form = document.getElementById('kontaktformular');
   if (!form) return;
 
@@ -812,4 +1085,5 @@
         if (submitLabel) submitLabel.textContent = defaultLabel;
       });
   });
+
 })();
