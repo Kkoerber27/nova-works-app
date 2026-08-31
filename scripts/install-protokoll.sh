@@ -36,6 +36,8 @@ if ! grep -q "PROTOKOLL_PROJEKT" "$ENV_FILE" 2>/dev/null; then
 # gerade keiner läuft — dann wird nichts erzeugt und nichts abgelegt.
 export PROTOKOLL_PROJEKT=""
 export PROTOKOLL_OBJEKT=""
+# Meldepostfach. Nur setzen, wenn nicht technik@nova-works.de gilt.
+# export PROTOKOLL_POSTFACH="info@nova-works.de"
 # Nur nötig, wenn der Microsoft-365-Server auf diesem Rechner anders heisst als
 # im Skript vorgegeben. Der Lauf nennt beim Abbruch die verfügbaren Namen.
 # export PROTOKOLL_MCP_SERVER="claude_ai_Microsoft_365"

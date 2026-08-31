@@ -49,6 +49,12 @@ fi
 # in einen Ordner, in dem längst niemand mehr nachsieht.
 PROJEKT="${PROTOKOLL_PROJEKT:-}"
 OBJEKT="${PROTOKOLL_OBJEKT:-}"
+
+# Das Meldepostfach ist umstellbar, weil es ausfallen kann: technik@ lehnte am
+# 31.08.2026 jede Zustellung mit "550 5.6.200 STOREDRV.Deliver; message is
+# treated as poison" ab — ein Defekt im Postfachspeicher, der nur von Microsoft
+# behoben werden kann. Ohne diesen Schalter stünde der ganze Ablauf still.
+POSTFACH="${PROTOKOLL_POSTFACH:-technik@nova-works.de}"
 if [ -z "$PROJEKT" ]; then
   log "Kein PROTOKOLL_PROJEKT gesetzt — nichts zu tun. Für einen laufenden Job in $ENV_FILE eintragen."
   exit 0
@@ -76,6 +82,7 @@ cd "$REPO" || { log "FEHLER cd nach $REPO fehlgeschlagen"; exit 1; }
 PROMPT="Erstelle das Scheinwerfer-Protokoll nach .claude/skills/scheinwerfer-protokoll/SKILL.md.
 
 Zeitraum: ausschliesslich der $TAG, von 00:00 bis 23:59 Ortszeit.
+Postfach: $POSTFACH
 Projektnummer: $PROJEKT
 Objekt: ${OBJEKT:-aus den Meldungen ableiten}
 
@@ -120,7 +127,7 @@ done
 # Prompt über die Standardeingabe, nicht als Argument: --allowedTools nimmt
 # mehrere Werte entgegen und verschluckt einen nachfolgenden Text als weiteren
 # Werkzeugnamen. Der Aufruf endete dann mit "Input must be provided".
-log "Start — Tag $TAG, Projekt $PROJEKT, MCP-Server $MCP_SERVER"
+log "Start — Tag $TAG, Postfach $POSTFACH, Projekt $PROJEKT, MCP-Server $MCP_SERVER"
 if printf '%s' "$PROMPT" | claude -p --allowedTools "$WERKZEUGE" >>"$LOG" 2>&1; then
   log "Ende"
 else

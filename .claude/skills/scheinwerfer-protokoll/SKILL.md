@@ -33,8 +33,14 @@ Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre
 1. **Zeitraum klären.** Ohne Angabe den laufenden Tag nehmen und das im Bericht
    sagen. Ein Protokoll über „alles im Postfach" mischt sonst mehrere Jobs.
 
-2. **Meldungen holen** mit `outlook_email_search`, `mailboxOwnerEmail:
-   "technik@nova-works.de"`, dazu `afterDateTime` / `beforeDateTime`.
+2. **Meldungen holen** mit `outlook_email_search`, dazu `afterDateTime` /
+   `beforeDateTime`. Als `mailboxOwnerEmail` das Postfach nehmen, das im Auftrag
+   genannt ist; ohne Angabe `technik@nova-works.de`.
+
+   Das Postfach ist bewusst kein fester Wert. Am 31.08.2026 lehnte `technik@`
+   jede Zustellung mit `550 5.6.200 STOREDRV.Deliver; message is treated as
+   poison` ab — ein Defekt im Postfachspeicher, der nur von Microsoft behoben
+   werden kann. Bis dahin läuft die Erfassung über eine andere Adresse weiter.
 
 3. **Jede Nachricht einzeln mit `read_resource` öffnen.** Nicht überspringen und
    nicht aus der Trefferliste arbeiten: iPhone-Mails betten Fotos in den Text ein
