@@ -125,8 +125,8 @@ Schlüssel ohne `nw_`-Präfix.
 ### Aus einem WhatsApp-Export
 
 Die Crew meldet in der WhatsApp-Gruppe: ein Foto, darunter als Bildunterschrift
-`Standort, Anzahl, Zustand`. Am Ende des Tages den Chat exportieren — **mit
-Medien** — und die ZIP hier in den Chat hängen.
+`Standort, Anzahl, Zustand` oder kurz `Hauptzelt 4x w600`. Am Ende des Tages den
+Chat exportieren — **mit Medien** — und die ZIP hier in den Chat hängen.
 
 ```bash
 unzip -q "WhatsApp Chat - Technik.zip" -d /tmp/wa
@@ -152,10 +152,18 @@ Beschriftung nicht am Bild, sondern als eigene Nachricht danach, wird sie
 übernommen — sofern derselbe Absender sie innerhalb von fünf Minuten schickt.
 Weiter auseinander nicht: dann ist nicht mehr sicher, dass sie zusammengehören.
 
-Geraten wird nichts. Eine Beschriftung, die nicht aufs Format passt, kommt als
-unvollständige Zeile mit Prüfhinweis ins Protokoll statt lautlos zu verschwinden;
-ein Foto, das der Export nicht mitgebracht hat (Export *ohne* Medien), ebenso.
-Beides steht am Ende des Laufs auf der Konsole.
+Zwei Schreibweisen werden gelesen: die genaue mit Kommas
+(`Halle 3, Traverse Nord, 6, alle ok`) und die kurze, wie sie in der Gruppe
+tatsächlich entsteht (`Hauptzelt 4x w600`) — dort wird der Gerätetyp als solcher
+übernommen. Die kurze Form greift **nur bei einer Nachricht mit Foto**: ohne Bild
+wäre „kann 2x nachsehen" nicht von einer Meldung zu unterscheiden. Ein Zustand
+steht in beiden Formen hinter einem Komma.
+
+Geraten wird nichts. Eine Beschriftung, die auf keine der beiden Formen passt,
+kommt als unvollständige Zeile mit Prüfhinweis ins Protokoll statt lautlos zu
+verschwinden; ein Foto, das der Export nicht mitgebracht hat (Export *ohne*
+Medien), ebenso. Nachrichten ohne Foto und ohne Meldeformat sind Geplauder und
+werden übergangen. Alles davon steht am Ende des Laufs auf der Konsole.
 
 ### Nächtlicher Lauf (Mailweg)
 

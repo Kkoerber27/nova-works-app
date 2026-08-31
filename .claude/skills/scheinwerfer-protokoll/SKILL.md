@@ -20,6 +20,19 @@ Halle 3, Traverse Nord, Feld B4, SW-14, Linse gesprungen
 
 In WhatsApp steht das als Bildunterschrift, per Mail in der Betreffzeile.
 
+**Kurzform mit Foto.** In der Gruppe wird tatsächlich so geschrieben:
+
+```
+Hauptzelt 4x w600
+Nebenzelt 3x litecraft, alle ok
+```
+
+Das ist keine schlampige Fassung, sondern die kürzere: Ort, wie viele, was —
+und der Gerätetyp landet im Feld `geraetetyp` neben der Stückzahl. Erlaubt ist
+sie nur **mit Foto**: ohne Bild wäre „kann 2x nachsehen" nicht von einer Meldung
+zu unterscheiden. Ein Zustand gehört auch hier hinter ein Komma; ohne Komma
+liesse sich nicht entscheiden, wo der Gerätetyp aufhört.
+
 Ein Foto darf mehrere Lampen zeigen — dann steht vor dem Zustand ihre Anzahl,
 und Standort wie Zustand gelten für die ganze Gruppe. Steht dort statt einer Zahl
 eine Gerätebezeichnung, betrifft die Meldung genau dieses eine Gerät.
@@ -57,8 +70,16 @@ meldet, gehört in den Bericht an den Auftraggeber:
 
 - **„Datei fehlt im Export"** — beim Exportieren wurde *Ohne Medien* gewählt.
   Neu exportieren lassen, die Texte allein sind kein Nachweis.
-- **„Meldung nicht zerlegbar"** — die Beschriftung passt nicht aufs Format. Die
-  Zeile steht unvollständig im Protokoll; nachfordern, nicht raten.
+- **„Meldung nicht zerlegbar"** — die Beschriftung passt weder auf die Komma-
+  noch auf die Kurzform. Die Zeile steht unvollständig im Protokoll;
+  nachfordern, nicht raten.
+- **„N Meldung(en) ohne Zustandsangabe"** — nur Ort und Anzahl gemeldet. Als
+  Bestandsaufnahme brauchbar, als Schadensnachweis nicht. Ein Sammelhinweis,
+  keine Zeile je Meldung.
+
+Nachrichten **ohne Foto und ohne Meldeformat** sind Gruppengeplauder und werden
+übergangen, nicht als leere Zeile aufgenommen. Der Lauf sagt, wie viele es
+waren.
 
 Nur der gewünschte Tag: `--tag 2026-09-05`. Ohne das steht der ganze Export im
 Protokoll, und in einer Gruppe, die über mehrere Tage läuft, sind das mehrere

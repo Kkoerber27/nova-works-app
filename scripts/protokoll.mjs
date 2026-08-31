@@ -245,6 +245,14 @@ const zeitraum =
 
 const datum = daten.datum || (zeiten[0] ? zeiten[0].slice(0, 10) : "");
 
+/* Woher die Meldungen kamen, steht im Kopf — sonst liest jemand später „aus der
+   Betreffzeile“ über einem Protokoll, das aus einem Gruppenchat stammt, und
+   sucht Mails, die es nie gab. */
+const ausWhatsApp = /whatsapp/i.test(String(daten.postfach || ""));
+const herkunftSatz = ausWhatsApp
+  ? `im <code>WhatsApp-Export</code> der Gruppe.`
+  : `an <code>${escapeHtml(daten.postfach || "technik@nova-works.de")}</code>.`;
+
 /* ------------------------------------------------------------------- Bausteine */
 
 function fotoZelle(position) {
@@ -530,8 +538,8 @@ const html = `<!DOCTYPE html>
 
   <header class="head">
     <h1>Scheinwerfer-Protokoll</h1>
-    <p class="lede">Erzeugt aus den Meldungen an <code>${escapeHtml(daten.postfach || "technik@nova-works.de")}</code>.
-    Standort, Anzahl und Zustand stammen aus der Betreffzeile.</p>
+    <p class="lede">Erzeugt aus den Meldungen ${herkunftSatz}
+    Standort, Anzahl und Zustand stammen ${ausWhatsApp ? "aus der Bildunterschrift" : "aus der Betreffzeile"}.</p>
     <dl class="meta">
 ${metaFelder.map(([k, v]) => `      <div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("\n")}
     </dl>

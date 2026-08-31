@@ -119,9 +119,14 @@ for (let i = 0; i < nachrichten.length; i++) {
 const ANZAHL = /^(\d{1,4})\s*(?:st(?:ü|ue)ck|st\.?|x)?$/i;
 const GERAET = /^(?=.*\d)(?=.*[A-Za-zÄÖÜäöü])[A-Za-zÄÖÜäöü0-9._-]{2,20}$/;
 
+/* Wie tatsächlich geschrieben wird: „Hauptzelt 4x w600“ — Standort, Stückzahl,
+   Gerätetyp, ohne Kommas. Das ist keine schlampige Fassung des Meldeformats,
+   sondern die kürzere: Ort, wie viele, was. */
+const FREI = /^(.*?)[\s,]+(\d{1,4})\s*(?:x|st(?:ü|ue)ck|st\.)\s*(.*)$/i;
+
 /** Von hinten lesen: letztes Feld Zustand, vorletztes Anzahl oder Gerät, alles
  *  davor Standort. Von vorn ginge es nicht — der Standort enthält selbst Kommas. */
-function zerlegen(text) {
+function streng(text) {
   const felder = text.split(",").map((f) => f.trim()).filter((f, i, a) => !(f === "" && i === a.length - 1));
   if (felder.length < 3) return { fehler: "weniger als drei Kommafelder" };
 
@@ -135,22 +140,58 @@ function zerlegen(text) {
   return { fehler: `mittleres Feld ist weder Stückzahl noch Gerätebezeichnung: „${mitte}“` };
 }
 
+/** „Hauptzelt 4x w600“ und „Halle 3, Traverse Nord 6x MAC Aura, Linse gesprungen“.
+ *  Ein Zustand steht hier hinter einem Komma — ohne Trennzeichen liesse sich
+ *  nicht entscheiden, wo der Gerätetyp aufhört und der Zustand anfängt. */
+function frei(text) {
+  const felder = text.split(",").map((f) => f.trim()).filter(Boolean);
+  // Zwei Lesarten: mit Zustand hinter dem letzten Komma und ohne.
+  const versuche = felder.length > 1
+    ? [[felder.slice(0, -1).join(", "), felder[felder.length - 1]], [text, ""]]
+    : [[text, ""]];
+
+  for (const [links, zustand] of versuche) {
+    const t = FREI.exec(links);
+    if (!t) continue;
+    const standort = t[1].trim().replace(/[,\s]+$/, "");
+    const geraetetyp = t[3].trim();
+    if (!standort) continue;
+    return { standort, anzahl: Number(t[2]), geraetetyp: geraetetyp || undefined, zustand };
+  }
+  return null;
+}
+
+/** Die lockere Lesart greift nur bei einer Meldung mit Foto. Ohne Bild ist
+ *  „kann 2x nachsehen“ eine Wortmeldung im Gruppenchat und keine Position —
+ *  wer ohne Foto meldet, muss das genaue Format schreiben. */
+function zerlegen(text, hatFoto) {
+  const s = streng(text);
+  if (!s.fehler) return s;
+  if (hatFoto) {
+    const f = frei(text);
+    if (f) return f;
+  }
+  return s;
+}
+
 /* ------------------------------------------------------ Positionen bauen */
 
 const tagFilter = wert("--tag");
 const positionen = [];
 const hinweise = [];
 const uebersprungen = [];
+const geplauder = [];
 
 for (const n of nachrichten) {
   if (n.verbraucht) continue;
   if (tagFilter && !n.zeit.startsWith(tagFilter)) continue;
   if (!n.anhang && !n.text) continue;
 
-  // Systemmeldungen des Chats sind keine Meldungen der Crew.
-  if (/verschlüsselt|hat .* hinzugefügt|hat die Gruppe|Nachrichten und Anrufe/i.test(n.text) && !n.anhang) continue;
-
-  const zerlegt = n.text ? zerlegen(n.text) : { fehler: "keine Beschriftung" };
+  // Systemmeldungen des Chats sind keine Meldungen der Crew. WhatsApp schreibt
+  // sie mit dem Gruppennamen als Absender und mal in der zweiten, mal in der
+  // dritten Person („Du hast die Gruppe … erstellt“ / „Robin hat die Gruppe …“).
+  const SYSTEM = /verschlüsselt|Ende-zu-Ende|(?:hat|hast) die Gruppe|hinzugefügt|Nachrichten und Anrufe|Sicherheitsnummer|beigetreten|hat den Betreff/i;
+  if (SYSTEM.test(n.text) && !n.anhang) continue;
 
   const fotos = [];
   if (n.anhang) {
@@ -162,6 +203,17 @@ for (const n of nachrichten) {
     } else {
       uebersprungen.push(`${n.zeit} — Datei fehlt im Export: ${n.anhang}`);
     }
+  }
+
+  const zerlegt = n.text ? zerlegen(n.text, Boolean(n.anhang)) : { fehler: "keine Beschriftung" };
+
+  // In der Gruppe wird auch geredet. Eine Nachricht ohne Foto, die sich nicht
+  // zerlegen lässt, ist kein Bericht, sondern ein Satz — sie gehört nicht als
+  // leere Zeile ins Protokoll. Mit Foto ist es umgekehrt: da war eine Meldung
+  // gemeint, und die muss sichtbar bleiben.
+  if (zerlegt.fehler && !n.anhang) {
+    geplauder.push(n.zeit);
+    continue;
   }
 
   if (zerlegt.fehler) {
@@ -194,7 +246,13 @@ for (const n of nachrichten) {
   };
   if (zerlegt.anzahl) position.anzahl = zerlegt.anzahl;
   if (zerlegt.geraet) position.geraet = zerlegt.geraet;
-  if (!fotos.length) position.hinweis = "kein Foto";
+  if (zerlegt.geraetetyp) position.geraetetyp = zerlegt.geraetetyp;
+
+  const luecken = [];
+  if (!fotos.length) luecken.push("kein Foto");
+  if (!zerlegt.zustand) luecken.push("kein Zustand angegeben");
+  if (luecken.length) position.hinweis = luecken.join(", ");
+
   positionen.push(position);
 }
 
@@ -207,9 +265,24 @@ if (positionen.length === 0) {
 /* Dubletten: dieselbe Stelle ein zweites Mal, typischerweise weitergeleitet. */
 const gesehen = new Set();
 for (const p of positionen) {
-  const schluessel = `${p.standort}|${p.geraet ?? p.anzahl ?? ""}`;
+  const schluessel = `${p.standort}|${p.geraet ?? ""}|${p.geraetetyp ?? ""}|${p.anzahl ?? ""}`;
   if (gesehen.has(schluessel)) p.status = "dublette";
   else gesehen.add(schluessel);
+}
+
+/* Ein Sammelhinweis statt einer Zeile je Meldung: Fehlt bei zehn Meldungen der
+   Zustand, sind zehn gleichlautende Prüfhinweise nur Rauschen, in dem die
+   wirklich einzelnen Fälle untergehen. */
+const ohneZustand = positionen.filter((p) => p.status !== "dublette" && !p.zustand);
+if (ohneZustand.length) {
+  hinweise.push({
+    bezug: "Zustand",
+    titel: `${ohneZustand.length} Meldung(en) ohne Zustandsangabe`,
+    text:
+      `${ohneZustand.map((p) => p.standort).join("; ")} — hier steht nur, was wo hängt, ` +
+      "nicht in welchem Zustand. Als Bestandsaufnahme brauchbar, als Schadensnachweis nicht. " +
+      "Der Zustand gehört hinter ein Komma: „Hauptzelt 4x w600, alle ok“.",
+  });
 }
 
 for (const eintrag of uebersprungen) {
@@ -242,7 +315,9 @@ const vollstaendig = positionen
 
 console.log(`DATEN ${ziel}`);
 console.log(`      ${nachrichten.length} Nachrichten gelesen, ${positionen.length} Meldungen erkannt`);
+if (geplauder.length) console.log(`      ${geplauder.length} Nachricht(en) ohne Foto und ohne Meldeformat übergangen`);
 console.log(`      ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
+if (ohneZustand.length) console.log(`      davon ${ohneZustand.length} Meldung(en) ohne Zustandsangabe`);
 if (hinweise.length) console.log(`      ${hinweise.length} Prüfhinweis(e) — stehen im Protokoll`);
 console.log("");
 console.log("Weiter mit:");
