@@ -138,6 +138,13 @@ export PROTOKOLL_OBJEKT="Glücksgefühle"
 Andere Uhrzeit: `NOVA_HOUR=6 NOVA_MINUTE=30 ./scripts/install-protokoll.sh`.
 Entfernen: `./scripts/install-protokoll.sh --remove`.
 
+Zum Prüfen lässt sich ein beliebiger Tag mitgeben — sonst nimmt der Lauf immer
+den gestrigen:
+
+```bash
+./scripts/protokoll-nacht.sh 2026-08-31
+```
+
 Bewusst einmal am Tag statt bei jeder eingehenden Mail: Ein Protokoll ist eine
 Zusammenfassung. Bei jeder Meldung eines zu erzeugen hiesse, dreissig PDFs in den
 Projektordner zu legen, von denen neunundzwanzig überholt sind.
@@ -157,15 +164,15 @@ Das Skript gibt am `claude`-Aufruf genau das Nötige frei — Postfach lesen,
 Projektordner finden, PDF ablegen — statt die Rechte global zu setzen. So steht
 im Skript, was es darf.
 
-Der Server-Präfix hängt von der Einrichtung ab. Bricht der Lauf mit
-`ABBRUCH: Outlook-Tools nicht verfügbar` ab, in `~/.nova-works/env` nachhelfen:
+Der Server-Präfix hängt von der Einrichtung ab; vorgegeben ist der Name des
+Arbeitsrechners (`claude_ai_Microsoft_365`). Heisst er woanders anders, bricht
+der Lauf mit `ABBRUCH: Outlook-Tools nicht verfügbar` ab und schreibt die
+tatsächlich verfügbaren Werkzeugnamen ins Protokoll. Daraus ergibt sich der
+richtige Wert für `~/.nova-works/env`:
 
 ```bash
-export PROTOKOLL_MCP_SERVER="Microsoft_365"   # Name aus: claude mcp list
+export PROTOKOLL_MCP_SERVER="…"
 ```
-
-Der abgebrochene Lauf schreibt ins Protokoll, welche Werkzeugnamen tatsächlich
-zur Verfügung standen — daraus ergibt sich der richtige Name.
 
 ### Von Hand rendern
 

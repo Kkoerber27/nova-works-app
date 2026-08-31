@@ -4,7 +4,9 @@
 # legt es im Projektordner ab.
 #
 # Wird vom LaunchAgent de.nova-works.protokoll aufgerufen. Zum Testen auch von
-# Hand:  ./scripts/protokoll-nacht.sh
+# Hand, wahlweise mit einem anderen Tag:
+#   ./scripts/protokoll-nacht.sh
+#   ./scripts/protokoll-nacht.sh 2026-08-31
 #
 # Bewusst einmal am Tag statt bei jeder eingehenden Mail: Ein Protokoll ist eine
 # Zusammenfassung. Bei jeder Meldung eines zu erzeugen hiesse, dreissig PDFs in
@@ -52,9 +54,18 @@ if [ -z "$PROJEKT" ]; then
   exit 0
 fi
 
-# Der Lauf um 01:00 fasst den Tag zusammen, der gerade zu Ende ist.
-# BSD-date auf macOS, GNU-date überall sonst.
-TAG="$(date -v-1d "+%Y-%m-%d" 2>/dev/null || date -d "yesterday" "+%Y-%m-%d")"
+# Der Lauf um 01:00 fasst den Tag zusammen, der gerade zu Ende ist. Zum Prüfen
+# lässt sich ein anderer Tag mitgeben:  ./scripts/protokoll-nacht.sh 2026-08-31
+TAG="${1:-}"
+if [ -n "$TAG" ]; then
+  case "$TAG" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+    *) log "FEHLER Datum muss JJJJ-MM-TT lauten, war: $TAG"; exit 1 ;;
+  esac
+else
+  # BSD-date auf macOS, GNU-date überall sonst.
+  TAG="$(date -v-1d "+%Y-%m-%d" 2>/dev/null || date -d "yesterday" "+%Y-%m-%d")"
+fi
 if [ -z "$TAG" ]; then
   log "FEHLER Datum des Vortags liess sich nicht bestimmen."
   exit 1
@@ -90,10 +101,12 @@ müssen. Ist beides nichts, schreibe nur \"nichts zu tun\"."
 # genau das Nötige — Postfach lesen, Projektordner finden, PDF ablegen — statt
 # global in der Konfiguration. So steht im Skript, was es darf.
 #
-# Der Server-Präfix unterscheidet sich je nach Einrichtung. Stimmt er nicht,
-# bricht der Lauf mit "Outlook-Tools nicht verfügbar" ab; dann in der env-Datei
-# PROTOKOLL_MCP_SERVER auf den Namen setzen, den "claude mcp list" anzeigt.
-MCP_SERVER="${PROTOKOLL_MCP_SERVER:-Microsoft_365}"
+# Der Server-Präfix unterscheidet sich je nach Einrichtung. Der Standardwert ist
+# der auf dem Arbeitsrechner tatsächlich vergebene Name. Stimmt er auf einem
+# anderen Rechner nicht, bricht der Lauf mit "Outlook-Tools nicht verfügbar" ab
+# und nennt die verfügbaren Werkzeugnamen; dann PROTOKOLL_MCP_SERVER in der
+# env-Datei setzen.
+MCP_SERVER="${PROTOKOLL_MCP_SERVER:-claude_ai_Microsoft_365}"
 WERKZEUGE="Bash,Read,Write,Glob,Grep"
 for t in outlook_email_search read_resource \
          sharepoint_folder_search sharepoint_search sharepoint_upload_file sharepoint_create_folder; do
