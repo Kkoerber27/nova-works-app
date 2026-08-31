@@ -1,6 +1,6 @@
 # Geplante Aufgaben auf dem Mac
 
-Zwei LaunchAgents. Beide lesen ihre Zugangsdaten aus `~/.nova-works/env`
+Drei LaunchAgents. Alle lesen ihre Zugangsdaten aus `~/.nova-works/env`
 (Rechte 600, liegt bewusst außerhalb des Repositories) und schreiben ein
 Protokoll nach `~/.nova-works/`.
 
@@ -8,6 +8,7 @@ Protokoll nach `~/.nova-works/`.
 |---|---|---|---|
 | Rechnungsablage | alle 15 Min | `rechnungsablage.sh` | `~/.nova-works/rechnungsablage.log` |
 | NAS-Sicherung | nachts 03:15 | `nas-backup.sh` | `~/.nova-works/nas-backup.log` |
+| Scheinwerfer-Protokoll | nachts 01:00 | `protokoll-nacht.sh` | `~/.nova-works/protokoll.log` |
 
 Dazu `nas-restore.sh` für das Zurückspielen — von Hand, nicht geplant.
 
@@ -120,8 +121,40 @@ Schlüssel ohne `nw_`-Präfix.
 
 ## Scheinwerfer-Protokoll
 
-Von Hand, nicht geplant. Rendert die Meldungen aus `technik@nova-works.de` zu
-einem Protokoll — HTML immer, PDF auf Wunsch.
+### Nächtlicher Lauf
+
+```bash
+./scripts/install-protokoll.sh
+```
+
+Fasst um 01:00 den vergangenen Tag zusammen und legt das PDF im Projektordner ab.
+Danach in `~/.nova-works/env` den laufenden Job eintragen:
+
+```bash
+export PROTOKOLL_PROJEKT="26-0032"
+export PROTOKOLL_OBJEKT="Glücksgefühle"
+```
+
+Andere Uhrzeit: `NOVA_HOUR=6 NOVA_MINUTE=30 ./scripts/install-protokoll.sh`.
+Entfernen: `./scripts/install-protokoll.sh --remove`.
+
+Bewusst einmal am Tag statt bei jeder eingehenden Mail: Ein Protokoll ist eine
+Zusammenfassung. Bei jeder Meldung eines zu erzeugen hiesse, dreissig PDFs in den
+Projektordner zu legen, von denen neunundzwanzig überholt sind.
+
+**Ohne gesetztes `PROTOKOLL_PROJEKT` wird nichts erzeugt.** Nach dem letzten Job
+den Eintrag leeren — sonst legt die Automatik Nacht für Nacht leere Protokolle in
+einen Ordner, in dem längst niemand mehr nachsieht. Ebenso wird nichts erzeugt,
+wenn der Tag keine Meldungen hatte: Ein leeres Protokoll sieht aus wie ein Tag
+ohne Schäden und ist keiner.
+
+Fotos bettet der nächtliche Lauf nicht ein. Dafür müssten Dateien von Hand
+abgelegt werden, und der Lauf findet ohne Aufsicht statt.
+
+### Von Hand rendern
+
+Rendert die Meldungen aus `technik@nova-works.de` zu einem Protokoll — HTML
+immer, PDF auf Wunsch.
 
 ```bash
 node scripts/protokoll.mjs daten.json          # nur HTML
