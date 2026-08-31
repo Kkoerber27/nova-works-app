@@ -94,9 +94,25 @@ Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre
    Ohne `--pdf` entsteht nur das HTML. Findet das Skript keinen Chromium-Browser,
    sagt es das und das HTML lässt sich von Hand drucken.
 
-8. **Lücken melden.** Am Ende in zwei Zeilen: wie viele Geräte vollständig
+8. **Protokoll ablegen** — nur wenn die Projektnummer feststeht. Mit
+   `sharepoint_folder_search` den Ordner `Schäden` unterhalb von
+   `Documents/Angebote/<projektnummer>_…` suchen. Bleibt mehr als ein Treffer
+   übrig oder gar keiner, nicht raten: melden und das PDF liegen lassen.
+
+   Vor dem Hochladen mit `sharepoint_search` prüfen, ob dort schon ein Protokoll
+   desselben Tages liegt. Wenn ja, **nicht überschreiben** — im Bericht erwähnen
+   und den Namen um eine laufende Nummer ergänzen. Ein Protokoll ist ein
+   Nachweis; eine überschriebene Fassung ist ein verlorener Nachweis.
+
+   Dateiname: `Scheinwerfer-Protokoll_<Objekt>_<JJJJ-MM-TT>.pdf`, hochgeladen mit
+   `sharepoint_upload_file`.
+
+   Der Ordner `Schäden` ist die Ablage, nicht `Technik` oder `Dokumente`: Dort
+   sucht ihn, wer später einen Schaden belegen muss.
+
+9. **Lücken melden.** Am Ende in zwei Zeilen: wie viele Geräte vollständig
    erfasst sind, und welche Meldungen nachgearbeitet werden müssen — mit Gerät
-   und Grund.
+   und Grund. Dazu, wohin das Protokoll abgelegt wurde oder warum nicht.
 
 ## Fotos ansehen
 
@@ -115,9 +131,11 @@ wo es etwas entscheidet: unklarer Betreff, gemeldeter Schaden, Stichprobe.
   Koordinaten. Der Standort steht ausschließlich im Betreff — ist er zu vage,
   ist die Position verloren und muss neu angefahren werden. Das gehört in die
   Prüfhinweise, nicht stillschweigend übergangen.
-- **Keine Ablage in SharePoint.** Die Anhänge lassen sich lesen, aber nicht
-  weiterreichen. Die Fotos bleiben im Postfach; das Protokoll verlinkt über das
-  Feld `mail` auf die Nachricht in Outlook.
+- **Die Fotos selbst kommen nicht nach SharePoint und nicht ins PDF.** Anhänge
+  lassen sich mit `read_resource` ansehen, aber nicht als Datei weiterreichen —
+  es gibt keinen Weg, die Bytes auf die Platte zu bekommen. Die Fotos bleiben im
+  Postfach, das Protokoll verlinkt über das Feld `mail` auf die Nachricht in
+  Outlook. Das fertige PDF ist davon nicht betroffen und wird abgelegt.
 
 ## Wann etwas liegen bleibt
 
