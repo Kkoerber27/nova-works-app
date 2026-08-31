@@ -139,8 +139,17 @@ und ein Paket, das nur zum Drucken installiert wird, veraltet zwischen zwei
 Protokollen. Wird kein Browser gefunden, sagt das Skript das und das fertige HTML
 lässt sich mit Cmd+P als PDF sichern.
 
-Zwei Eigenheiten, die im Skript festgehalten sind, weil sie sonst stillschweigend
-falsche Protokolle erzeugen:
+Farben, Schrift und Logo stammen aus `Crewplanung.html`, damit das Protokoll wie
+die übrigen Werkzeuge aussieht: warmes Off-White, schwarzes Kopfband mit dem
+Logo, Gold als Akzent, Helvetica. Das Logo liegt als `scripts/assets/` und wird
+beim Rendern als Data-URI eingebettet — so bleibt das HTML eine einzelne Datei,
+die sich weiterleiten lässt. Fehlt es, trägt eine Wortmarke den Kopf.
+
+Bewusst keine Google-Schrift: Die Werkzeuge nutzen Helvetica, und ein PDF, das
+erst eine Schrift nachladen muss, sieht ohne Netz anders aus als mit.
+
+Drei Eigenheiten, die im Skript festgehalten sind, weil sie sonst stillschweigend
+falsche Protokolle oder ein falsches Druckbild erzeugen:
 
 - **Uhrzeiten werden nicht umgerechnet.** Ausgegeben wird, was in der Meldung
   steht. Liefe das Skript auf einem Server in UTC, stünden sonst zwei Stunden zu
@@ -148,3 +157,5 @@ falsche Protokolle erzeugen:
 - **Der Druck benutzt die Tabellenansicht.** Eine A4-Seite ist rund 690 px breit
   und fiele sonst in den Handy-Umbruch — das Protokoll bräuchte das Dreifache an
   Seiten.
+- **Das Kopf-Raster ist eine Flexzeile.** Bei ungerader Feldzahl streckt sich die
+  letzte Zeile über die volle Breite; ein Raster ließe dort eine Lücke stehen.
