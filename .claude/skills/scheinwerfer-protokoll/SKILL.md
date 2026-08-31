@@ -125,17 +125,46 @@ Nicht bei jedem Foto machen. Ein Bild in Originalgröße ist rund 5 MB; bei drei
 Geräten ist das Postfach in einem Durchgang nicht sinnvoll durchzusehen. Ansehen,
 wo es etwas entscheidet: unklarer Betreff, gemeldeter Schaden, Stichprobe.
 
+## Fotos ins Protokoll holen
+
+Standardmäßig führt das Protokoll nur, *dass* Fotos vorliegen. Sollen die Bilder
+im Dokument stehen — bei Mängeln ist das der eigentliche Nachweis —, braucht es
+die Dateien auf der Platte:
+
+1. In Outlook die betreffenden Anhänge markieren und in einen Ordner neben die
+   Datendatei ziehen.
+2. Bei den passenden Fotos das Feld `datei` eintragen, Pfad relativ zur
+   Datendatei:
+
+   ```json
+   "fotos": [{ "name": "image0.jpeg", "groesse": 5149962, "datei": "fotos/sw-14.jpg" }]
+   ```
+
+`protokoll.mjs` verkleinert die Bilder beim Rendern selbst auf 900 px längste
+Kante und bettet sie unter der jeweiligen Zeile ein. Ein Originalfoto von 5 MB
+wird so zu rund 200 KB; ohne das Verkleinern wäre ein Protokoll mit zehn Bildern
+über 50 MB groß und ließe sich nicht mehr per Mail verschicken.
+
+**Nicht alle Fotos einbetten.** Bei dreißig Positionen will niemand dreißig
+Bilder im PDF. Die Regel: Was einen Mangel zeigt, kommt ins Dokument; der Rest
+bleibt im Postfach und ist über den Link erreichbar.
+
+Fehlt eine unter `datei` genannte Datei, wird sie beim Rendern **gemeldet** und
+das Bild weggelassen — ein Protokoll, das vollständig aussieht und es nicht ist,
+wäre schlimmer als eines mit einer sichtbaren Lücke.
+
 ## Was das Protokoll nicht kann
 
 - **Kein Standort aus dem Bild.** Fotos aus dem Mailversand enthalten keine
   Koordinaten. Der Standort steht ausschließlich im Betreff — ist er zu vage,
   ist die Position verloren und muss neu angefahren werden. Das gehört in die
   Prüfhinweise, nicht stillschweigend übergangen.
-- **Die Fotos selbst kommen nicht nach SharePoint und nicht ins PDF.** Anhänge
-  lassen sich mit `read_resource` ansehen, aber nicht als Datei weiterreichen —
-  es gibt keinen Weg, die Bytes auf die Platte zu bekommen. Die Fotos bleiben im
-  Postfach, das Protokoll verlinkt über das Feld `mail` auf die Nachricht in
-  Outlook. Das fertige PDF ist davon nicht betroffen und wird abgelegt.
+- **Die Fotos landen nicht von selbst im Dokument.** Anhänge lassen sich mit
+  `read_resource` ansehen, aber nicht als Datei weiterreichen — es gibt keinen
+  Weg, die Bytes auf die Platte zu bekommen. Wer Bilder im Protokoll haben will,
+  legt sie einmal von Hand ab; siehe „Fotos ins Protokoll holen". Ohne das
+  bleiben die Fotos im Postfach, und das Protokoll verlinkt über das Feld `mail`
+  auf die Nachricht in Outlook.
 
 ## Wann etwas liegen bleibt
 

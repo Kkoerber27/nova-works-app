@@ -20,7 +20,12 @@
       "geraetetyp": "Litecraft BeamX7",
       "absender": "mail@kilian-koerber.de",
       "zeit": "2026-08-31T13:14:01+02:00",
-      "fotos": [{ "name": "image0.jpeg", "groesse": 236253 }],
+      "fotos": [
+        {
+          "name": "image0.jpeg",
+          "groesse": 236253
+        }
+      ],
       "status": "unvollstaendig"
     },
     {
@@ -49,7 +54,12 @@
       "geraetetyp": "Litecraft BeamX7",
       "absender": "kk@nova-works.de",
       "zeit": "2026-08-31T13:27:04+02:00",
-      "fotos": [{ "name": "image0.jpeg", "groesse": 5149962 }],
+      "fotos": [
+        {
+          "name": "image0.jpeg",
+          "groesse": 5149962
+        }
+      ],
       "status": "vollstaendig"
     },
     {
@@ -59,7 +69,12 @@
       "geraetetyp": "Litecraft BeamX7",
       "absender": "kk@nova-works.de",
       "zeit": "2026-08-31T13:31:00+02:00",
-      "fotos": [{ "name": "image0.jpeg", "groesse": 4980112 }],
+      "fotos": [
+        {
+          "name": "image0.jpeg",
+          "groesse": 4980112
+        }
+      ],
       "status": "vollstaendig"
     }
   ],

@@ -20,7 +20,8 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, extname, join, resolve } from "node:path";
+import { createHash } from "node:crypto";
 
 /* ------------------------------------------------------------------ Eingabe */
 
@@ -98,6 +99,58 @@ function datumLang(wert) {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 }
 
+/* ------------------------------------------------------------- Miniaturen */
+
+/** Längste Kante der eingebetteten Miniatur. Ein Originalfoto ist rund 5 MB;
+ *  eingebettet als Data-URI wären zehn davon ein PDF jenseits von 50 MB. Als
+ *  Beleg dient ohnehin die Datei im Postfach, im Protokoll genügt das Bild zum
+ *  Wiedererkennen. */
+const MINI_KANTE = 900;
+const MINI_QUALITAET = 72;
+
+const MIME = { ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".png": "image/png", ".webp": "image/webp" };
+
+/** Verkleinert mit dem, was da ist: sips gehört zu macOS, ImageMagick ist auf
+ *  Servern üblich. Ist keins von beidem da, wird das Original eingebettet —
+ *  lieber ein großes Protokoll als eines ohne Bilder. */
+function verkleinern(von, nach) {
+  const versuche = [
+    ["sips", ["-s", "format", "jpeg", "-s", "formatOptions", String(MINI_QUALITAET),
+              "-Z", String(MINI_KANTE), von, "--out", nach]],
+    ["magick", [von, "-resize", `${MINI_KANTE}x${MINI_KANTE}>`, "-quality", String(MINI_QUALITAET), nach]],
+    ["convert", [von, "-resize", `${MINI_KANTE}x${MINI_KANTE}>`, "-quality", String(MINI_QUALITAET), nach]],
+  ];
+  for (const [werkzeug, argumente] of versuche) {
+    try {
+      execFileSync(werkzeug, argumente, { stdio: "ignore", timeout: 30_000 });
+      if (existsSync(nach)) return true;
+    } catch {
+      // Werkzeug fehlt oder kam nicht zurecht — das nächste probieren.
+    }
+  }
+  return false;
+}
+
+const fehlendeBilder = [];
+let ohneVerkleinerung = 0;
+const miniOrdner = mkdtempSync(join(tmpdir(), "nova-mini-"));
+
+/** Pfad → Data-URI. Pfade dürfen relativ zur Datendatei stehen. */
+function miniatur(pfad) {
+  const voll = resolve(dirname(resolve(quelle)), pfad);
+  if (!existsSync(voll)) {
+    fehlendeBilder.push(pfad);
+    return null;
+  }
+  const ziel = join(miniOrdner, `${createHash("sha1").update(voll).digest("hex")}.jpg`);
+  if (verkleinern(voll, ziel)) {
+    return `data:image/jpeg;base64,${readFileSync(ziel).toString("base64")}`;
+  }
+  ohneVerkleinerung += 1;
+  const typ = MIME[extname(voll).toLowerCase()] ?? "image/jpeg";
+  return `data:${typ};base64,${readFileSync(voll).toString("base64")}`;
+}
+
 const CHIP = {
   vollstaendig: { klasse: "ok", text: "Vollständig" },
   unvollstaendig: { klasse: "gap", text: "Unvollständig" },
@@ -166,12 +219,25 @@ function zeile(position) {
     ? escapeHtml(position.geraet)
     : `${anzahl}&nbsp;Stück`;
 
+  // Nur Fotos mit hinterlegter Datei landen im Dokument. Die übrigen sind
+  // trotzdem in der Foto-Spalte gezählt — sie liegen im Postfach.
+  const bilder = (Array.isArray(position.fotos) ? position.fotos : [])
+    .filter((f) => f.datei)
+    .map((f) => ({ uri: miniatur(f.datei), name: f.name || f.datei }))
+    .filter((b) => b.uri);
+
+  const streifen = bilder.length
+    ? `\n        <div class="fotos">${bilder
+        .map((b) => `<img src="${b.uri}" alt="${escapeHtml(b.name)}">`)
+        .join("")}</div>`
+    : "";
+
   return `      <div class="row">
         <div class="id">${bezeichner}${typ}</div>
         <div class="place"><span class="cell-label">Standort</span>${standort}<span class="sub">${untertitel}</span></div>
         <div class="cond"><span class="cell-label">Zustand</span>${zustand}</div>
         <div class="photo"><span class="cell-label">Foto</span>${fotoZelle(position)}</div>
-        <div><span class="chip ${chip.klasse}">${chip.text}</span></div>
+        <div><span class="chip ${chip.klasse}">${chip.text}</span></div>${streifen}
       </div>`;
 }
 
@@ -293,6 +359,9 @@ const STIL = `
   .chip.dupe { background:var(--dupe-bg); color:var(--dupe); }
   .cell-label { display:none; font-size:.62rem; letter-spacing:.16em; text-transform:uppercase;
                 color:var(--muted); margin-bottom:.15rem; }
+  .fotos { grid-column:1/-1; display:flex; flex-wrap:wrap; gap:.45rem; margin-top:.7rem; }
+  .fotos img { height:120px; width:auto; max-width:100%; display:block;
+               border:1px solid var(--rule); background:var(--surface-2); }
 
   .findings { border:1px solid var(--rule); background:var(--surface); }
   .finding { padding:.95rem 1rem; display:grid; grid-template-columns:6rem 1fr; gap:1rem;
@@ -331,6 +400,8 @@ const STIL = `
            gap:.6rem; padding:.55rem .7rem; font-size:.84rem; }
     .finding { grid-template-columns:4.4rem 1fr; gap:.6rem; padding:.65rem .7rem; }
     .chip { font-size:.62rem; letter-spacing:.06em; padding:.22rem .4rem; }
+    .fotos { gap:.35rem; margin-top:.5rem; }
+    .fotos img { height:82px; }
     .row, .finding { break-inside:avoid; }
     h1, h2 { break-after:avoid; }
     .place a { border-bottom:0; }
@@ -425,8 +496,23 @@ const zielHtml = resolve(outArg || quelle.replace(/\.json$/i, "") + ".html");
 writeFileSync(zielHtml, html, "utf8");
 console.log(`HTML  ${zielHtml}`);
 
-if (!flags.has("--pdf")) {
+/** Kennzahlen und alles, was beim Einbetten der Bilder nicht geklappt hat.
+ *  Stillschweigend fehlende Fotos wären das Schlimmste: das Protokoll sähe
+ *  vollständig aus und wäre es nicht. */
+function bericht() {
   console.log(`      ${positionen.length} Meldungen, ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
+  if (fehlendeBilder.length) {
+    console.warn(`      ${fehlendeBilder.length} Foto(s) nicht gefunden, nicht eingebettet:`);
+    for (const pfad of fehlendeBilder) console.warn(`        ${pfad}`);
+  }
+  if (ohneVerkleinerung) {
+    console.warn(`      ${ohneVerkleinerung} Foto(s) in Originalgröße eingebettet — weder sips noch ImageMagick gefunden.`);
+    console.warn("      Das Dokument wird dadurch groß. Auf dem Mac bringt sips das von Haus aus mit.");
+  }
+}
+
+if (!flags.has("--pdf")) {
+  bericht();
   process.exit(0);
 }
 
@@ -491,4 +577,4 @@ if (!existsSync(zielPdf)) {
 }
 
 console.log(`PDF   ${zielPdf}`);
-console.log(`      ${positionen.length} Meldungen, ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
+bericht();

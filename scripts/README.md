@@ -132,6 +132,14 @@ node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
 Die `daten.json` schreibt der Skill `.claude/skills/scheinwerfer-protokoll/`;
 das Format steht dort, ein ausgefülltes Beispiel liegt daneben in `beispiel.json`.
 
+Trägt ein Foto das Feld `datei` (Pfad relativ zur Datendatei), wird es als
+Miniatur unter der Zeile eingebettet. Verkleinert wird mit `sips` (gehört zu
+macOS), ersatzweise mit ImageMagick, auf 900 px längste Kante — aus 5 MB werden
+rund 200 KB. Ohne beides landet das Original im Dokument, was das Skript meldet.
+Eine unter `datei` genannte, aber fehlende Datei wird ebenfalls gemeldet und
+weggelassen: ein Protokoll, das vollständig aussieht und es nicht ist, wäre
+schlimmer als eines mit sichtbarer Lücke.
+
 Für das PDF wird ein installierter Chromium-Browser kopflos benutzt — gesucht
 werden Chrome, Edge, Brave und Chromium in dieser Reihenfolge. Bewusst keine
 zusätzliche Abhängigkeit: Edge ist auf einem Mac mit Microsoft 365 ohnehin da,
