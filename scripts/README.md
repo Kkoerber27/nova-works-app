@@ -180,10 +180,30 @@ Rendert die Meldungen aus `technik@nova-works.de` zu einem Protokoll — HTML
 immer, PDF auf Wunsch.
 
 ```bash
-node scripts/protokoll.mjs daten.json          # nur HTML
-node scripts/protokoll.mjs daten.json --pdf    # HTML und PDF daneben
+node scripts/protokoll.mjs daten.json                    # nur HTML
+node scripts/protokoll.mjs daten.json --pdf              # HTML und PDF daneben
+node scripts/protokoll.mjs daten.json --pdf --ablegen    # dazu in den Projektordner
 node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
 ```
+
+`--ablegen` kopiert das PDF nach
+`Angebote/<projektnummer>_…/Schäden/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf`
+im lokal synchronisierten OneDrive; der Sync-Client schiebt es nach SharePoint.
+Der Basisordner lässt sich über `NOVA_ABLAGE_BASIS` umstellen, Standard ist
+`~/Library/CloudStorage/OneDrive-NOVAWORKSGmbH/Angebote`.
+
+Bewusst über den Dateipfad statt über die Graph-API: `sharepoint_upload_file`
+nimmt den Inhalt nur inline als base64 entgegen, für ein Protokoll über 200.000
+Zeichen. Ein einziges falsches Zeichen ergibt ein beschädigtes PDF, und ein
+unlesbarer Nachweis im Schadensordner ist schlimmer als gar keiner.
+
+Abgelegt wird nur bei genau einem passenden Projektordner, und nie
+überschreibend — eine vorhandene Fassung desselben Tages bekommt eine laufende
+Nummer. Sonst bricht das Skript mit Rückgabewert 4 und einer Begründung ab.
+
+Ein Fallstrick, der im Skript berücksichtigt ist: macOS legt Dateinamen in
+zerlegter Form ab, „Schäden" besteht dort aus `a` und einem gesonderten
+Umlautzeichen. Ohne Normalisierung findet ein Vergleich den Ordner nie.
 
 Die `daten.json` schreibt der Skill `.claude/skills/scheinwerfer-protokoll/`;
 das Format steht dort, ein ausgefülltes Beispiel liegt daneben in `beispiel.json`.

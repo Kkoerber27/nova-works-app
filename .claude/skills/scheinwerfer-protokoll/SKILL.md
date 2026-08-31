@@ -84,28 +84,31 @@ Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre
    Bei einer Gruppenmeldung zählt der Status für alle Lampen der Gruppe: sechs
    Stück ohne Foto sind sechs unvollständige Scheinwerfer, nicht einer.
 
-7. **Daten schreiben** nach dem Muster in `beispiel.json` (gleicher Ordner) und
-   rendern:
+7. **Daten schreiben** nach dem Muster in `beispiel.json` (gleicher Ordner),
+   rendern und ablegen:
 
    ```bash
-   node scripts/protokoll.mjs /pfad/daten.json --pdf
+   node scripts/protokoll.mjs /pfad/daten.json --pdf --ablegen
    ```
 
    Ohne `--pdf` entsteht nur das HTML. Findet das Skript keinen Chromium-Browser,
    sagt es das und das HTML lässt sich von Hand drucken.
 
-8. **Protokoll ablegen** — nur wenn die Projektnummer feststeht. Mit
-   `sharepoint_folder_search` den Ordner `Schäden` unterhalb von
-   `Documents/Angebote/<projektnummer>_…` suchen. Bleibt mehr als ein Treffer
-   übrig oder gar keiner, nicht raten: melden und das PDF liegen lassen.
+8. **Ablage macht `--ablegen` selbst.** Steht eine `projekt`-Nummer in den Daten,
+   kopiert das Skript das PDF nach
+   `Angebote/<projektnummer>_…/Schäden/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf`
+   im lokal synchronisierten OneDrive; der Sync-Client schiebt es nach SharePoint.
 
-   Vor dem Hochladen mit `sharepoint_search` prüfen, ob dort schon ein Protokoll
-   desselben Tages liegt. Wenn ja, **nicht überschreiben** — im Bericht erwähnen
-   und den Namen um eine laufende Nummer ergänzen. Ein Protokoll ist ein
-   Nachweis; eine überschriebene Fassung ist ein verlorener Nachweis.
+   **Nicht über `sharepoint_upload_file` gehen.** Das Werkzeug nimmt den Inhalt
+   nur inline als base64 entgegen — für ein Protokoll sind das über 200.000
+   Zeichen, die zeichengenau durchgereicht werden müssten. Ein einziges falsches
+   Zeichen ergibt ein beschädigtes PDF, und ein unlesbarer Nachweis im
+   Schadensordner ist schlimmer als gar keiner.
 
-   Dateiname: `Scheinwerfer-Protokoll_<Objekt>_<JJJJ-MM-TT>.pdf`, hochgeladen mit
-   `sharepoint_upload_file`.
+   Das Skript legt nur ab, wenn genau ein Projektordner zur Nummer passt, und
+   überschreibt nie: Eine vorhandene Fassung desselben Tages bekommt eine
+   laufende Nummer. Meldet es `ABLAGE nicht erfolgt` (Rückgabewert 4), den Grund
+   im Bericht nennen und das PDF liegen lassen.
 
    Der Ordner `Schäden` ist die Ablage, nicht `Technik` oder `Dokumente`: Dort
    sucht ihn, wer später einen Schaden belegen muss.

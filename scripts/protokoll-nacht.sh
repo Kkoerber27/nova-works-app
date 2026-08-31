@@ -98,8 +98,10 @@ müssen. Ist beides nichts, schreibe nur \"nichts zu tun\"."
 
 # Ein unbeaufsichtigter Lauf bekommt keine Rückfrage beantwortet und darf ohne
 # ausdrückliche Freigabe keine MCP-Werkzeuge aufrufen. Freigegeben wird hier
-# genau das Nötige — Postfach lesen, Projektordner finden, PDF ablegen — statt
-# global in der Konfiguration. So steht im Skript, was es darf.
+# genau das Nötige — Postfach lesen und die Anhänge dazu — statt global in der
+# Konfiguration. So steht im Skript, was es darf. SharePoint-Werkzeuge braucht es
+# nicht: die Ablage macht protokoll.mjs --ablegen über den synchronisierten
+# Ordner.
 #
 # Der Server-Präfix unterscheidet sich je nach Einrichtung. Der Standardwert ist
 # der auf dem Arbeitsrechner tatsächlich vergebene Name. Stimmt er auf einem
@@ -108,8 +110,7 @@ müssen. Ist beides nichts, schreibe nur \"nichts zu tun\"."
 # env-Datei setzen.
 MCP_SERVER="${PROTOKOLL_MCP_SERVER:-claude_ai_Microsoft_365}"
 WERKZEUGE="Bash,Read,Write,Glob,Grep"
-for t in outlook_email_search read_resource \
-         sharepoint_folder_search sharepoint_search sharepoint_upload_file sharepoint_create_folder; do
+for t in outlook_email_search read_resource; do
   WERKZEUGE="$WERKZEUGE,mcp__${MCP_SERVER}__${t}"
 done
 

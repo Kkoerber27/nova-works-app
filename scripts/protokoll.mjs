@@ -6,6 +6,7 @@
  *   node scripts/protokoll.mjs daten.json
  *   node scripts/protokoll.mjs daten.json --pdf
  *   node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
+ *   node scripts/protokoll.mjs daten.json --pdf --ablegen
  *
  * Die Daten schreibt der Skill .claude/skills/scheinwerfer-protokoll/SKILL.md.
  * Das Format steht dort beschrieben; ein Beispiel liegt in
@@ -18,7 +19,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -592,3 +593,60 @@ if (!existsSync(zielPdf)) {
 
 console.log(`PDF   ${zielPdf}`);
 bericht();
+
+
+/* ----------------------------------------------------------------- Ablage */
+
+/* SharePoint ist auf dem Arbeitsrechner lokal synchronisiert. Das Protokoll
+   wird deshalb in den Projektordner kopiert, statt es über die Graph-API
+   hochzuladen: sharepoint_upload_file nimmt den Inhalt nur inline als base64
+   entgegen, und 215.000 Zeichen zeichengenau durchzureichen ist kein Weg, auf
+   dem ein Nachweis unbeschädigt ankommt. Der Sync-Client erledigt den Rest. */
+
+const ABLAGE_BASIS =
+  process.env.NOVA_ABLAGE_BASIS ||
+  join(process.env.HOME || "", "Library/CloudStorage/OneDrive-NOVAWORKSGmbH/Angebote");
+
+/** macOS legt Dateinamen in zerlegter Form ab: "Schäden" besteht dort aus a und
+ *  einem gesonderten Umlautzeichen. Ohne Normalisierung findet ein Vergleich mit
+ *  der zusammengesetzten Schreibweise den Ordner nie. */
+const nfc = (wert) => String(wert).normalize("NFC");
+
+function ablegen(pdfPfad) {
+  if (!daten.projekt) return { fehler: "keine Projektnummer in den Daten — nicht abgelegt" };
+  if (!existsSync(ABLAGE_BASIS)) return { fehler: `Ablageordner nicht gefunden: ${ABLAGE_BASIS}` };
+
+  const treffer = readdirSync(ABLAGE_BASIS).filter((n) =>
+    nfc(n).startsWith(`${nfc(daten.projekt)}_`),
+  );
+  if (treffer.length === 0) return { fehler: `kein Projektordner zu ${daten.projekt} unter ${ABLAGE_BASIS}` };
+  if (treffer.length > 1) {
+    return { fehler: `mehrere Projektordner zu ${daten.projekt}: ${treffer.join(", ")} — nicht abgelegt` };
+  }
+
+  const projektOrdner = join(ABLAGE_BASIS, treffer[0]);
+  const schaeden = readdirSync(projektOrdner).find((n) => nfc(n) === "Schäden");
+  const ziel = join(projektOrdner, schaeden ?? "Schäden");
+  if (!schaeden) mkdirSync(ziel, { recursive: true });
+
+  // Vorhandenes nicht überschreiben: ein überschriebener Nachweis ist ein
+  // verlorener Nachweis. Stattdessen durchnummerieren.
+  const stamm = `Scheinwerfer-Protokoll_${daten.objekt || "Protokoll"}_${datum || "ohne-Datum"}`;
+  let name = `${stamm}.pdf`;
+  let n = 2;
+  while (existsSync(join(ziel, name))) name = `${stamm}_${n++}.pdf`;
+
+  const zielDatei = join(ziel, name);
+  copyFileSync(pdfPfad, zielDatei);
+  return { pfad: zielDatei, neuerOrdner: !schaeden };
+}
+
+if (flags.has("--ablegen")) {
+  const ergebnis = ablegen(zielPdf);
+  if (ergebnis.fehler) {
+    console.error(`ABLAGE nicht erfolgt: ${ergebnis.fehler}`);
+    process.exit(4);
+  }
+  if (ergebnis.neuerOrdner) console.log('      Ordner "Schäden" neu angelegt');
+  console.log(`ABLAGE ${ergebnis.pfad}`);
+}
