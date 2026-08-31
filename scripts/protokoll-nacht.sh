@@ -100,8 +100,11 @@ for t in outlook_email_search read_resource \
   WERKZEUGE="$WERKZEUGE,mcp__${MCP_SERVER}__${t}"
 done
 
+# Prompt über die Standardeingabe, nicht als Argument: --allowedTools nimmt
+# mehrere Werte entgegen und verschluckt einen nachfolgenden Text als weiteren
+# Werkzeugnamen. Der Aufruf endete dann mit "Input must be provided".
 log "Start — Tag $TAG, Projekt $PROJEKT, MCP-Server $MCP_SERVER"
-if claude -p --allowedTools "$WERKZEUGE" "$PROMPT" >>"$LOG" 2>&1; then
+if printf '%s' "$PROMPT" | claude -p --allowedTools "$WERKZEUGE" >>"$LOG" 2>&1; then
   log "Ende"
 else
   log "FEHLER claude endete mit Code $?"
