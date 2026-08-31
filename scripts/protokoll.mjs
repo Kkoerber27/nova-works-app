@@ -334,7 +334,6 @@ const STIL = `
     --paper:#f4f3f1; --surface:#ffffff; --surface-2:#eceae7;
     --ink:#1a1a1a; --ink-2:#444444; --muted:#888888;
     --rule:#d9d6d1; --rule-2:#e8e5e0;
-    --band:#0a0a0a; --band-ink:#e8e8e8; --band-rule:#3a3a3a;
     --accent:#a07840; --accent-hell:#c8a96e;
     --licht:#4a7fb5;
     --ok:#3f7a54; --ok-bg:#e2ede6;
@@ -355,6 +354,14 @@ const STIL = `
       --note:#a8a8a8; --note-bg:#2a2a2a;
     }
   }
+  /* Das Logo ist dunkle Zeichnung auf Transparenz, gemacht für helles Papier.
+     Auf dunklem Grund verschwände es, deshalb dort umgekehrt. */
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .blatt-kopf img { filter:invert(1); }
+  }
+  :root[data-theme="dark"] .blatt-kopf img { filter:invert(1); }
+  :root[data-theme="light"] .blatt-kopf img { filter:none; }
+
   :root[data-theme="dark"] {
     --paper:#141414; --surface:#1e1e1e; --surface-2:#252525;
     --ink:#e8e8e8; --ink-2:#bbbbbb; --muted:#888888;
@@ -370,32 +377,33 @@ const STIL = `
          font-size:15px; line-height:1.55; -webkit-font-smoothing:antialiased; }
   .sheet { max-width:64rem; margin:0 auto; padding:0 clamp(1rem,4vw,2.5rem) 3.5rem; }
 
-  /* Kopfband: das Logo hat einen schwarzen Grund und braucht eine dunkle
-     Fläche — in der App sitzt es aus demselben Grund in der Seitenleiste. */
-  .band { background:var(--band); color:var(--band-ink);
-          margin:0 calc(-1 * clamp(1rem,4vw,2.5rem)) 2.25rem;
-          padding:1.1rem clamp(1rem,4vw,2.5rem);
-          display:flex; align-items:center; justify-content:space-between;
-          gap:1.5rem; flex-wrap:wrap; border-bottom:2px solid var(--accent-hell); }
-  .band img { height:34px; width:auto; display:block; }
-  .band .kennung { font-size:.72rem; letter-spacing:.22em; text-transform:uppercase;
-                   color:var(--accent-hell); text-align:right; line-height:1.6; }
-  .band .kennung .projekt { color:var(--band-ink); opacity:.6; }
-  .band-rechts { display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap; justify-content:flex-end; }
+  /* Blattkopf wie in den übrigen Hauswerkzeugen: freigestelltes Logo auf
+     Papier, darunter der Titel, darunter eine 2 px starke schwarze Linie —
+     .sheet-head in funkgeraete.html und .print-header in Crewplanung.html.
+     Das frühere dunkle Band war keine Hausform, sondern eine Notlösung: das
+     alte Logo-Asset hatte einen schwarzen Grund und war auf Papier nicht zu
+     gebrauchen. Mit dem freigestellten Logo entfällt der Grund. */
+  .blatt-kopf { display:flex; align-items:flex-end; justify-content:space-between;
+                gap:1.5rem; flex-wrap:wrap; margin:0 0 1.5rem;
+                border-bottom:2px solid var(--ink); padding-bottom:.7rem; }
+  .blatt-kopf img { height:30px; width:auto; display:block; margin-bottom:.55rem; }
+  .kennung { text-align:right; line-height:1.5; font-size:.72rem; color:var(--ink-2);
+             display:flex; flex-direction:column; align-items:flex-end; gap:.5rem; }
+  .kennung .objekt { color:var(--ink); font-size:.78rem; font-weight:600;
+                     letter-spacing:.12em; text-transform:uppercase; }
   /* Öffnet den Druckdialog des Browsers; dort führt „Als PDF sichern" zum
      selben Ergebnis wie protokoll.mjs --pdf. Im Druck ist der Knopf weg —
      er hat auf einem Nachweis nichts verloren. */
-  .druck { font-family:var(--body); font-size:.68rem; font-weight:600; letter-spacing:.18em;
-           text-transform:uppercase; color:var(--accent-hell); background:none;
-           border:1px solid var(--accent-hell); padding:.5rem .9rem; cursor:pointer;
-           white-space:nowrap; }
-  .druck:hover { background:var(--accent-hell); color:var(--band); }
-  .druck:focus-visible { outline:2px solid var(--band-ink); outline-offset:2px; }
-  .band .wortmarke { font-size:1.1rem; letter-spacing:.3em; text-transform:uppercase;
-                     color:var(--band-ink); }
+  .druck { font-family:var(--body); font-size:.66rem; font-weight:600; letter-spacing:.1em;
+           text-transform:uppercase; color:var(--paper); background:var(--ink);
+           border:none; padding:.45rem 1rem; cursor:pointer; white-space:nowrap; }
+  .druck:hover { background:var(--ink-2); }
+  .druck:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  .wortmarke { display:block; font-size:1.05rem; font-weight:200; letter-spacing:.42em;
+               text-transform:uppercase; color:var(--ink); margin-bottom:.55rem; }
 
-  h1 { font-size:clamp(1.5rem,4vw,2.1rem); font-weight:300; letter-spacing:.15em;
-       text-transform:uppercase; margin:0 0 .5rem; text-wrap:balance; }
+  h1 { font-size:1.32rem; font-weight:600; letter-spacing:.05em;
+       text-transform:uppercase; margin:0; text-wrap:balance; }
   .lede { margin:0 0 1.5rem; max-width:60ch; color:var(--ink-2); font-size:.95rem; }
 
   /* Flexzeile statt Raster: bei ungerader Feldzahl streckt sich die letzte
@@ -468,12 +476,15 @@ const STIL = `
     .finding { grid-template-columns:1fr; gap:.4rem; }
   }
 
-  @page { margin:12mm; }
+  /* Satzspiegel wie in den übrigen Hauswerkzeugen (funkgeraete.html). */
+  @page { size:A4 portrait; margin:12mm 10mm; }
   @media print {
     body { background:#fff; }
     .sheet { padding:0; max-width:none; }
-    .band { margin:0 0 1.6rem; padding:.8rem 1rem; }
-    .band img { height:26px; }
+    .blatt-kopf { margin-bottom:1.3rem; padding-bottom:.5rem; }
+    /* Gedruckt wird auf weisses Papier — dort gilt immer die helle Fassung,
+       auch wenn der Bildschirm dunkel eingestellt ist. */
+    .blatt-kopf img { height:26px; filter:none; }
     .druck { display:none; }
     section { margin-bottom:1.6rem; }
     .meta { margin-bottom:1.6rem; }
@@ -528,22 +539,25 @@ const html = `<!DOCTYPE html>
 <body>
 <div class="sheet">
 
-  <div class="band">
-    ${logoTag}
-    <div class="band-rechts">
-      <div class="kennung">${escapeHtml(daten.objekt || "Protokoll")}${daten.projekt ? `<br><span class="projekt">Projekt ${escapeHtml(daten.projekt)}</span>` : ""}</div>
+  <header class="blatt-kopf">
+    <div>
+      ${logoTag}
+      <h1>Scheinwerfer-Protokoll</h1>
+    </div>
+    <div class="kennung">
+      <span class="objekt">${escapeHtml(daten.objekt || "Protokoll")}</span>
+      ${daten.projekt ? `<span>Projekt ${escapeHtml(daten.projekt)}</span>` : ""}
       <button type="button" class="druck" onclick="window.print()">Als PDF</button>
     </div>
-  </div>
+  </header>
 
-  <header class="head">
-    <h1>Scheinwerfer-Protokoll</h1>
+  <div class="head">
     <p class="lede">Erzeugt aus den Meldungen ${herkunftSatz}
     Standort, Anzahl und Zustand stammen ${ausWhatsApp ? "aus der Bildunterschrift" : "aus der Betreffzeile"}.</p>
     <dl class="meta">
 ${metaFelder.map(([k, v]) => `      <div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("\n")}
     </dl>
-  </header>
+  </div>
 
   <section>
     <h2>Erfassung</h2>

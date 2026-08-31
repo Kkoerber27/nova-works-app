@@ -304,10 +304,23 @@ Protokollen. Wird kein Browser gefunden, sagt das Skript das und das fertige HTM
 lässt sich mit Cmd+P als PDF sichern.
 
 Farben, Schrift und Logo stammen aus `Crewplanung.html`, damit das Protokoll wie
-die übrigen Werkzeuge aussieht: warmes Off-White, schwarzes Kopfband mit dem
-Logo, Gold als Akzent, Helvetica. Das Logo liegt als `scripts/assets/` und wird
-beim Rendern als Data-URI eingebettet — so bleibt das HTML eine einzelne Datei,
+die übrigen Werkzeuge aussieht: warmes Off-White, Helvetica, Gold als Akzent.
+
+Der Blattkopf folgt der Hausform für gedruckte Dokumente — freigestelltes Logo
+auf Papier, darunter der Titel in Versalien, darunter eine 2 px starke schwarze
+Linie, rechts Objekt und Projektnummer. So macht es `funkgeraete.html` mit
+`.sheet-head` und `Crewplanung.html` mit `.print-header`.
+
+Es gab dort zwischenzeitlich ein dunkles Kopfband. Das war keine Hausform,
+sondern eine Notlösung: Das damals hinterlegte Logo hatte einen schwarzen Grund
+und war auf Papier nicht zu gebrauchen. `scripts/assets/nova-works-logo.png` ist
+jetzt dasselbe freigestellte Logo, das die übrigen Werkzeuge benutzen; es wird
+beim Rendern als Data-URI eingebettet, damit das HTML eine einzelne Datei bleibt,
 die sich weiterleiten lässt. Fehlt es, trägt eine Wortmarke den Kopf.
+
+Die Zeichnung ist dunkel und für helles Papier gemacht. Im Dunkelmodus wird sie
+umgekehrt, im Druck nie — gedruckt wird auf Weiss, auch wenn der Bildschirm
+dunkel steht.
 
 Bewusst keine Google-Schrift: Die Werkzeuge nutzen Helvetica, und ein PDF, das
 erst eine Schrift nachladen muss, sieht ohne Netz anders aus als mit.
