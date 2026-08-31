@@ -117,3 +117,34 @@ auf einen alten Stand zu setzen.
 Abgewiesen werden: ein Datum ohne Sicherung, ein Schlüssel, den die Sicherung nicht
 enthält, ein Tagesordner ohne `_manifest.json` (unvollständige Sicherung) und
 Schlüssel ohne `nw_`-Präfix.
+
+## Scheinwerfer-Protokoll
+
+Von Hand, nicht geplant. Rendert die Meldungen aus `technik@nova-works.de` zu
+einem Protokoll — HTML immer, PDF auf Wunsch.
+
+```bash
+node scripts/protokoll.mjs daten.json          # nur HTML
+node scripts/protokoll.mjs daten.json --pdf    # HTML und PDF daneben
+node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
+```
+
+Die `daten.json` schreibt der Skill `.claude/skills/scheinwerfer-protokoll/`;
+das Format steht dort, ein ausgefülltes Beispiel liegt daneben in `beispiel.json`.
+
+Für das PDF wird ein installierter Chromium-Browser kopflos benutzt — gesucht
+werden Chrome, Edge, Brave und Chromium in dieser Reihenfolge. Bewusst keine
+zusätzliche Abhängigkeit: Edge ist auf einem Mac mit Microsoft 365 ohnehin da,
+und ein Paket, das nur zum Drucken installiert wird, veraltet zwischen zwei
+Protokollen. Wird kein Browser gefunden, sagt das Skript das und das fertige HTML
+lässt sich mit Cmd+P als PDF sichern.
+
+Zwei Eigenheiten, die im Skript festgehalten sind, weil sie sonst stillschweigend
+falsche Protokolle erzeugen:
+
+- **Uhrzeiten werden nicht umgerechnet.** Ausgegeben wird, was in der Meldung
+  steht. Liefe das Skript auf einem Server in UTC, stünden sonst zwei Stunden zu
+  wenig im Dokument.
+- **Der Druck benutzt die Tabellenansicht.** Eine A4-Seite ist rund 690 px breit
+  und fiele sonst in den Handy-Umbruch — das Protokoll bräuchte das Dreifache an
+  Seiten.
