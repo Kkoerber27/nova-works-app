@@ -242,7 +242,14 @@ for (const n of nachrichten) {
     absender: n.absender,
     zeit: n.zeit,
     fotos,
-    status: fotos.length && zerlegt.standort && zerlegt.zustand ? "vollstaendig" : "unvollstaendig",
+    // Vollständig heisst: belegt und verortet — Foto, Standort, und wie viele
+    // oder welches Gerät. Der Zustand fehlt meistens, weil nichts zu melden war;
+    // ihn zur Bedingung zu machen färbte ein sauber erfasstes Protokoll
+    // durchgehend rot und der Balken sagte nichts mehr aus. Er fehlt trotzdem
+    // sichtbar: an der Zeile und als Sammelhinweis.
+    status: fotos.length && zerlegt.standort && (zerlegt.anzahl || zerlegt.geraet)
+      ? "vollstaendig"
+      : "unvollstaendig",
   };
   if (zerlegt.anzahl) position.anzahl = zerlegt.anzahl;
   if (zerlegt.geraet) position.geraet = zerlegt.geraet;
@@ -279,9 +286,10 @@ if (ohneZustand.length) {
     bezug: "Zustand",
     titel: `${ohneZustand.length} Meldung(en) ohne Zustandsangabe`,
     text:
-      `${ohneZustand.map((p) => p.standort).join("; ")} — hier steht nur, was wo hängt, ` +
-      "nicht in welchem Zustand. Als Bestandsaufnahme brauchbar, als Schadensnachweis nicht. " +
-      "Der Zustand gehört hinter ein Komma: „Hauptzelt 4x w600, alle ok“.",
+      `${ohneZustand.map((p) => p.standort).join("; ")} — hier steht, was wo hängt, ` +
+      "nicht in welchem Zustand. Als Bestandsaufnahme zählt das; als Nachweis, dass " +
+      "die Geräte in Ordnung waren, nicht. Wo es darauf ankommt, gehört der Zustand " +
+      "hinter ein Komma: „Hauptzelt 4x w600, alle ok“.",
   });
 }
 

@@ -152,6 +152,12 @@ Beschriftung nicht am Bild, sondern als eigene Nachricht danach, wird sie
 übernommen — sofern derselbe Absender sie innerhalb von fünf Minuten schickt.
 Weiter auseinander nicht: dann ist nicht mehr sicher, dass sie zusammengehören.
 
+Als **vollständig** zählt eine Meldung mit Standort, Anzahl oder Gerät und Foto.
+Der Zustand gehört nicht dazu: Er fehlt meistens, weil nichts zu melden war, und
+als Bedingung färbte er ein sauber erfasstes Protokoll durchgehend rot. Fehlt er,
+steht das an der Zeile und einmal gesammelt in den Prüfhinweisen — erfunden wird
+er nie.
+
 Zwei Schreibweisen werden gelesen: die genaue mit Kommas
 (`Halle 3, Traverse Nord, 6, alle ok`) und die kurze, wie sie in der Gruppe
 tatsächlich entsteht (`Hauptzelt 4x w600`) — dort wird der Gerätetyp als solcher

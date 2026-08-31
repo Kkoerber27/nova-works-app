@@ -12,6 +12,7 @@ oder eine Gruppe auf einem Foto. Daraus entsteht ein Protokoll.
 ## Meldeformat
 
 Drei Angaben, getrennt durch Komma: **Standort, Anzahl oder Gerät, Zustand**.
+Die ersten beiden tragen die Position, der Zustand ist die Ergänzung.
 
 ```
 Halle 3, Traverse Nord, 6, alle ok
@@ -159,9 +160,16 @@ Hier gibt es kein Importskript — diese Schritte macht der Skill selbst.
 
    | Status | Wann |
    |---|---|
-   | `vollstaendig` | alle drei Betreff-Felder gefüllt **und** mindestens ein Foto |
-   | `unvollstaendig` | ein Feld fehlt oder kein Foto dran |
+   | `vollstaendig` | Standort **und** Anzahl oder Gerät **und** mindestens ein Foto |
+   | `unvollstaendig` | Standort fehlt, Anzahl und Gerät fehlen, oder kein Foto dran |
    | `dublette` | dieselbe Position schon erfasst |
+
+   **Der Zustand gehört nicht dazu.** Er fehlt meistens, weil nichts zu melden
+   war — ihn zur Bedingung zu machen färbte ein sauber erfasstes Protokoll
+   durchgehend rot, und der Balken „x von y vollständig" sagte nichts mehr aus.
+   Fehlt er, steht das an der Zeile und einmal gesammelt in den Prüfhinweisen;
+   erfunden wird er nie. Wo er zählt — bei einem Schaden —, ist er ohnehin
+   geschrieben.
 
    Bei einer Gruppenmeldung zählt der Status für alle Lampen der Gruppe: sechs
    Stück ohne Foto sind sechs unvollständige Scheinwerfer, nicht einer.
