@@ -12,21 +12,21 @@ Protokoll.
 
 ## Meldeformat
 
-Drei Felder, getrennt durch `|`: **Standort | Anzahl oder Gerät | Zustand**.
+Drei Angaben, getrennt durch Komma: **Standort, Anzahl oder Gerät, Zustand**.
 
 ```
-Betreff: Halle 3, Traverse Nord | 6 | alle ok
-Betreff: Halle 3, Traverse Nord, Feld B4 | SW-14 | Linse gesprungen
+Betreff: Halle 3, Traverse Nord, 6, alle ok
+Betreff: Halle 3, Traverse Nord, Feld B4, SW-14, Linse gesprungen
 ```
 
-Ein Foto darf mehrere Lampen zeigen — dann steht im mittleren Feld ihre Anzahl,
+Ein Foto darf mehrere Lampen zeigen — dann steht vor dem Zustand ihre Anzahl,
 und Standort wie Zustand gelten für die ganze Gruppe. Steht dort statt einer Zahl
 eine Gerätebezeichnung, betrifft die Meldung genau dieses eine Gerät.
 
 Der Standort steht bewusst **vorn**, nicht die Gerätenummer. Er ist das einzige
 Feld, das sich nicht rekonstruieren lässt — die Fotos enthalten keine
 Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre bei
-`Halle 3 | … | ok` nicht zu entscheiden, was gemeint ist.
+`Halle 3, …, ok` nicht zu entscheiden, was gemeint ist.
 
 ## Ablauf
 
@@ -42,14 +42,32 @@ Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre
    `hasAttachments: false`, obwohl das Foto da ist. Wer der Liste glaubt,
    protokolliert vorhandene Fotos als fehlend.
 
-4. **Betreff zerlegen** an `|` in Standort, Mittelfeld, Zustand. Leere Felder
-   bleiben leer — sie werden im Protokoll als „nicht angegeben" ausgewiesen, nicht
-   geraten.
+4. **Betreff von hinten zerlegen.** An Kommas trennen, dann:
 
-   Das Mittelfeld entscheidet die Form: Besteht es nur aus einer Zahl (auch als
-   „6 Stück" oder „6x"), ist es eine Gruppenmeldung → `anzahl`. Sonst ist es eine
-   Gerätebezeichnung → `geraet`, und `anzahl` bleibt weg. Ohne beides zählt die
-   Meldung als ein Scheinwerfer.
+   | Feld | Herkunft |
+   |---|---|
+   | Zustand | letztes Feld |
+   | Anzahl oder Gerät | vorletztes Feld |
+   | Standort | alles davor, mit Kommas wieder zusammengesetzt |
+
+   **Nicht von vorn zählen.** Der Standort enthält selbst Kommas — „Halle 3,
+   Traverse Nord, Feld B4" sind schon drei Felder. Nur von hinten liegen die
+   Grenzen fest.
+
+   Das vorletzte Feld entscheidet die Form: eine reine Zahl, auch mit „Stück",
+   „St." oder „x" dahinter, ist eine Gruppenmeldung → `anzahl`. Eine
+   Gerätebezeichnung — Buchstaben mit Ziffer, etwa `SW-14` oder `BeamX7-03` —
+   meint ein einzelnes Gerät → `geraet`, `anzahl` bleibt weg.
+
+   Zahl plus beliebiges Wort ist **keine** Anzahl: „5 ok" ist ein abgeschnittener
+   Zustand, keine Stückzahl. Nur die drei genannten Zusätze zählen.
+
+   Passt es auf **keines von beidem**, ist die Zerlegung nicht sicher: dann
+   steckt vermutlich ein Komma im Zustand („5 ok, einer flackert"). Nicht raten
+   — als `unvollstaendig` mit Hinweis aufnehmen und melden.
+
+   Leere Felder bleiben leer und werden im Protokoll als „nicht angegeben"
+   ausgewiesen.
 
 5. **Dubletten markieren.** Gleiches Gerät am gleichen Standort ein zweites Mal,
    typischerweise als Weiterleitung: `status: "dublette"`. Sie bleibt als Zeile
@@ -106,17 +124,21 @@ wo es etwas entscheidet: unklarer Betreff, gemeldeter Schaden, Stichprobe.
 Diese Fälle nicht raten, sondern als `unvollstaendig` mit `hinweis` aufnehmen und
 am Ende melden:
 
-- **Betreff ohne `|`.** Kommt vor, wenn jemand die Vorlage kopiert statt sie
-  auszufüllen. Steht die Gerätenummer erkennbar drin, als Hinweis vermerken —
-  aber nie einen Standort erfinden, der nicht dasteht.
+- **Betreff mit weniger als drei Kommafeldern.** Kommt vor, wenn jemand die
+  Vorlage kopiert statt sie auszufüllen oder Angaben weglässt. Steht der Standort
+  erkennbar drin, als Hinweis vermerken — aber nie einen Standort erfinden, der
+  nicht dasteht.
+- **Komma im Zustand.** Dann steht im vorletzten Feld weder eine Zahl noch eine
+  Gerätebezeichnung, und der Standort wäre zu lang geraten. Die Meldung liegen
+  lassen und nachfordern — der Zustand gehört ohne Komma in ein Feld.
 - **Foto unter 500 KB.** Das Mailprogramm hat es beim Versand verkleinert; für
   einen Schadensnachweis reicht es oft nicht. Das Protokoll markiert solche
   Fotos selbst mit „verkleinert".
 - **Gerätenummer doppelt an verschiedenen Standorten.** Entweder ein Tippfehler
   oder ein umgehängtes Gerät — beides muss ein Mensch entscheiden.
-- **Gruppenmeldung mit gemischtem Zustand.** „6 | 5 ok, einer flackert" lässt
-  offen, welcher. Die Gruppe als unvollständig führen und die Einzelmeldung
-  nachfordern — eine Gruppe trägt genau einen Zustand.
+- **Gruppenmeldung mit gemischtem Zustand.** „…, 6, 5 ok, einer flackert" lässt
+  offen, welcher — und zerlegt sich obendrein falsch. Die Gruppe als unvollständig
+  führen und die Einzelmeldung nachfordern; eine Gruppe trägt genau einen Zustand.
 
 Ein Protokoll ist ein Nachweis. Eine geratene Zeile darin ist schlimmer als eine
 fehlende, weil niemand mehr nachsieht.
