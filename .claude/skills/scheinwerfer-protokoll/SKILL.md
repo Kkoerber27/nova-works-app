@@ -132,16 +132,40 @@ wo es etwas entscheidet: unklarer Betreff, gemeldeter Schaden, Stichprobe.
 
 Standardmäßig führt das Protokoll nur, *dass* Fotos vorliegen. Sollen die Bilder
 im Dokument stehen — bei Mängeln ist das der eigentliche Nachweis —, braucht es
-die Dateien auf der Platte:
+die Dateien auf der Platte. Anhänge lassen sich mit `read_resource` ansehen, aber
+nicht als Datei weiterreichen; sie müssen also von woanders kommen.
 
-1. In Outlook die betreffenden Anhänge markieren und in einen Ordner neben die
-   Datendatei ziehen.
-2. Bei den passenden Fotos das Feld `datei` eintragen, Pfad relativ zur
-   Datendatei:
+**Regelfall: der Power-Automate-Flow.** Ein Flow legt jeden Anhang aus `technik@`
+in einem OneDrive-Ordner ab und benennt ihn nach dem Empfangszeitpunkt:
 
-   ```json
-   "fotos": [{ "name": "image0.jpeg", "groesse": 5149962, "datei": "fotos/sw-14.jpg" }]
-   ```
+```
+20260831-134756-image0.jpeg
+```
+
+Damit die Zuordnung funktioniert, **bei jeder Meldung `empfangen` mitschreiben** —
+den Wert von `receivedDateTime` unverändert, so wie Graph ihn liefert:
+
+```json
+"empfangen": "2026-08-31T13:47:56.000Z"
+```
+
+Beim Rendern den Ordner mitgeben:
+
+```bash
+node scripts/protokoll.mjs daten.json --pdf --ablegen --fotos ~/OneDrive…/technik-fotos
+```
+
+Das Skript bildet aus `empfangen` denselben Schlüssel wie der Flow aus dem
+Dateinamen und ordnet exakt zu — kein Zeitfenster, in dem zwei kurz aufeinander
+folgende Meldungen kollidieren. Meldungen mit Foto, für die keine Datei gefunden
+wurde, listet es am Ende auf.
+
+**Ausnahmefall: von Hand.** Anhang in Outlook in einen Ordner ziehen und den Pfad
+ausdrücklich eintragen — das hat Vorrang vor der Zuordnung über den Ordner:
+
+```json
+"fotos": [{ "name": "image0.jpeg", "groesse": 5149962, "datei": "fotos/sw-14.jpg" }]
+```
 
 `protokoll.mjs` verkleinert die Bilder beim Rendern selbst auf 900 px längste
 Kante und bettet sie unter der jeweiligen Zeile ein. Ein Originalfoto von 5 MB
@@ -162,11 +186,10 @@ wäre schlimmer als eines mit einer sichtbaren Lücke.
   Koordinaten. Der Standort steht ausschließlich im Betreff — ist er zu vage,
   ist die Position verloren und muss neu angefahren werden. Das gehört in die
   Prüfhinweise, nicht stillschweigend übergangen.
-- **Die Fotos landen nicht von selbst im Dokument.** Anhänge lassen sich mit
-  `read_resource` ansehen, aber nicht als Datei weiterreichen — es gibt keinen
-  Weg, die Bytes auf die Platte zu bekommen. Wer Bilder im Protokoll haben will,
-  legt sie einmal von Hand ab; siehe „Fotos ins Protokoll holen". Ohne das
-  bleiben die Fotos im Postfach, und das Protokoll verlinkt über das Feld `mail`
+- **Anhänge lassen sich nicht selbst herunterladen.** `read_resource` zeigt sie,
+  gibt sie aber nicht als Datei heraus. Die Bilder müssen über den
+  Power-Automate-Flow im Ordner liegen; siehe „Fotos ins Protokoll holen". Ohne
+  das bleiben sie im Postfach, und das Protokoll verlinkt über das Feld `mail`
   auf die Nachricht in Outlook.
 
 ## Wann etwas liegen bleibt

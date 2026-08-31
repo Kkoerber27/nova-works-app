@@ -208,8 +208,17 @@ Umlautzeichen. Ohne Normalisierung findet ein Vergleich den Ordner nie.
 Die `daten.json` schreibt der Skill `.claude/skills/scheinwerfer-protokoll/`;
 das Format steht dort, ein ausgefülltes Beispiel liegt daneben in `beispiel.json`.
 
-Trägt ein Foto das Feld `datei` (Pfad relativ zur Datendatei), wird es als
-Miniatur unter der Zeile eingebettet. Verkleinert wird mit `sips` (gehört zu
+### Fotos
+
+Ein Power-Automate-Flow legt die Anhänge aus `technik@` in einem OneDrive-Ordner
+ab und benennt sie nach dem Empfangszeitpunkt (`20260831-134756-image0.jpeg`).
+Mit `--fotos <ordner>` ordnet das Skript sie den Meldungen zu — über das Feld
+`empfangen`, das denselben Wert trägt. Damit ist die Zuordnung exakt und nicht
+ein Zeitfenster, in dem zwei kurz aufeinanderfolgende Meldungen kollidieren.
+Meldungen mit Foto, für die keine Datei gefunden wurde, werden am Ende gelistet.
+
+Ein ausdrücklich eingetragenes `datei` hat Vorrang. Das Bild wird als Miniatur
+unter der Zeile eingebettet. Verkleinert wird mit `sips` (gehört zu
 macOS), ersatzweise mit ImageMagick, auf 900 px längste Kante — aus 5 MB werden
 rund 200 KB. Ohne beides landet das Original im Dokument, was das Skript meldet.
 Eine unter `datei` genannte, aber fehlende Datei wird ebenfalls gemeldet und

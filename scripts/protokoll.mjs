@@ -7,6 +7,7 @@
  *   node scripts/protokoll.mjs daten.json --pdf
  *   node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
  *   node scripts/protokoll.mjs daten.json --pdf --ablegen
+ *   node scripts/protokoll.mjs daten.json --pdf --fotos ~/Fotos/technik
  *
  * Die Daten schreibt der Skill .claude/skills/scheinwerfer-protokoll/SKILL.md.
  * Das Format steht dort beschrieben; ein Beispiel liegt in
@@ -130,6 +131,68 @@ function verkleinern(von, nach) {
     }
   }
   return false;
+}
+
+/* --------------------------------------------------- Fotos aus dem Flow ---
+   Ein Power-Automate-Flow legt die Anhänge aus technik@ in einem Ordner ab und
+   benennt sie nach dem Empfangszeitpunkt: 20260831-134756-image0.jpeg. Genau
+   dieselbe Angabe steht als `empfangen` bei der Meldung, beides stammt aus dem
+   Feld receivedDateTime. Deshalb ist die Zuordnung eine exakte Übereinstimmung
+   und kein Zeitfenster, in dem zwei Meldungen kurz nacheinander kollidieren. */
+
+const fotoOrdner = (() => {
+  const i = args.indexOf("--fotos");
+  const pfad = i >= 0 ? args[i + 1] : daten.fotoordner;
+  if (!pfad) return null;
+  const voll = resolve(dirname(resolve(quelle)), pfad);
+  if (!existsSync(voll)) {
+    console.error(`WARNUNG Fotoordner nicht gefunden: ${voll}`);
+    return null;
+  }
+  return voll;
+})();
+if (fotoOrdner && positional.includes(args[args.indexOf("--fotos") + 1])) {
+  positional.splice(positional.indexOf(args[args.indexOf("--fotos") + 1]), 1);
+}
+
+/** "2026-08-31T13:47:56.000Z" → "20260831-134756" */
+function fotoSchluessel(iso) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(String(iso ?? ""));
+  return m ? `${m[1]}${m[2]}${m[3]}-${m[4]}${m[5]}${m[6]}` : null;
+}
+
+const fotoIndex = new Map();
+if (fotoOrdner) {
+  for (const name of readdirSync(fotoOrdner).sort()) {
+    const m = /^(\d{8}-\d{6})/.exec(name);
+    if (!m) continue;
+    if (!fotoIndex.has(m[1])) fotoIndex.set(m[1], []);
+    fotoIndex.get(m[1]).push(join(fotoOrdner, name));
+  }
+}
+
+let zugeordnet = 0;
+const ohneZuordnung = [];
+if (fotoOrdner) {
+  for (const position of positionen) {
+    const schluessel = fotoSchluessel(position.empfangen);
+    const treffer = schluessel ? fotoIndex.get(schluessel) : null;
+    if (!treffer) {
+      if (Array.isArray(position.fotos) && position.fotos.length && !position.fotos.some((f) => f.datei)) {
+        ohneZuordnung.push(`${position.geraet || position.standort} (${uhrzeit(position.zeit)})`);
+      }
+      continue;
+    }
+    if (!Array.isArray(position.fotos) || position.fotos.length === 0) {
+      position.fotos = treffer.map((pfad) => ({ name: basename(pfad), datei: pfad }));
+    } else {
+      // Ausdrücklich eingetragene Pfade haben Vorrang.
+      position.fotos.forEach((f, i) => {
+        if (!f.datei && treffer[i]) f.datei = treffer[i];
+      });
+    }
+    zugeordnet += treffer.length;
+  }
 }
 
 const fehlendeBilder = [];
@@ -519,6 +582,13 @@ function bericht() {
   if (fehlendeBilder.length) {
     console.warn(`      ${fehlendeBilder.length} Foto(s) nicht gefunden, nicht eingebettet:`);
     for (const pfad of fehlendeBilder) console.warn(`        ${pfad}`);
+  }
+  if (fotoOrdner) {
+    console.log(`      ${zugeordnet} Foto(s) aus dem Ordner zugeordnet`);
+    if (ohneZuordnung.length) {
+      console.warn(`      Ohne Datei geblieben, obwohl die Meldung ein Foto hatte:`);
+      for (const eintrag of ohneZuordnung) console.warn(`        ${eintrag}`);
+    }
   }
   if (ohneVerkleinerung) {
     console.warn(`      ${ohneVerkleinerung} Foto(s) in Originalgröße eingebettet — weder sips noch ImageMagick gefunden.`);

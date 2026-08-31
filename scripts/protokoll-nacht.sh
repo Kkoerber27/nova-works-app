@@ -89,8 +89,10 @@ Liegen für diesen Tag keine Meldungen im Postfach, schreibe nur \"keine Meldung
 und erzeuge kein Protokoll. Ein leeres Protokoll im Projektordner sieht aus wie ein
 Tag ohne Schäden und ist keiner.
 
-Fotos werden nicht eingebettet — dafür müssten Dateien von Hand abgelegt werden,
-und dieser Lauf findet ohne Aufsicht statt. Das Feld 'datei' bleibt weg.
+Schreibe bei jeder Meldung das Feld 'empfangen' mit dem unveränderten Wert von
+receivedDateTime mit. Ist \$PROTOKOLL_FOTOS gesetzt, gib den Ordner beim Rendern
+mit --fotos mit; die Bilder legt der Power-Automate-Flow dort ab und werden über
+den Empfangszeitpunkt zugeordnet.
 
 Melde am Ende in zwei Zeilen: wie viele Scheinwerfer vollständig erfasst sind und
 wohin das Protokoll abgelegt wurde, und welche Meldungen nachgearbeitet werden
@@ -109,6 +111,7 @@ müssen. Ist beides nichts, schreibe nur \"nichts zu tun\"."
 # und nennt die verfügbaren Werkzeugnamen; dann PROTOKOLL_MCP_SERVER in der
 # env-Datei setzen.
 MCP_SERVER="${PROTOKOLL_MCP_SERVER:-claude_ai_Microsoft_365}"
+export PROTOKOLL_FOTOS="${PROTOKOLL_FOTOS:-}"
 WERKZEUGE="Bash,Read,Write,Glob,Grep"
 for t in outlook_email_search read_resource; do
   WERKZEUGE="$WERKZEUGE,mcp__${MCP_SERVER}__${t}"
