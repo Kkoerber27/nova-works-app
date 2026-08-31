@@ -70,7 +70,9 @@ Objekt: ${OBJEKT:-aus den Meldungen ableiten}
 
 Prüfe zuerst, ob die Outlook-Tools verfügbar sind. Sind sie es nicht, brich ab und
 schreibe genau diese Zeile: \"ABBRUCH: Outlook-Tools nicht verfügbar\" — erzeuge dann
-kein Protokoll und lege nichts ab.
+kein Protokoll und lege nichts ab. Nenne dabei, welche Werkzeugnamen du tatsächlich
+zur Verfügung hast, damit der Server-Präfix in PROTOKOLL_MCP_SERVER berichtigt
+werden kann.
 
 Liegen für diesen Tag keine Meldungen im Postfach, schreibe nur \"keine Meldungen\"
 und erzeuge kein Protokoll. Ein leeres Protokoll im Projektordner sieht aus wie ein
@@ -83,8 +85,23 @@ Melde am Ende in zwei Zeilen: wie viele Scheinwerfer vollständig erfasst sind u
 wohin das Protokoll abgelegt wurde, und welche Meldungen nachgearbeitet werden
 müssen. Ist beides nichts, schreibe nur \"nichts zu tun\"."
 
-log "Start — Tag $TAG, Projekt $PROJEKT"
-if claude -p "$PROMPT" >>"$LOG" 2>&1; then
+# Ein unbeaufsichtigter Lauf bekommt keine Rückfrage beantwortet und darf ohne
+# ausdrückliche Freigabe keine MCP-Werkzeuge aufrufen. Freigegeben wird hier
+# genau das Nötige — Postfach lesen, Projektordner finden, PDF ablegen — statt
+# global in der Konfiguration. So steht im Skript, was es darf.
+#
+# Der Server-Präfix unterscheidet sich je nach Einrichtung. Stimmt er nicht,
+# bricht der Lauf mit "Outlook-Tools nicht verfügbar" ab; dann in der env-Datei
+# PROTOKOLL_MCP_SERVER auf den Namen setzen, den "claude mcp list" anzeigt.
+MCP_SERVER="${PROTOKOLL_MCP_SERVER:-Microsoft_365}"
+WERKZEUGE="Bash,Read,Write,Glob,Grep"
+for t in outlook_email_search read_resource \
+         sharepoint_folder_search sharepoint_search sharepoint_upload_file sharepoint_create_folder; do
+  WERKZEUGE="$WERKZEUGE,mcp__${MCP_SERVER}__${t}"
+done
+
+log "Start — Tag $TAG, Projekt $PROJEKT, MCP-Server $MCP_SERVER"
+if claude -p --allowedTools "$WERKZEUGE" "$PROMPT" >>"$LOG" 2>&1; then
   log "Ende"
 else
   log "FEHLER claude endete mit Code $?"

@@ -36,6 +36,9 @@ if ! grep -q "PROTOKOLL_PROJEKT" "$ENV_FILE" 2>/dev/null; then
 # gerade keiner läuft — dann wird nichts erzeugt und nichts abgelegt.
 export PROTOKOLL_PROJEKT=""
 export PROTOKOLL_OBJEKT=""
+# Nur setzen, wenn der Lauf mit "Outlook-Tools nicht verfügbar" abbricht: Name
+# des Microsoft-365-Servers, wie ihn "claude mcp list" anzeigt.
+# export PROTOKOLL_MCP_SERVER="Microsoft_365"
 ENVEOF
   echo "In $ENV_FILE ergänzt: PROTOKOLL_PROJEKT — dort jetzt die Projektnummer eintragen."
 fi
