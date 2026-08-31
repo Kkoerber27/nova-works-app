@@ -189,9 +189,24 @@ Ohne `--pdf` entsteht nur das HTML. Findet das Skript keinen Chromium-Browser,
 sagt es das und das HTML lässt sich von Hand drucken.
 
 **Ablage macht `--ablegen` selbst.** Steht eine `projekt`-Nummer in den Daten,
-kopiert das Skript das PDF nach
-`Angebote/<projektnummer>_…/Schäden/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf`
-im lokal synchronisierten OneDrive; der Sync-Client schiebt es nach SharePoint.
+kopiert das Skript das PDF in den Projektordner, Unterordner **`Lampen
+Protokolle`**, im lokal synchronisierten OneDrive; der Sync-Client schiebt es
+nach SharePoint:
+
+```
+Angebote/26-0032_…/Lampen Protokolle/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf
+```
+
+Der Unterordner lässt sich mit `--ordner "…"` oder über
+`PROTOKOLL_ABLAGE_ORDNER` umstellen. `Lampen Protokolle` statt `Schäden`, weil
+das Protokoll in erster Linie eine Bestandsaufnahme ist — was wo hängt und wie
+viele — und nur im Einzelfall ein Schadensnachweis.
+
+Fehlt der Ordner, wird er angelegt. Gibt es einen, der bis auf Leerzeichen,
+Bindestriche und Gross-/Kleinschreibung gleich heisst (`Lampenprotokolle`), wird
+**dieser** benutzt und das gemeldet — sonst stünden zwei fast gleich benannte
+Ordner nebeneinander und die Protokolle verteilten sich auf beide. Passen
+mehrere, bricht das Skript ab und nennt sie.
 
 **Nicht über `sharepoint_upload_file` gehen.** Das Werkzeug nimmt den Inhalt
 nur inline als base64 entgegen — für ein Protokoll sind das über 200.000
@@ -204,8 +219,8 @@ Das Skript legt nur ab, wenn genau ein Projektordner zur Nummer passt, und
 laufende Nummer. Meldet es `ABLAGE nicht erfolgt` (Rückgabewert 4), den Grund
 im Bericht nennen und das PDF liegen lassen.
 
-Der Ordner `Schäden` ist die Ablage, nicht `Technik` oder `Dokumente`: Dort
-sucht ihn, wer später einen Schaden belegen muss.
+   Der Ordner ist bewusst einer, den man beim Suchen trifft: Wer wissen will,
+was auf dem Job hing, sucht nicht unter `Technik` oder `Dokumente`.
 
 **Lücken melden.** Am Ende in zwei Zeilen: wie viele Geräte vollständig
 erfasst sind, und welche Meldungen nachgearbeitet werden müssen — mit Gerät

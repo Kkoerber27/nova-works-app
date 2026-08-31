@@ -249,11 +249,23 @@ node scripts/protokoll.mjs daten.json --pdf --ablegen    # dazu in den Projektor
 node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
 ```
 
-`--ablegen` kopiert das PDF nach
-`Angebote/<projektnummer>_…/Schäden/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf`
-im lokal synchronisierten OneDrive; der Sync-Client schiebt es nach SharePoint.
-Der Basisordner lässt sich über `NOVA_ABLAGE_BASIS` umstellen, Standard ist
-`~/Library/CloudStorage/OneDrive-NOVAWORKSGmbH/Angebote`.
+`--ablegen` kopiert das PDF in den Projektordner, Unterordner
+`Lampen Protokolle`, im lokal synchronisierten OneDrive; der Sync-Client schiebt
+es nach SharePoint:
+
+```
+Angebote/26-0032_…/Lampen Protokolle/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf
+```
+
+| Stellschraube | Standard |
+|---|---|
+| `NOVA_ABLAGE_BASIS` | `~/Library/CloudStorage/OneDrive-NOVAWORKSGmbH/Angebote` |
+| `--ordner "…"` / `PROTOKOLL_ABLAGE_ORDNER` | `Lampen Protokolle` |
+
+`Lampen Protokolle` statt `Schäden`, weil das Protokoll in erster Linie eine
+Bestandsaufnahme ist — was wo hängt und wie viele — und nur im Einzelfall ein
+Schadensnachweis. Für einen reinen Schadensordner:
+`--ordner "Schäden"`.
 
 Bewusst über den Dateipfad statt über die Graph-API: `sharepoint_upload_file`
 nimmt den Inhalt nur inline als base64 entgegen, für ein Protokoll über 200.000
@@ -264,9 +276,16 @@ Abgelegt wird nur bei genau einem passenden Projektordner, und nie
 überschreibend — eine vorhandene Fassung desselben Tages bekommt eine laufende
 Nummer. Sonst bricht das Skript mit Rückgabewert 4 und einer Begründung ab.
 
+Fehlt der Zielordner, wird er angelegt. Gibt es einen, der bis auf Leerzeichen,
+Bindestriche und Gross-/Kleinschreibung gleich heisst — `Lampenprotokolle` neben
+`Lampen Protokolle` —, wird **dieser** benutzt und das gemeldet. Sonst stünden
+zwei fast gleich benannte Ordner nebeneinander und die Protokolle verteilten sich
+auf beide. Passen mehrere, bricht das Skript ab und nennt sie.
+
 Ein Fallstrick, der im Skript berücksichtigt ist: macOS legt Dateinamen in
-zerlegter Form ab, „Schäden" besteht dort aus `a` und einem gesonderten
-Umlautzeichen. Ohne Normalisierung findet ein Vergleich den Ordner nie.
+zerlegter Form ab, ein „ä" besteht dort aus `a` und einem gesonderten
+Umlautzeichen. Ohne Normalisierung findet ein Vergleich den Ordner nie — und legt
+ihn ein zweites Mal an, scheinbar gleich benannt.
 
 Die `daten.json` schreibt der Skill `.claude/skills/scheinwerfer-protokoll/`;
 das Format steht dort, ein ausgefülltes Beispiel liegt daneben in `beispiel.json`.

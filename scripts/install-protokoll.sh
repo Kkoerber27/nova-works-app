@@ -42,6 +42,8 @@ export PROTOKOLL_OBJEKT=""
 # Nur nötig, wenn der Microsoft-365-Server auf diesem Rechner anders heisst als
 # im Skript vorgegeben. Der Lauf nennt beim Abbruch die verfügbaren Namen.
 # export PROTOKOLL_MCP_SERVER="claude_ai_Microsoft_365"
+# Unterordner im Projektordner, in den das PDF gelegt wird.
+# export PROTOKOLL_ABLAGE_ORDNER="Lampen Protokolle"
 ENVEOF
   echo "In $ENV_FILE ergänzt: PROTOKOLL_PROJEKT — dort jetzt die Projektnummer eintragen."
 fi

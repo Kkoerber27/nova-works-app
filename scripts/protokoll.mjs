@@ -8,6 +8,7 @@
  *   node scripts/protokoll.mjs daten.json --out ~/Desktop/protokoll.html --pdf
  *   node scripts/protokoll.mjs daten.json --pdf --ablegen
  *   node scripts/protokoll.mjs daten.json --pdf --fotos ~/Fotos/technik
+ *   node scripts/protokoll.mjs daten.json --pdf --ablegen --ordner "Schäden"
  *
  * Die Daten schreibt der Skill .claude/skills/scheinwerfer-protokoll/SKILL.md.
  * Das Format steht dort beschrieben; ein Beispiel liegt in
@@ -34,6 +35,15 @@ const positional = args.filter((a) => !a.startsWith("--"));
 const outIndex = args.indexOf("--out");
 const outArg = outIndex >= 0 ? args[outIndex + 1] : null;
 if (outArg && positional.includes(outArg)) positional.splice(positional.indexOf(outArg), 1);
+
+/* Zielordner im Projekt. Vorgabe "Lampen Protokolle", nicht "Schäden": Das
+   Protokoll ist in erster Linie eine Bestandsaufnahme — was wo hängt und wie
+   viele —, und nur im Einzelfall ein Schadensnachweis. Unter "Schäden" sucht es
+   niemand, der bloss wissen will, was im Hauptzelt stand. */
+const ordnerIndex = args.indexOf("--ordner");
+const ordnerArg = ordnerIndex >= 0 ? args[ordnerIndex + 1] : null;
+if (ordnerArg && positional.includes(ordnerArg)) positional.splice(positional.indexOf(ordnerArg), 1);
+const ABLAGE_ORDNER = ordnerArg || process.env.PROTOKOLL_ABLAGE_ORDNER || "Lampen Protokolle";
 
 const quelle = positional[0];
 if (!quelle) {
@@ -699,9 +709,10 @@ const ABLAGE_BASIS =
   process.env.NOVA_ABLAGE_BASIS ||
   join(process.env.HOME || "", "Library/CloudStorage/OneDrive-NOVAWORKSGmbH/Angebote");
 
-/** macOS legt Dateinamen in zerlegter Form ab: "Schäden" besteht dort aus a und
+/** macOS legt Dateinamen in zerlegter Form ab: ein "ä" besteht dort aus a und
  *  einem gesonderten Umlautzeichen. Ohne Normalisierung findet ein Vergleich mit
- *  der zusammengesetzten Schreibweise den Ordner nie. */
+ *  der zusammengesetzten Schreibweise den Ordner nie — und legt ihn ein zweites
+ *  Mal an, scheinbar gleich benannt. */
 const nfc = (wert) => String(wert).normalize("NFC");
 
 function ablegen(pdfPfad) {
@@ -717,9 +728,28 @@ function ablegen(pdfPfad) {
   }
 
   const projektOrdner = join(ABLAGE_BASIS, treffer[0]);
-  const schaeden = readdirSync(projektOrdner).find((n) => nfc(n) === "Schäden");
-  const ziel = join(projektOrdner, schaeden ?? "Schäden");
-  if (!schaeden) mkdirSync(ziel, { recursive: true });
+  const inhalt = readdirSync(projektOrdner);
+  let vorhanden = inhalt.find((n) => nfc(n) === nfc(ABLAGE_ORDNER));
+
+  /* Schreibt jemand "Lampenprotokolle" und das Skript sucht "Lampen Protokolle",
+     stünden am Ende zwei fast gleich benannte Ordner nebeneinander und die
+     Protokolle verteilten sich auf beide. Deshalb zweiter Versuch ohne
+     Leerzeichen, Bindestriche und Gross-/Kleinschreibung: Was der Sache nach
+     derselbe Ordner ist, wird auch derselbe. */
+  let angepasst = null;
+  if (!vorhanden) {
+    const lose = (w) => nfc(w).toLowerCase().replace(/[\s_-]+/g, "");
+    const nah = inhalt.filter((n) => lose(n) === lose(ABLAGE_ORDNER));
+    if (nah.length === 1) {
+      vorhanden = nah[0];
+      angepasst = nah[0];
+    } else if (nah.length > 1) {
+      return { fehler: `mehrere Ordner kommen für "${ABLAGE_ORDNER}" in Frage: ${nah.join(", ")} — nicht abgelegt` };
+    }
+  }
+
+  const ziel = join(projektOrdner, vorhanden ?? ABLAGE_ORDNER);
+  if (!vorhanden) mkdirSync(ziel, { recursive: true });
 
   // Vorhandenes nicht überschreiben: ein überschriebener Nachweis ist ein
   // verlorener Nachweis. Stattdessen durchnummerieren.
@@ -730,7 +760,7 @@ function ablegen(pdfPfad) {
 
   const zielDatei = join(ziel, name);
   copyFileSync(pdfPfad, zielDatei);
-  return { pfad: zielDatei, neuerOrdner: !schaeden };
+  return { pfad: zielDatei, neuerOrdner: !vorhanden, angepasst };
 }
 
 if (flags.has("--ablegen")) {
@@ -739,6 +769,9 @@ if (flags.has("--ablegen")) {
     console.error(`ABLAGE nicht erfolgt: ${ergebnis.fehler}`);
     process.exit(4);
   }
-  if (ergebnis.neuerOrdner) console.log('      Ordner "Schäden" neu angelegt');
+  if (ergebnis.neuerOrdner) console.log(`      Ordner "${ABLAGE_ORDNER}" neu angelegt`);
+  if (ergebnis.angepasst) {
+    console.log(`      vorhandenen Ordner "${ergebnis.angepasst}" benutzt statt "${ABLAGE_ORDNER}" neu anzulegen`);
+  }
   console.log(`ABLAGE ${ergebnis.pfad}`);
 }
