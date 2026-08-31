@@ -4,7 +4,9 @@
 # legt es im Projektordner ab.
 #
 # Wird vom LaunchAgent de.nova-works.protokoll aufgerufen. Zum Testen auch von
-# Hand:  ./scripts/protokoll-nacht.sh
+# Hand, wahlweise mit einem anderen Tag:
+#   ./scripts/protokoll-nacht.sh
+#   ./scripts/protokoll-nacht.sh 2026-08-31
 #
 # Bewusst einmal am Tag statt bei jeder eingehenden Mail: Ein Protokoll ist eine
 # Zusammenfassung. Bei jeder Meldung eines zu erzeugen hiesse, dreissig PDFs in
@@ -47,14 +49,29 @@ fi
 # in einen Ordner, in dem längst niemand mehr nachsieht.
 PROJEKT="${PROTOKOLL_PROJEKT:-}"
 OBJEKT="${PROTOKOLL_OBJEKT:-}"
+
+# Vorgabe ist info@, weil technik@ seit dem 31.08.2026 jede Zustellung mit
+# "550 5.6.200 STOREDRV.Deliver; message is treated as poison" ablehnt — ein
+# Defekt im Postfachspeicher, den nur Microsoft beheben kann. Sobald das Postfach
+# wieder annimmt, hier zurückstellen; bis dahin liefe die Erfassung sonst ins Leere.
+POSTFACH="${PROTOKOLL_POSTFACH:-info@nova-works.de}"
 if [ -z "$PROJEKT" ]; then
   log "Kein PROTOKOLL_PROJEKT gesetzt — nichts zu tun. Für einen laufenden Job in $ENV_FILE eintragen."
   exit 0
 fi
 
-# Der Lauf um 01:00 fasst den Tag zusammen, der gerade zu Ende ist.
-# BSD-date auf macOS, GNU-date überall sonst.
-TAG="$(date -v-1d "+%Y-%m-%d" 2>/dev/null || date -d "yesterday" "+%Y-%m-%d")"
+# Der Lauf um 01:00 fasst den Tag zusammen, der gerade zu Ende ist. Zum Prüfen
+# lässt sich ein anderer Tag mitgeben:  ./scripts/protokoll-nacht.sh 2026-08-31
+TAG="${1:-}"
+if [ -n "$TAG" ]; then
+  case "$TAG" in
+    [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;;
+    *) log "FEHLER Datum muss JJJJ-MM-TT lauten, war: $TAG"; exit 1 ;;
+  esac
+else
+  # BSD-date auf macOS, GNU-date überall sonst.
+  TAG="$(date -v-1d "+%Y-%m-%d" 2>/dev/null || date -d "yesterday" "+%Y-%m-%d")"
+fi
 if [ -z "$TAG" ]; then
   log "FEHLER Datum des Vortags liess sich nicht bestimmen."
   exit 1
@@ -65,26 +82,53 @@ cd "$REPO" || { log "FEHLER cd nach $REPO fehlgeschlagen"; exit 1; }
 PROMPT="Erstelle das Scheinwerfer-Protokoll nach .claude/skills/scheinwerfer-protokoll/SKILL.md.
 
 Zeitraum: ausschliesslich der $TAG, von 00:00 bis 23:59 Ortszeit.
+Postfach: $POSTFACH
 Projektnummer: $PROJEKT
 Objekt: ${OBJEKT:-aus den Meldungen ableiten}
 
 Prüfe zuerst, ob die Outlook-Tools verfügbar sind. Sind sie es nicht, brich ab und
 schreibe genau diese Zeile: \"ABBRUCH: Outlook-Tools nicht verfügbar\" — erzeuge dann
-kein Protokoll und lege nichts ab.
+kein Protokoll und lege nichts ab. Nenne dabei, welche Werkzeugnamen du tatsächlich
+zur Verfügung hast, damit der Server-Präfix in PROTOKOLL_MCP_SERVER berichtigt
+werden kann.
 
 Liegen für diesen Tag keine Meldungen im Postfach, schreibe nur \"keine Meldungen\"
 und erzeuge kein Protokoll. Ein leeres Protokoll im Projektordner sieht aus wie ein
 Tag ohne Schäden und ist keiner.
 
-Fotos werden nicht eingebettet — dafür müssten Dateien von Hand abgelegt werden,
-und dieser Lauf findet ohne Aufsicht statt. Das Feld 'datei' bleibt weg.
+Schreibe bei jeder Meldung das Feld 'empfangen' mit dem unveränderten Wert von
+receivedDateTime mit. Ist \$PROTOKOLL_FOTOS gesetzt, gib den Ordner beim Rendern
+mit --fotos mit; die Bilder legt der Power-Automate-Flow dort ab und werden über
+den Empfangszeitpunkt zugeordnet.
 
 Melde am Ende in zwei Zeilen: wie viele Scheinwerfer vollständig erfasst sind und
 wohin das Protokoll abgelegt wurde, und welche Meldungen nachgearbeitet werden
 müssen. Ist beides nichts, schreibe nur \"nichts zu tun\"."
 
-log "Start — Tag $TAG, Projekt $PROJEKT"
-if claude -p "$PROMPT" >>"$LOG" 2>&1; then
+# Ein unbeaufsichtigter Lauf bekommt keine Rückfrage beantwortet und darf ohne
+# ausdrückliche Freigabe keine MCP-Werkzeuge aufrufen. Freigegeben wird hier
+# genau das Nötige — Postfach lesen und die Anhänge dazu — statt global in der
+# Konfiguration. So steht im Skript, was es darf. SharePoint-Werkzeuge braucht es
+# nicht: die Ablage macht protokoll.mjs --ablegen über den synchronisierten
+# Ordner.
+#
+# Der Server-Präfix unterscheidet sich je nach Einrichtung. Der Standardwert ist
+# der auf dem Arbeitsrechner tatsächlich vergebene Name. Stimmt er auf einem
+# anderen Rechner nicht, bricht der Lauf mit "Outlook-Tools nicht verfügbar" ab
+# und nennt die verfügbaren Werkzeugnamen; dann PROTOKOLL_MCP_SERVER in der
+# env-Datei setzen.
+MCP_SERVER="${PROTOKOLL_MCP_SERVER:-claude_ai_Microsoft_365}"
+export PROTOKOLL_FOTOS="${PROTOKOLL_FOTOS:-}"
+WERKZEUGE="Bash,Read,Write,Glob,Grep"
+for t in outlook_email_search read_resource; do
+  WERKZEUGE="$WERKZEUGE,mcp__${MCP_SERVER}__${t}"
+done
+
+# Prompt über die Standardeingabe, nicht als Argument: --allowedTools nimmt
+# mehrere Werte entgegen und verschluckt einen nachfolgenden Text als weiteren
+# Werkzeugnamen. Der Aufruf endete dann mit "Input must be provided".
+log "Start — Tag $TAG, Postfach $POSTFACH, Projekt $PROJEKT, MCP-Server $MCP_SERVER"
+if printf '%s' "$PROMPT" | claude -p --allowedTools "$WERKZEUGE" >>"$LOG" 2>&1; then
   log "Ende"
 else
   log "FEHLER claude endete mit Code $?"
