@@ -5,18 +5,28 @@ description: Erstellt aus den Fotomeldungen im Postfach technik@nova-works.de ei
 
 # Scheinwerfer-Protokoll
 
-Die Crew schickt pro Scheinwerfer eine Mail an `technik@nova-works.de`: Gerät,
-Standort und Zustand in der Betreffzeile, Fotos im Anhang. Daraus entsteht ein
+Die Crew schickt Mails an `technik@nova-works.de`: Standort, Anzahl bzw. Gerät und
+Zustand in der Betreffzeile, Fotos im Anhang. Eine Meldung deckt entweder einen
+einzelnen Scheinwerfer ab oder eine Gruppe auf einem Foto. Daraus entsteht ein
 Protokoll.
 
 ## Meldeformat
 
+Drei Felder, getrennt durch `|`: **Standort | Anzahl oder Gerät | Zustand**.
+
 ```
-Betreff: SW-14 | Halle 3, Traverse Nord, Feld B4 | Linse gesprungen
+Betreff: Halle 3, Traverse Nord | 6 | alle ok
+Betreff: Halle 3, Traverse Nord, Feld B4 | SW-14 | Linse gesprungen
 ```
 
-Drei Felder, getrennt durch `|`: **Gerät | Standort | Zustand**. Mehrere Fotos in
-einer Mail gehören alle zu diesem einen Gerät.
+Ein Foto darf mehrere Lampen zeigen — dann steht im mittleren Feld ihre Anzahl,
+und Standort wie Zustand gelten für die ganze Gruppe. Steht dort statt einer Zahl
+eine Gerätebezeichnung, betrifft die Meldung genau dieses eine Gerät.
+
+Der Standort steht bewusst **vorn**, nicht die Gerätenummer. Er ist das einzige
+Feld, das sich nicht rekonstruieren lässt — die Fotos enthalten keine
+Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre bei
+`Halle 3 | … | ok` nicht zu entscheiden, was gemeint ist.
 
 ## Ablauf
 
@@ -32,8 +42,14 @@ einer Mail gehören alle zu diesem einen Gerät.
    `hasAttachments: false`, obwohl das Foto da ist. Wer der Liste glaubt,
    protokolliert vorhandene Fotos als fehlend.
 
-4. **Betreff zerlegen** an `|` in Gerät, Standort, Zustand. Leere Felder bleiben
-   leer — sie werden im Protokoll als „nicht angegeben" ausgewiesen, nicht geraten.
+4. **Betreff zerlegen** an `|` in Standort, Mittelfeld, Zustand. Leere Felder
+   bleiben leer — sie werden im Protokoll als „nicht angegeben" ausgewiesen, nicht
+   geraten.
+
+   Das Mittelfeld entscheidet die Form: Besteht es nur aus einer Zahl (auch als
+   „6 Stück" oder „6x"), ist es eine Gruppenmeldung → `anzahl`. Sonst ist es eine
+   Gerätebezeichnung → `geraet`, und `anzahl` bleibt weg. Ohne beides zählt die
+   Meldung als ein Scheinwerfer.
 
 5. **Dubletten markieren.** Gleiches Gerät am gleichen Standort ein zweites Mal,
    typischerweise als Weiterleitung: `status: "dublette"`. Sie bleibt als Zeile
@@ -45,7 +61,10 @@ einer Mail gehören alle zu diesem einen Gerät.
    |---|---|
    | `vollstaendig` | alle drei Betreff-Felder gefüllt **und** mindestens ein Foto |
    | `unvollstaendig` | ein Feld fehlt oder kein Foto dran |
-   | `dublette` | dasselbe Gerät schon erfasst |
+   | `dublette` | dieselbe Position schon erfasst |
+
+   Bei einer Gruppenmeldung zählt der Status für alle Lampen der Gruppe: sechs
+   Stück ohne Foto sind sechs unvollständige Scheinwerfer, nicht einer.
 
 7. **Daten schreiben** nach dem Muster in `beispiel.json` (gleicher Ordner) und
    rendern:
@@ -95,6 +114,9 @@ am Ende melden:
   Fotos selbst mit „verkleinert".
 - **Gerätenummer doppelt an verschiedenen Standorten.** Entweder ein Tippfehler
   oder ein umgehängtes Gerät — beides muss ein Mensch entscheiden.
+- **Gruppenmeldung mit gemischtem Zustand.** „6 | 5 ok, einer flackert" lässt
+  offen, welcher. Die Gruppe als unvollständig führen und die Einzelmeldung
+  nachfordern — eine Gruppe trägt genau einen Zustand.
 
 Ein Protokoll ist ein Nachweis. Eine geratene Zeile darin ist schlimmer als eine
 fehlende, weil niemand mehr nachsieht.

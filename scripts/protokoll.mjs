@@ -106,9 +106,18 @@ const CHIP = {
 
 /* ------------------------------------------------------------- Kennzahlen */
 
+/** Eine Meldung kann eine Lampe betreffen oder eine ganze Traverse. Ohne
+ *  Angabe ist es eine. */
+function anzahlVon(position) {
+  const n = Number(position.anzahl);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : 1;
+}
+
 const echte = positionen.filter((p) => p.status !== "dublette");
-const geraete = new Set(echte.map((p) => p.geraet).filter(Boolean));
-const vollstaendig = echte.filter((p) => p.status === "vollstaendig").length;
+const scheinwerfer = echte.reduce((summe, p) => summe + anzahlVon(p), 0);
+const vollstaendig = echte
+  .filter((p) => p.status === "vollstaendig")
+  .reduce((summe, p) => summe + anzahlVon(p), 0);
 
 const zeiten = positionen.map((p) => p.zeit).filter(Boolean).sort();
 const zeitraum =
@@ -152,8 +161,13 @@ function zeile(position) {
     ? `<a href="${escapeHtml(position.mail)}">${escapeHtml(position.standort || "—")}</a>`
     : escapeHtml(position.standort || "—");
 
+  const anzahl = anzahlVon(position);
+  const bezeichner = position.geraet
+    ? escapeHtml(position.geraet)
+    : `${anzahl}&nbsp;Stück`;
+
   return `      <div class="row">
-        <div class="id">${escapeHtml(position.geraet || "—")}${typ}</div>
+        <div class="id">${bezeichner}${typ}</div>
         <div class="place"><span class="cell-label">Standort</span>${standort}<span class="sub">${untertitel}</span></div>
         <div class="cond"><span class="cell-label">Zustand</span>${zustand}</div>
         <div class="photo"><span class="cell-label">Foto</span>${fotoZelle(position)}</div>
@@ -300,8 +314,8 @@ const metaFelder = [
   ["Datum", datumLang(datum) || "—"],
   ["Zeitraum", zeitraum],
   ["Meldungen", String(positionen.length)],
-  ["Geräte", String(geraete.size)],
-  ["Vollständig", `${vollstaendig} von ${geraete.size}`],
+  ["Scheinwerfer", String(scheinwerfer)],
+  ["Vollständig", `${vollstaendig} von ${scheinwerfer}`],
 ].filter(Boolean);
 
 const hinweise = Array.isArray(daten.hinweise) ? daten.hinweise : [];
@@ -322,7 +336,7 @@ const html = `<!DOCTYPE html>
     <div class="eyebrow">Nova Works${daten.projekt ? ` &middot; Projekt ${escapeHtml(daten.projekt)}` : ""}</div>
     <h1>Scheinwerfer-Protokoll</h1>
     <p class="lede">Erzeugt aus den Meldungen an <code>${escapeHtml(daten.postfach || "technik@nova-works.de")}</code>.
-    Gerät, Standort und Zustand stammen aus der Betreffzeile.</p>
+    Standort, Anzahl und Zustand stammen aus der Betreffzeile.</p>
     <dl class="meta">
 ${metaFelder.map(([k, v]) => `      <div><dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v)}</dd></div>`).join("\n")}
     </dl>
@@ -332,7 +346,7 @@ ${metaFelder.map(([k, v]) => `      <div><dt>${escapeHtml(k)}</dt><dd>${escapeHt
     <h2>Erfassung</h2>
     <div class="log">
       <div class="row is-head">
-        <div>Gerät</div><div>Standort</div><div>Zustand</div><div>Foto</div><div>Status</div>
+        <div>Gerät / Anzahl</div><div>Standort</div><div>Zustand</div><div>Foto</div><div>Status</div>
       </div>
 ${positionen.map(zeile).join("\n")}
     </div>
@@ -366,7 +380,7 @@ writeFileSync(zielHtml, html, "utf8");
 console.log(`HTML  ${zielHtml}`);
 
 if (!flags.has("--pdf")) {
-  console.log(`      ${positionen.length} Meldungen, ${geraete.size} Geräte, ${vollstaendig} vollständig`);
+  console.log(`      ${positionen.length} Meldungen, ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
   process.exit(0);
 }
 
@@ -431,4 +445,4 @@ if (!existsSync(zielPdf)) {
 }
 
 console.log(`PDF   ${zielPdf}`);
-console.log(`      ${positionen.length} Meldungen, ${geraete.size} Geräte, ${vollstaendig} vollständig`);
+console.log(`      ${positionen.length} Meldungen, ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
