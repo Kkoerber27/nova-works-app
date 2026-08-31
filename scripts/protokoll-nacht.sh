@@ -22,6 +22,14 @@ mkdir -p "$(dirname "$LOG")"
 stamp() { date "+%Y-%m-%d %H:%M:%S"; }
 log() { echo "[$(stamp)] $*" >>"$LOG"; }
 
+# Damit die Datei nicht unbegrenzt wächst: die letzten 2000 Zeilen behalten.
+kuerzen() {
+  [ -f "$LOG" ] || return 0
+  if [ "$(wc -l <"$LOG")" -gt 4000 ]; then
+    tail -n 2000 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+  fi
+}
+
 # LaunchAgents erben weder ~/.zshrc noch einen brauchbaren PATH.
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
@@ -128,13 +136,42 @@ done
 # mehrere Werte entgegen und verschluckt einen nachfolgenden Text als weiteren
 # Werkzeugnamen. Der Aufruf endete dann mit "Input must be provided".
 log "Start — Tag $TAG, Postfach $POSTFACH, Projekt $PROJEKT, MCP-Server $MCP_SERVER"
-if printf '%s' "$PROMPT" | claude -p --allowedTools "$WERKZEUGE" >>"$LOG" 2>&1; then
-  log "Ende"
-else
-  log "FEHLER claude endete mit Code $?"
+
+# Die Ausgabe erst sammeln, dann bewerten. Ein Abbruch steht nur im Fliesstext —
+# claude selbst endet dabei mit 0. Ohne diese Prüfung schlösse das Protokoll mit
+# "Ende" und der Rückgabewert wäre 0: Wer nachts nur die letzte Zeile ansieht
+# oder eine Überwachung anhängt, hielte einen Lauf für erfolgreich, der nichts
+# erzeugt hat.
+AUSGABE="$(mktemp "${TMPDIR:-/tmp}/protokoll-nacht.XXXXXX")"
+# Aufräumen und Kürzen in den Trap, nicht ans Skriptende: Unten wird an mehreren
+# Stellen vorzeitig ausgestiegen, und gerade bei wiederholten Fehlern wächst das
+# Protokoll am schnellsten.
+trap 'rm -f "$AUSGABE"; kuerzen' EXIT
+
+printf '%s' "$PROMPT" | claude -p --allowedTools "$WERKZEUGE" >"$AUSGABE" 2>&1
+CODE=$?
+cat "$AUSGABE" >>"$LOG"
+
+if [ "$CODE" -ne 0 ]; then
+  log "FEHLER claude endete mit Code $CODE"
+  exit 1
 fi
 
-# Damit die Datei nicht unbegrenzt wächst: die letzten 2000 Zeilen behalten.
-if [ "$(wc -l <"$LOG")" -gt 4000 ]; then
-  tail -n 2000 "$LOG" >"$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+if grep -q "^ABBRUCH:" "$AUSGABE"; then
+  log "FEHLER $(grep -m1 "^ABBRUCH:" "$AUSGABE") — kein Protokoll erzeugt, nichts abgelegt"
+  exit 1
 fi
+
+# Kein Fehler, aber auch kein Ergebnis: ein Tag ohne Meldungen. Das ist der
+# Normalfall an einem Tag ohne Job und darf nicht wie ein Fehler aussehen.
+if grep -qi "keine Meldungen" "$AUSGABE"; then
+  log "Ende — keine Meldungen für $TAG, kein Protokoll erzeugt"
+  exit 0
+fi
+
+if grep -q "^ABLAGE nicht erfolgt" "$AUSGABE"; then
+  log "FEHLER Ablage nicht erfolgt — das PDF liegt nur lokal. Grund steht darüber."
+  exit 1
+fi
+
+log "Ende"

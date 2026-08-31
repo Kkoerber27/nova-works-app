@@ -220,6 +220,22 @@ ohne Schäden und ist keiner.
 Fotos bettet der nächtliche Lauf nicht ein. Dafür müssten Dateien von Hand
 abgelegt werden, und der Lauf findet ohne Aufsicht statt.
 
+**Was das Protokoll am nächsten Morgen sagt.** Der Lauf bewertet sein eigenes
+Ergebnis, statt nur „Ende" zu schreiben — nachts sieht niemand zu, und die
+letzte Zeile ist meist alles, was jemand liest:
+
+| Letzte Zeile | Code | Bedeutung |
+|---|---|---|
+| `Ende` | 0 | Protokoll erzeugt und abgelegt |
+| `Ende — keine Meldungen für …` | 0 | Tag ohne Meldungen, bewusst nichts erzeugt |
+| `FEHLER ABBRUCH: …` | 1 | Werkzeuge fehlten, nichts erzeugt |
+| `FEHLER Ablage nicht erfolgt …` | 1 | PDF liegt nur lokal |
+| `FEHLER claude endete mit Code N` | 1 | Lauf selbst gescheitert |
+
+Der Unterschied ist nicht kosmetisch: `claude` endet auch beim Abbruch mit 0.
+Ohne diese Auswertung stünde unter einem Lauf, der nichts erzeugt hat, „Ende"
+und der Rückgabewert wäre 0.
+
 **Werkzeug-Freigabe.** Ein unbeaufsichtigter Lauf bekommt keine Rückfrage
 beantwortet und darf ohne ausdrückliche Erlaubnis keine MCP-Werkzeuge aufrufen.
 Das Skript gibt am `claude`-Aufruf genau das Nötige frei — Postfach lesen,
