@@ -309,6 +309,16 @@ const STIL = `
   .band .kennung { font-size:.72rem; letter-spacing:.22em; text-transform:uppercase;
                    color:var(--accent-hell); text-align:right; line-height:1.6; }
   .band .kennung .projekt { color:var(--band-ink); opacity:.6; }
+  .band-rechts { display:flex; align-items:center; gap:1.1rem; flex-wrap:wrap; justify-content:flex-end; }
+  /* Öffnet den Druckdialog des Browsers; dort führt „Als PDF sichern" zum
+     selben Ergebnis wie protokoll.mjs --pdf. Im Druck ist der Knopf weg —
+     er hat auf einem Nachweis nichts verloren. */
+  .druck { font-family:var(--body); font-size:.68rem; font-weight:600; letter-spacing:.18em;
+           text-transform:uppercase; color:var(--accent-hell); background:none;
+           border:1px solid var(--accent-hell); padding:.5rem .9rem; cursor:pointer;
+           white-space:nowrap; }
+  .druck:hover { background:var(--accent-hell); color:var(--band); }
+  .druck:focus-visible { outline:2px solid var(--band-ink); outline-offset:2px; }
   .band .wortmarke { font-size:1.1rem; letter-spacing:.3em; text-transform:uppercase;
                      color:var(--band-ink); }
 
@@ -392,6 +402,7 @@ const STIL = `
     .sheet { padding:0; max-width:none; }
     .band { margin:0 0 1.6rem; padding:.8rem 1rem; }
     .band img { height:26px; }
+    .druck { display:none; }
     section { margin-bottom:1.6rem; }
     .meta { margin-bottom:1.6rem; }
     /* Engere Spalten, damit die Tabelle in den Satzspiegel passt. Die letzte
@@ -447,7 +458,10 @@ const html = `<!DOCTYPE html>
 
   <div class="band">
     ${logoTag}
-    <div class="kennung">${escapeHtml(daten.objekt || "Protokoll")}${daten.projekt ? `<br><span class="projekt">Projekt ${escapeHtml(daten.projekt)}</span>` : ""}</div>
+    <div class="band-rechts">
+      <div class="kennung">${escapeHtml(daten.objekt || "Protokoll")}${daten.projekt ? `<br><span class="projekt">Projekt ${escapeHtml(daten.projekt)}</span>` : ""}</div>
+      <button type="button" class="druck" onclick="window.print()">Als PDF</button>
+    </div>
   </div>
 
   <header class="head">

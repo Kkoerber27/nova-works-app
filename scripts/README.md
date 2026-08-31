@@ -173,6 +173,11 @@ Eine unter `datei` genannte, aber fehlende Datei wird ebenfalls gemeldet und
 weggelassen: ein Protokoll, das vollständig aussieht und es nicht ist, wäre
 schlimmer als eines mit sichtbarer Lücke.
 
+Das erzeugte HTML trägt oben rechts einen Knopf **Als PDF**, der den Druckdialog
+des Browsers öffnet — „Als PDF sichern" führt dort zum selben Ergebnis wie
+`--pdf`. Nützlich, wenn jemand nur das weitergeleitete HTML hat. Im Druck ist der
+Knopf ausgeblendet; auf einem Nachweis hat er nichts verloren.
+
 Für das PDF wird ein installierter Chromium-Browser kopflos benutzt — gesucht
 werden Chrome, Edge, Brave und Chromium in dieser Reihenfolge. Bewusst keine
 zusätzliche Abhängigkeit: Edge ist auf einem Mac mit Microsoft 365 ohnehin da,
