@@ -1,0 +1,191 @@
+---
+name: scheinwerfer-protokoll
+description: Erstellt aus den Fotomeldungen im Postfach technik@nova-works.de ein Scheinwerfer-Protokoll als HTML und PDF. Nutzen, wenn nach Scheinwerfer-Protokoll, Lampenprotokoll, Bestandsaufnahme der Scheinwerfer oder dem Auswerten der Fotos aus technik@ gefragt wird.
+---
+
+# Scheinwerfer-Protokoll
+
+Die Crew schickt Mails an `technik@nova-works.de`: Standort, Anzahl bzw. Gerät und
+Zustand in der Betreffzeile, Fotos im Anhang. Eine Meldung deckt entweder einen
+einzelnen Scheinwerfer ab oder eine Gruppe auf einem Foto. Daraus entsteht ein
+Protokoll.
+
+## Meldeformat
+
+Drei Angaben, getrennt durch Komma: **Standort, Anzahl oder Gerät, Zustand**.
+
+```
+Betreff: Halle 3, Traverse Nord, 6, alle ok
+Betreff: Halle 3, Traverse Nord, Feld B4, SW-14, Linse gesprungen
+```
+
+Ein Foto darf mehrere Lampen zeigen — dann steht vor dem Zustand ihre Anzahl,
+und Standort wie Zustand gelten für die ganze Gruppe. Steht dort statt einer Zahl
+eine Gerätebezeichnung, betrifft die Meldung genau dieses eine Gerät.
+
+Der Standort steht bewusst **vorn**, nicht die Gerätenummer. Er ist das einzige
+Feld, das sich nicht rekonstruieren lässt — die Fotos enthalten keine
+Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre bei
+`Halle 3, …, ok` nicht zu entscheiden, was gemeint ist.
+
+## Ablauf
+
+1. **Zeitraum klären.** Ohne Angabe den laufenden Tag nehmen und das im Bericht
+   sagen. Ein Protokoll über „alles im Postfach" mischt sonst mehrere Jobs.
+
+2. **Meldungen holen** mit `outlook_email_search`, `mailboxOwnerEmail:
+   "technik@nova-works.de"`, dazu `afterDateTime` / `beforeDateTime`.
+
+3. **Jede Nachricht einzeln mit `read_resource` öffnen.** Nicht überspringen und
+   nicht aus der Trefferliste arbeiten: iPhone-Mails betten Fotos in den Text ein
+   statt sie anzuhängen, und für solche Nachrichten meldet die Suche
+   `hasAttachments: false`, obwohl das Foto da ist. Wer der Liste glaubt,
+   protokolliert vorhandene Fotos als fehlend.
+
+4. **Betreff von hinten zerlegen.** An Kommas trennen, dann:
+
+   | Feld | Herkunft |
+   |---|---|
+   | Zustand | letztes Feld |
+   | Anzahl oder Gerät | vorletztes Feld |
+   | Standort | alles davor, mit Kommas wieder zusammengesetzt |
+
+   **Nicht von vorn zählen.** Der Standort enthält selbst Kommas — „Halle 3,
+   Traverse Nord, Feld B4" sind schon drei Felder. Nur von hinten liegen die
+   Grenzen fest.
+
+   Das vorletzte Feld entscheidet die Form: eine reine Zahl, auch mit „Stück",
+   „St." oder „x" dahinter, ist eine Gruppenmeldung → `anzahl`. Eine
+   Gerätebezeichnung — Buchstaben mit Ziffer, etwa `SW-14` oder `BeamX7-03` —
+   meint ein einzelnes Gerät → `geraet`, `anzahl` bleibt weg.
+
+   Zahl plus beliebiges Wort ist **keine** Anzahl: „5 ok" ist ein abgeschnittener
+   Zustand, keine Stückzahl. Nur die drei genannten Zusätze zählen.
+
+   Passt es auf **keines von beidem**, ist die Zerlegung nicht sicher: dann
+   steckt vermutlich ein Komma im Zustand („5 ok, einer flackert"). Nicht raten
+   — als `unvollstaendig` mit Hinweis aufnehmen und melden.
+
+   Leere Felder bleiben leer und werden im Protokoll als „nicht angegeben"
+   ausgewiesen.
+
+5. **Dubletten markieren.** Gleiches Gerät am gleichen Standort ein zweites Mal,
+   typischerweise als Weiterleitung: `status: "dublette"`. Sie bleibt als Zeile
+   stehen, zählt aber nicht als eigene Position.
+
+6. **Status setzen** je Meldung:
+
+   | Status | Wann |
+   |---|---|
+   | `vollstaendig` | alle drei Betreff-Felder gefüllt **und** mindestens ein Foto |
+   | `unvollstaendig` | ein Feld fehlt oder kein Foto dran |
+   | `dublette` | dieselbe Position schon erfasst |
+
+   Bei einer Gruppenmeldung zählt der Status für alle Lampen der Gruppe: sechs
+   Stück ohne Foto sind sechs unvollständige Scheinwerfer, nicht einer.
+
+7. **Daten schreiben** nach dem Muster in `beispiel.json` (gleicher Ordner) und
+   rendern:
+
+   ```bash
+   node scripts/protokoll.mjs /pfad/daten.json --pdf
+   ```
+
+   Ohne `--pdf` entsteht nur das HTML. Findet das Skript keinen Chromium-Browser,
+   sagt es das und das HTML lässt sich von Hand drucken.
+
+8. **Protokoll ablegen** — nur wenn die Projektnummer feststeht. Mit
+   `sharepoint_folder_search` den Ordner `Schäden` unterhalb von
+   `Documents/Angebote/<projektnummer>_…` suchen. Bleibt mehr als ein Treffer
+   übrig oder gar keiner, nicht raten: melden und das PDF liegen lassen.
+
+   Vor dem Hochladen mit `sharepoint_search` prüfen, ob dort schon ein Protokoll
+   desselben Tages liegt. Wenn ja, **nicht überschreiben** — im Bericht erwähnen
+   und den Namen um eine laufende Nummer ergänzen. Ein Protokoll ist ein
+   Nachweis; eine überschriebene Fassung ist ein verlorener Nachweis.
+
+   Dateiname: `Scheinwerfer-Protokoll_<Objekt>_<JJJJ-MM-TT>.pdf`, hochgeladen mit
+   `sharepoint_upload_file`.
+
+   Der Ordner `Schäden` ist die Ablage, nicht `Technik` oder `Dokumente`: Dort
+   sucht ihn, wer später einen Schaden belegen muss.
+
+9. **Lücken melden.** Am Ende in zwei Zeilen: wie viele Geräte vollständig
+   erfasst sind, und welche Meldungen nachgearbeitet werden müssen — mit Gerät
+   und Grund. Dazu, wohin das Protokoll abgelegt wurde oder warum nicht.
+
+## Fotos ansehen
+
+`read_resource` auf die Anhang-URI liefert das Bild. Das lohnt sich, um den
+**Gerätetyp** zu bestimmen (steht meist lesbar auf dem Gehäuse) und ihn als
+`geraetetyp` einzutragen, oder um einen im Betreff behaupteten Zustand
+gegenzuprüfen.
+
+Nicht bei jedem Foto machen. Ein Bild in Originalgröße ist rund 5 MB; bei dreißig
+Geräten ist das Postfach in einem Durchgang nicht sinnvoll durchzusehen. Ansehen,
+wo es etwas entscheidet: unklarer Betreff, gemeldeter Schaden, Stichprobe.
+
+## Fotos ins Protokoll holen
+
+Standardmäßig führt das Protokoll nur, *dass* Fotos vorliegen. Sollen die Bilder
+im Dokument stehen — bei Mängeln ist das der eigentliche Nachweis —, braucht es
+die Dateien auf der Platte:
+
+1. In Outlook die betreffenden Anhänge markieren und in einen Ordner neben die
+   Datendatei ziehen.
+2. Bei den passenden Fotos das Feld `datei` eintragen, Pfad relativ zur
+   Datendatei:
+
+   ```json
+   "fotos": [{ "name": "image0.jpeg", "groesse": 5149962, "datei": "fotos/sw-14.jpg" }]
+   ```
+
+`protokoll.mjs` verkleinert die Bilder beim Rendern selbst auf 900 px längste
+Kante und bettet sie unter der jeweiligen Zeile ein. Ein Originalfoto von 5 MB
+wird so zu rund 200 KB; ohne das Verkleinern wäre ein Protokoll mit zehn Bildern
+über 50 MB groß und ließe sich nicht mehr per Mail verschicken.
+
+**Nicht alle Fotos einbetten.** Bei dreißig Positionen will niemand dreißig
+Bilder im PDF. Die Regel: Was einen Mangel zeigt, kommt ins Dokument; der Rest
+bleibt im Postfach und ist über den Link erreichbar.
+
+Fehlt eine unter `datei` genannte Datei, wird sie beim Rendern **gemeldet** und
+das Bild weggelassen — ein Protokoll, das vollständig aussieht und es nicht ist,
+wäre schlimmer als eines mit einer sichtbaren Lücke.
+
+## Was das Protokoll nicht kann
+
+- **Kein Standort aus dem Bild.** Fotos aus dem Mailversand enthalten keine
+  Koordinaten. Der Standort steht ausschließlich im Betreff — ist er zu vage,
+  ist die Position verloren und muss neu angefahren werden. Das gehört in die
+  Prüfhinweise, nicht stillschweigend übergangen.
+- **Die Fotos landen nicht von selbst im Dokument.** Anhänge lassen sich mit
+  `read_resource` ansehen, aber nicht als Datei weiterreichen — es gibt keinen
+  Weg, die Bytes auf die Platte zu bekommen. Wer Bilder im Protokoll haben will,
+  legt sie einmal von Hand ab; siehe „Fotos ins Protokoll holen". Ohne das
+  bleiben die Fotos im Postfach, und das Protokoll verlinkt über das Feld `mail`
+  auf die Nachricht in Outlook.
+
+## Wann etwas liegen bleibt
+
+Diese Fälle nicht raten, sondern als `unvollstaendig` mit `hinweis` aufnehmen und
+am Ende melden:
+
+- **Betreff mit weniger als drei Kommafeldern.** Kommt vor, wenn jemand die
+  Vorlage kopiert statt sie auszufüllen oder Angaben weglässt. Steht der Standort
+  erkennbar drin, als Hinweis vermerken — aber nie einen Standort erfinden, der
+  nicht dasteht.
+- **Komma im Zustand.** Dann steht im vorletzten Feld weder eine Zahl noch eine
+  Gerätebezeichnung, und der Standort wäre zu lang geraten. Die Meldung liegen
+  lassen und nachfordern — der Zustand gehört ohne Komma in ein Feld.
+- **Foto unter 500 KB.** Das Mailprogramm hat es beim Versand verkleinert; für
+  einen Schadensnachweis reicht es oft nicht. Das Protokoll markiert solche
+  Fotos selbst mit „verkleinert".
+- **Gerätenummer doppelt an verschiedenen Standorten.** Entweder ein Tippfehler
+  oder ein umgehängtes Gerät — beides muss ein Mensch entscheiden.
+- **Gruppenmeldung mit gemischtem Zustand.** „…, 6, 5 ok, einer flackert" lässt
+  offen, welcher — und zerlegt sich obendrein falsch. Die Gruppe als unvollständig
+  führen und die Einzelmeldung nachfordern; eine Gruppe trägt genau einen Zustand.
+
+Ein Protokoll ist ein Nachweis. Eine geratene Zeile darin ist schlimmer als eine
+fehlende, weil niemand mehr nachsieht.

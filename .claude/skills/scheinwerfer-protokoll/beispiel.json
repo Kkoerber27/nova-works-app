@@ -1,0 +1,103 @@
+{
+  "objekt": "Testhalle",
+  "postfach": "technik@nova-works.de",
+  "datum": "2026-08-31",
+  "erstellt": "2026-08-31T14:45:00+02:00",
+  "positionen": [
+    {
+      "geraet": "SW-01",
+      "standort": "Testhalle, Traverse Süd",
+      "zustand": "Testaufnahme",
+      "absender": "mail@kilian-koerber.de",
+      "zeit": "2026-08-31T13:12:54+02:00",
+      "fotos": [],
+      "status": "unvollstaendig"
+    },
+    {
+      "geraet": "SW-02",
+      "standort": "Testhalle, Traverse Süd",
+      "zustand": "",
+      "geraetetyp": "Litecraft BeamX7",
+      "absender": "mail@kilian-koerber.de",
+      "zeit": "2026-08-31T13:14:01+02:00",
+      "fotos": [
+        {
+          "name": "image0.jpeg",
+          "groesse": 236253
+        }
+      ],
+      "status": "unvollstaendig"
+    },
+    {
+      "geraet": "SW-02",
+      "standort": "Testhalle, Traverse Süd",
+      "zustand": "",
+      "absender": "kk@nova-works.de",
+      "zeit": "2026-08-31T13:18:40+02:00",
+      "hinweis": "Weiterleitung",
+      "fotos": [],
+      "status": "dublette"
+    },
+    {
+      "geraet": "SW-03",
+      "standort": "Testhalle, Traverse Süd",
+      "zustand": "Linse ok",
+      "absender": "kk@nova-works.de",
+      "zeit": "2026-08-31T13:26:15+02:00",
+      "fotos": [],
+      "status": "unvollstaendig"
+    },
+    {
+      "geraet": "SW-04",
+      "standort": "Testhalle, Traverse Süd",
+      "zustand": "Linse ok",
+      "geraetetyp": "Litecraft BeamX7",
+      "absender": "kk@nova-works.de",
+      "zeit": "2026-08-31T13:27:04+02:00",
+      "fotos": [
+        {
+          "name": "image0.jpeg",
+          "groesse": 5149962
+        }
+      ],
+      "status": "vollstaendig"
+    },
+    {
+      "standort": "Testhalle, Traverse Nord",
+      "anzahl": 6,
+      "zustand": "alle ok",
+      "geraetetyp": "Litecraft BeamX7",
+      "absender": "kk@nova-works.de",
+      "zeit": "2026-08-31T13:31:00+02:00",
+      "fotos": [
+        {
+          "name": "image0.jpeg",
+          "groesse": 4980112
+        }
+      ],
+      "status": "vollstaendig"
+    }
+  ],
+  "hinweise": [
+    {
+      "bezug": "SW-01",
+      "titel": "Die Vorlage steht komplett im Betreff",
+      "text": "Der Betreff enthält die Anleitung statt der ausgefüllten Felder. Hier ließen sie sich noch herauslesen, bei abweichender Schreibweise nicht mehr."
+    },
+    {
+      "bezug": "SW-02",
+      "titel": "Foto auf 231 KB verkleinert",
+      "text": "Das Mailprogramm hat das Bild beim Versand neu berechnet — SW-04 kam zum Vergleich mit 4,9 MB an. Beim Verkleinern gehen Details verloren, auf die es bei einem Schadensnachweis ankommt."
+    },
+    {
+      "bezug": "SW-02",
+      "titel": "Doppelt eingegangen",
+      "text": "Einmal direkt, einmal als Weiterleitung vier Minuten später. Die Weiterleitung ist als Dublette markiert und zählt nicht als eigene Position."
+    },
+    {
+      "bezug": "SW-03",
+      "titel": "„Anhang“ im Betreff, aber keiner dran",
+      "text": "Die Mail kündigt ein Foto an und enthält keines. Ohne Bild ist die Meldung als Nachweis wertlos."
+    }
+  ]
+}
