@@ -10,7 +10,8 @@ Protokoll nach `~/.nova-works/`.
 | NAS-Sicherung | nachts 03:15 | `nas-backup.sh` | `~/.nova-works/nas-backup.log` |
 | Scheinwerfer-Protokoll | nachts 01:00 | `protokoll-nacht.sh` | `~/.nova-works/protokoll.log` |
 
-Dazu `nas-restore.sh` für das Zurückspielen — von Hand, nicht geplant.
+Von Hand dazu: `nas-restore.sh` für das Zurückspielen, `whatsapp-import.mjs` und
+`protokoll.mjs` für das Scheinwerfer-Protokoll.
 
 ## NAS-Sicherung
 
@@ -121,7 +122,45 @@ Schlüssel ohne `nw_`-Präfix.
 
 ## Scheinwerfer-Protokoll
 
-### Nächtlicher Lauf
+### Aus einem WhatsApp-Export
+
+Die Crew meldet in der WhatsApp-Gruppe: ein Foto, darunter als Bildunterschrift
+`Standort, Anzahl, Zustand`. Am Ende des Tages den Chat exportieren — **mit
+Medien** — und die ZIP hier in den Chat hängen.
+
+```bash
+unzip -q "WhatsApp Chat - Technik.zip" -d /tmp/wa
+node scripts/whatsapp-import.mjs /tmp/wa --objekt "Glücksgefühle" --projekt 26-0032
+node scripts/protokoll.mjs /tmp/wa/daten.json --pdf --ablegen
+```
+
+`--tag 2026-09-05` beschränkt auf einen Tag; ohne das steht der ganze Export im
+Protokoll, und eine Gruppe, die über mehrere Tage läuft, ergäbe mehrere Jobs in
+einem Dokument. `--out` legt die `daten.json` woanders ab, Vorgabe ist der
+Export-Ordner.
+
+Dieser Weg ist der Regelfall, weil die Fotos **als Dateien** im Export liegen und
+damit ohne weiteres Zutun im PDF landen. Aus dem Postfach sind sie nicht
+herauszuholen: Anhänge lassen sich über die Graph-Schnittstelle ansehen, aber
+nicht als Datei herausgeben — deshalb der Umweg über Power Automate, der beim
+Mailweg nötig bleibt.
+
+Gelesen werden beide Schreibweisen des Exports, die iPhone-Form
+(`‎<angehängt: …>`) und die Android-Form (`… (Datei angehängt)`), samt der
+unsichtbaren Steuerzeichen, die WhatsApp an den Zeilenanfang setzt. Steht die
+Beschriftung nicht am Bild, sondern als eigene Nachricht danach, wird sie
+übernommen — sofern derselbe Absender sie innerhalb von fünf Minuten schickt.
+Weiter auseinander nicht: dann ist nicht mehr sicher, dass sie zusammengehören.
+
+Geraten wird nichts. Eine Beschriftung, die nicht aufs Format passt, kommt als
+unvollständige Zeile mit Prüfhinweis ins Protokoll statt lautlos zu verschwinden;
+ein Foto, das der Export nicht mitgebracht hat (Export *ohne* Medien), ebenso.
+Beides steht am Ende des Laufs auf der Konsole.
+
+### Nächtlicher Lauf (Mailweg)
+
+Nur für den Weg über das Meldepostfach — ein WhatsApp-Export lässt sich nicht
+unbeaufsichtigt abholen.
 
 ```bash
 ./scripts/install-protokoll.sh
@@ -185,8 +224,9 @@ export PROTOKOLL_MCP_SERVER="…"
 
 ### Von Hand rendern
 
-Rendert die Meldungen aus `technik@nova-works.de` zu einem Protokoll — HTML
-immer, PDF auf Wunsch.
+Rendert einen fertigen Datensatz zu einem Protokoll — HTML immer, PDF auf
+Wunsch. Die `daten.json` kommt entweder aus `whatsapp-import.mjs` oder vom Skill
+`.claude/skills/scheinwerfer-protokoll/`.
 
 ```bash
 node scripts/protokoll.mjs daten.json                    # nur HTML
@@ -218,6 +258,9 @@ Die `daten.json` schreibt der Skill `.claude/skills/scheinwerfer-protokoll/`;
 das Format steht dort, ein ausgefülltes Beispiel liegt daneben in `beispiel.json`.
 
 ### Fotos
+
+Aus einem WhatsApp-Export kommen die Bilder von selbst mit; `whatsapp-import.mjs`
+trägt ihren Pfad ein. Der nächste Absatz betrifft nur den Mailweg.
 
 Ein Power-Automate-Flow legt die Anhänge aus `technik@` in einem OneDrive-Ordner
 ab und benennt sie nach dem Empfangszeitpunkt (`20260831-134756-image0.jpeg`).

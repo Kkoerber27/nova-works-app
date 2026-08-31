@@ -1,23 +1,24 @@
 ---
 name: scheinwerfer-protokoll
-description: Erstellt aus den Fotomeldungen im Meldepostfach ein Scheinwerfer-Protokoll als HTML und PDF. Nutzen, wenn nach Scheinwerfer-Protokoll, Lampenprotokoll, Bestandsaufnahme der Scheinwerfer oder dem Auswerten der Fotomeldungen gefragt wird.
+description: Erstellt aus den Fotomeldungen der Crew ein Scheinwerfer-Protokoll als HTML und PDF — aus einem WhatsApp-Chatexport oder aus dem Meldepostfach. Nutzen, wenn nach Scheinwerfer-Protokoll, Lampenprotokoll, Bestandsaufnahme der Scheinwerfer, einem WhatsApp-Export der Technikgruppe oder dem Auswerten der Fotomeldungen gefragt wird.
 ---
 
 # Scheinwerfer-Protokoll
 
-Die Crew schickt Mails an das Meldepostfach — derzeit `info@nova-works.de`:
-Standort, Anzahl bzw. Gerät und Zustand in der Betreffzeile, Fotos im Anhang. Eine Meldung deckt entweder einen
-einzelnen Scheinwerfer ab oder eine Gruppe auf einem Foto. Daraus entsteht ein
-Protokoll.
+Die Crew meldet Scheinwerfer mit Foto und drei Angaben — **Standort, Anzahl oder
+Gerät, Zustand**. Eine Meldung deckt entweder einen einzelnen Scheinwerfer ab
+oder eine Gruppe auf einem Foto. Daraus entsteht ein Protokoll.
 
 ## Meldeformat
 
 Drei Angaben, getrennt durch Komma: **Standort, Anzahl oder Gerät, Zustand**.
 
 ```
-Betreff: Halle 3, Traverse Nord, 6, alle ok
-Betreff: Halle 3, Traverse Nord, Feld B4, SW-14, Linse gesprungen
+Halle 3, Traverse Nord, 6, alle ok
+Halle 3, Traverse Nord, Feld B4, SW-14, Linse gesprungen
 ```
+
+In WhatsApp steht das als Bildunterschrift, per Mail in der Betreffzeile.
 
 Ein Foto darf mehrere Lampen zeigen — dann steht vor dem Zustand ihre Anzahl,
 und Standort wie Zustand gelten für die ganze Gruppe. Steht dort statt einer Zahl
@@ -28,7 +29,53 @@ Feld, das sich nicht rekonstruieren lässt — die Fotos enthalten keine
 Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre bei
 `Halle 3, …, ok` nicht zu entscheiden, was gemeint ist.
 
-## Ablauf
+Zwei Wege führen hinein. Sie unterscheiden sich nur darin, woher die Meldungen
+kommen; Format, Zerlegung, Status und Ablage sind gleich.
+
+| Weg | Wann | Fotos im PDF |
+|---|---|---|
+| **WhatsApp-Export** (Regelfall) | Gruppe „Technik", Chat exportieren *mit Medien*, ZIP hierher | ja, ohne Zutun |
+| **Meldepostfach** | wenn per Mail gemeldet wird, derzeit `info@nova-works.de` | nur über den Power-Automate-Ordner |
+
+Der Export ist der Regelfall, weil die Bilder darin als echte Dateien liegen.
+Aus dem Postfach sind sie nicht herauszuholen: `read_resource` zeigt Anhänge an,
+gibt sie aber nicht als Datei heraus.
+
+## Weg 1: WhatsApp-Export
+
+Der Export kommt als ZIP hier in den Chat. Entpacken, einlesen, rendern:
+
+```bash
+unzip -q "WhatsApp Chat - Technik.zip" -d /tmp/wa
+node scripts/whatsapp-import.mjs /tmp/wa --objekt "Glücksgefühle" --projekt 26-0032
+node scripts/protokoll.mjs /tmp/wa/daten.json --pdf --ablegen
+```
+
+`whatsapp-import.mjs` macht das Zerlegen, die Dublettenprüfung und den Status selbst — es zerlegt von
+hinten nach demselben Muster, erkennt Dubletten und setzt den Status. Was es
+meldet, gehört in den Bericht an den Auftraggeber:
+
+- **„Datei fehlt im Export"** — beim Exportieren wurde *Ohne Medien* gewählt.
+  Neu exportieren lassen, die Texte allein sind kein Nachweis.
+- **„Meldung nicht zerlegbar"** — die Beschriftung passt nicht aufs Format. Die
+  Zeile steht unvollständig im Protokoll; nachfordern, nicht raten.
+
+Nur der gewünschte Tag: `--tag 2026-09-05`. Ohne das steht der ganze Export im
+Protokoll, und in einer Gruppe, die über mehrere Tage läuft, sind das mehrere
+Jobs in einem Dokument.
+
+**Beschriftung.** Sie darf im Bild stehen oder als eigene Nachricht direkt
+danach — das Skript nimmt die nächste Nachricht desselben Absenders innerhalb
+von fünf Minuten als Beschriftung, wenn das Foto keine hat. Weiter auseinander
+nicht: dann ist nicht mehr sicher, dass sie zusammengehören.
+
+**Was im Export fehlt.** Keine Koordinaten (WhatsApp entfernt sie beim Versand
+als Foto) und keine Empfangszeit im Sinne des Postfachs — maßgeblich ist der
+Zeitpunkt der Nachricht. Wer den Standort nicht schreibt, hat ihn nicht.
+
+## Weg 2: Meldepostfach
+
+Hier gibt es kein Importskript — diese Schritte macht der Skill selbst.
 
 1. **Zeitraum klären.** Ohne Angabe den laufenden Tag nehmen und das im Bericht
    sagen. Ein Protokoll über „alles im Postfach" mischt sonst mehrere Jobs.
@@ -98,38 +145,42 @@ Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre
    Bei einer Gruppenmeldung zählt der Status für alle Lampen der Gruppe: sechs
    Stück ohne Foto sind sechs unvollständige Scheinwerfer, nicht einer.
 
-7. **Daten schreiben** nach dem Muster in `beispiel.json` (gleicher Ordner),
-   rendern und ablegen:
+## Rendern und ablegen
 
-   ```bash
-   node scripts/protokoll.mjs /pfad/daten.json --pdf --ablegen
-   ```
+Gilt für beide Wege gleich.
 
-   Ohne `--pdf` entsteht nur das HTML. Findet das Skript keinen Chromium-Browser,
-   sagt es das und das HTML lässt sich von Hand drucken.
+**Daten schreiben** nach dem Muster in `beispiel.json` (gleicher Ordner),
+rendern und ablegen:
 
-8. **Ablage macht `--ablegen` selbst.** Steht eine `projekt`-Nummer in den Daten,
-   kopiert das Skript das PDF nach
-   `Angebote/<projektnummer>_…/Schäden/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf`
-   im lokal synchronisierten OneDrive; der Sync-Client schiebt es nach SharePoint.
+```bash
+node scripts/protokoll.mjs /pfad/daten.json --pdf --ablegen
+```
 
-   **Nicht über `sharepoint_upload_file` gehen.** Das Werkzeug nimmt den Inhalt
-   nur inline als base64 entgegen — für ein Protokoll sind das über 200.000
-   Zeichen, die zeichengenau durchgereicht werden müssten. Ein einziges falsches
-   Zeichen ergibt ein beschädigtes PDF, und ein unlesbarer Nachweis im
-   Schadensordner ist schlimmer als gar keiner.
+Ohne `--pdf` entsteht nur das HTML. Findet das Skript keinen Chromium-Browser,
+sagt es das und das HTML lässt sich von Hand drucken.
 
-   Das Skript legt nur ab, wenn genau ein Projektordner zur Nummer passt, und
-   überschreibt nie: Eine vorhandene Fassung desselben Tages bekommt eine
-   laufende Nummer. Meldet es `ABLAGE nicht erfolgt` (Rückgabewert 4), den Grund
-   im Bericht nennen und das PDF liegen lassen.
+**Ablage macht `--ablegen` selbst.** Steht eine `projekt`-Nummer in den Daten,
+kopiert das Skript das PDF nach
+`Angebote/<projektnummer>_…/Schäden/Scheinwerfer-Protokoll_<Objekt>_<Datum>.pdf`
+im lokal synchronisierten OneDrive; der Sync-Client schiebt es nach SharePoint.
 
-   Der Ordner `Schäden` ist die Ablage, nicht `Technik` oder `Dokumente`: Dort
-   sucht ihn, wer später einen Schaden belegen muss.
+**Nicht über `sharepoint_upload_file` gehen.** Das Werkzeug nimmt den Inhalt
+nur inline als base64 entgegen — für ein Protokoll sind das über 200.000
+Zeichen, die zeichengenau durchgereicht werden müssten. Ein einziges falsches
+Zeichen ergibt ein beschädigtes PDF, und ein unlesbarer Nachweis im
+Schadensordner ist schlimmer als gar keiner.
 
-9. **Lücken melden.** Am Ende in zwei Zeilen: wie viele Geräte vollständig
-   erfasst sind, und welche Meldungen nachgearbeitet werden müssen — mit Gerät
-   und Grund. Dazu, wohin das Protokoll abgelegt wurde oder warum nicht.
+Das Skript legt nur ab, wenn genau ein Projektordner zur Nummer passt, und
+überschreibt nie: Eine vorhandene Fassung desselben Tages bekommt eine
+laufende Nummer. Meldet es `ABLAGE nicht erfolgt` (Rückgabewert 4), den Grund
+im Bericht nennen und das PDF liegen lassen.
+
+Der Ordner `Schäden` ist die Ablage, nicht `Technik` oder `Dokumente`: Dort
+sucht ihn, wer später einen Schaden belegen muss.
+
+**Lücken melden.** Am Ende in zwei Zeilen: wie viele Geräte vollständig
+erfasst sind, und welche Meldungen nachgearbeitet werden müssen — mit Gerät
+und Grund. Dazu, wohin das Protokoll abgelegt wurde oder warum nicht.
 
 ## Fotos ansehen
 
@@ -144,10 +195,14 @@ wo es etwas entscheidet: unklarer Betreff, gemeldeter Schaden, Stichprobe.
 
 ## Fotos ins Protokoll holen
 
-Standardmäßig führt das Protokoll nur, *dass* Fotos vorliegen. Sollen die Bilder
-im Dokument stehen — bei Mängeln ist das der eigentliche Nachweis —, braucht es
-die Dateien auf der Platte. Anhänge lassen sich mit `read_resource` ansehen, aber
-nicht als Datei weiterreichen; sie müssen also von woanders kommen.
+Sollen die Bilder im Dokument stehen — bei Mängeln ist das der eigentliche
+Nachweis —, braucht es die Dateien auf der Platte.
+
+**Beim WhatsApp-Export ist das erledigt:** die Bilder liegen im entpackten
+Ordner, `whatsapp-import.mjs` trägt ihren Pfad ein. Der Rest dieses Abschnitts
+betrifft nur den Weg über das Postfach. Dort führt das Protokoll standardmäßig
+nur, *dass* Fotos vorliegen: Anhänge lassen sich mit `read_resource` ansehen,
+aber nicht als Datei weiterreichen; sie müssen also von woanders kommen.
 
 **Regelfall: der Power-Automate-Flow.** Ein Flow legt jeden Anhang aus dem
 Meldepostfach in einem OneDrive-Ordner ab und benennt ihn nach dem Empfangszeitpunkt:
@@ -196,30 +251,31 @@ wäre schlimmer als eines mit einer sichtbaren Lücke.
 
 ## Was das Protokoll nicht kann
 
-- **Kein Standort aus dem Bild.** Fotos aus dem Mailversand enthalten keine
-  Koordinaten. Der Standort steht ausschließlich im Betreff — ist er zu vage,
-  ist die Position verloren und muss neu angefahren werden. Das gehört in die
+- **Kein Standort aus dem Bild.** Weder Mailversand noch WhatsApp lassen die
+  Koordinaten im Foto stehen. Der Standort steht ausschließlich in der Meldung —
+  ist er zu vage, ist die Position verloren und muss neu angefahren werden. Das gehört in die
   Prüfhinweise, nicht stillschweigend übergangen.
 - **Anhänge lassen sich nicht selbst herunterladen.** `read_resource` zeigt sie,
   gibt sie aber nicht als Datei heraus. Die Bilder müssen über den
   Power-Automate-Flow im Ordner liegen; siehe „Fotos ins Protokoll holen". Ohne
   das bleiben sie im Postfach, und das Protokoll verlinkt über das Feld `mail`
-  auf die Nachricht in Outlook.
+  auf die Nachricht in Outlook. Betrifft nur den Weg über das Postfach — im
+  WhatsApp-Export sind die Bilder ohnehin Dateien.
 
 ## Wann etwas liegen bleibt
 
 Diese Fälle nicht raten, sondern als `unvollstaendig` mit `hinweis` aufnehmen und
 am Ende melden:
 
-- **Betreff mit weniger als drei Kommafeldern.** Kommt vor, wenn jemand die
-  Vorlage kopiert statt sie auszufüllen oder Angaben weglässt. Steht der Standort
+- **Weniger als drei Kommafelder** in Betreff oder Bildunterschrift. Kommt vor,
+  wenn jemand die Vorlage kopiert statt sie auszufüllen oder Angaben weglässt. Steht der Standort
   erkennbar drin, als Hinweis vermerken — aber nie einen Standort erfinden, der
   nicht dasteht.
 - **Komma im Zustand.** Dann steht im vorletzten Feld weder eine Zahl noch eine
   Gerätebezeichnung, und der Standort wäre zu lang geraten. Die Meldung liegen
   lassen und nachfordern — der Zustand gehört ohne Komma in ein Feld.
-- **Foto unter 500 KB.** Das Mailprogramm hat es beim Versand verkleinert; für
-  einen Schadensnachweis reicht es oft nicht. Das Protokoll markiert solche
+- **Foto unter 500 KB.** Mailprogramm oder WhatsApp haben es beim Versand
+  verkleinert; für einen Schadensnachweis reicht es oft nicht. Das Protokoll markiert solche
   Fotos selbst mit „verkleinert".
 - **Gerätenummer doppelt an verschiedenen Standorten.** Entweder ein Tippfehler
   oder ein umgehängtes Gerät — beides muss ein Mensch entscheiden.
