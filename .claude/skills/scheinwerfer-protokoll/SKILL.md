@@ -1,12 +1,12 @@
 ---
 name: scheinwerfer-protokoll
-description: Erstellt aus den Fotomeldungen im Postfach technik@nova-works.de ein Scheinwerfer-Protokoll als HTML und PDF. Nutzen, wenn nach Scheinwerfer-Protokoll, Lampenprotokoll, Bestandsaufnahme der Scheinwerfer oder dem Auswerten der Fotos aus technik@ gefragt wird.
+description: Erstellt aus den Fotomeldungen im Meldepostfach ein Scheinwerfer-Protokoll als HTML und PDF. Nutzen, wenn nach Scheinwerfer-Protokoll, Lampenprotokoll, Bestandsaufnahme der Scheinwerfer oder dem Auswerten der Fotomeldungen gefragt wird.
 ---
 
 # Scheinwerfer-Protokoll
 
-Die Crew schickt Mails an `technik@nova-works.de`: Standort, Anzahl bzw. Gerät und
-Zustand in der Betreffzeile, Fotos im Anhang. Eine Meldung deckt entweder einen
+Die Crew schickt Mails an das Meldepostfach — derzeit `info@nova-works.de`:
+Standort, Anzahl bzw. Gerät und Zustand in der Betreffzeile, Fotos im Anhang. Eine Meldung deckt entweder einen
 einzelnen Scheinwerfer ab oder eine Gruppe auf einem Foto. Daraus entsteht ein
 Protokoll.
 
@@ -35,12 +35,20 @@ Koordinaten. Stünde mal ein Gerät und mal ein Standort an erster Stelle, wäre
 
 2. **Meldungen holen** mit `outlook_email_search`, dazu `afterDateTime` /
    `beforeDateTime`. Als `mailboxOwnerEmail` das Postfach nehmen, das im Auftrag
-   genannt ist; ohne Angabe `technik@nova-works.de`.
+   genannt ist; ohne Angabe `info@nova-works.de`.
 
-   Das Postfach ist bewusst kein fester Wert. Am 31.08.2026 lehnte `technik@`
-   jede Zustellung mit `550 5.6.200 STOREDRV.Deliver; message is treated as
-   poison` ab — ein Defekt im Postfachspeicher, der nur von Microsoft behoben
-   werden kann. Bis dahin läuft die Erfassung über eine andere Adresse weiter.
+   Das Postfach ist bewusst kein fester Wert. Eigentlich gehört die Erfassung
+   nach `technik@nova-works.de`, getrennt vom Geschäftsverkehr. Das Postfach
+   lehnt seit dem 31.08.2026 aber jede Zustellung mit `550 5.6.200
+   STOREDRV.Deliver; message is treated as poison` ab — ein Defekt im
+   Postfachspeicher, den nur Microsoft beheben kann. Bis dahin läuft es über
+   `info@`.
+
+   **Folge für die Auswertung:** In `info@` liegt echter Geschäftsverkehr. Nur
+   Nachrichten heranziehen, deren Betreff dem Meldeformat entspricht — drei
+   kommagetrennte Angaben mit Stückzahl oder Gerätebezeichnung an vorletzter
+   Stelle. Alles andere ist keine Meldung und gehört nicht ins Protokoll, auch
+   nicht als unvollständige Zeile.
 
 3. **Jede Nachricht einzeln mit `read_resource` öffnen.** Nicht überspringen und
    nicht aus der Trefferliste arbeiten: iPhone-Mails betten Fotos in den Text ein
@@ -141,8 +149,8 @@ im Dokument stehen — bei Mängeln ist das der eigentliche Nachweis —, brauch
 die Dateien auf der Platte. Anhänge lassen sich mit `read_resource` ansehen, aber
 nicht als Datei weiterreichen; sie müssen also von woanders kommen.
 
-**Regelfall: der Power-Automate-Flow.** Ein Flow legt jeden Anhang aus `technik@`
-in einem OneDrive-Ordner ab und benennt ihn nach dem Empfangszeitpunkt:
+**Regelfall: der Power-Automate-Flow.** Ein Flow legt jeden Anhang aus dem
+Meldepostfach in einem OneDrive-Ordner ab und benennt ihn nach dem Empfangszeitpunkt:
 
 ```
 20260831-134756-image0.jpeg

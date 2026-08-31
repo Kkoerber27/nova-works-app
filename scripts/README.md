@@ -135,12 +135,14 @@ export PROTOKOLL_PROJEKT="26-0032"
 export PROTOKOLL_OBJEKT="Glücksgefühle"
 ```
 
-Das Meldepostfach ist `technik@nova-works.de` und über `PROTOKOLL_POSTFACH`
-umstellbar. Am 31.08.2026 lehnte `technik@` jede Zustellung mit
-`550 5.6.200 STOREDRV.Deliver; message is treated as poison` ab — ein Defekt im
-Postfachspeicher, den nur Microsoft beheben kann. Der Schalter ist die Antwort
-darauf: Fällt die Adresse aus, läuft die Erfassung über eine andere weiter,
-statt dass der ganze Ablauf stillsteht.
+Das Meldepostfach ist über `PROTOKOLL_POSTFACH` umstellbar; Vorgabe ist derzeit
+`info@nova-works.de`. Eigentlich gehört die Erfassung nach `technik@`, getrennt
+vom Geschäftsverkehr — das Postfach lehnt seit dem 31.08.2026 aber jede
+Zustellung mit `550 5.6.200 STOREDRV.Deliver; message is treated as poison` ab,
+einem Defekt im Postfachspeicher, den nur Microsoft beheben kann.
+
+Sobald es wieder zustellt, die Vorgabe in `protokoll-nacht.sh` zurückstellen oder
+in der env-Datei `export PROTOKOLL_POSTFACH="technik@nova-works.de"` setzen.
 
 Andere Uhrzeit: `NOVA_HOUR=6 NOVA_MINUTE=30 ./scripts/install-protokoll.sh`.
 Entfernen: `./scripts/install-protokoll.sh --remove`.

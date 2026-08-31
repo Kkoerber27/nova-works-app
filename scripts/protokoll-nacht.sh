@@ -50,11 +50,11 @@ fi
 PROJEKT="${PROTOKOLL_PROJEKT:-}"
 OBJEKT="${PROTOKOLL_OBJEKT:-}"
 
-# Das Meldepostfach ist umstellbar, weil es ausfallen kann: technik@ lehnte am
-# 31.08.2026 jede Zustellung mit "550 5.6.200 STOREDRV.Deliver; message is
-# treated as poison" ab — ein Defekt im Postfachspeicher, der nur von Microsoft
-# behoben werden kann. Ohne diesen Schalter stünde der ganze Ablauf still.
-POSTFACH="${PROTOKOLL_POSTFACH:-technik@nova-works.de}"
+# Vorgabe ist info@, weil technik@ seit dem 31.08.2026 jede Zustellung mit
+# "550 5.6.200 STOREDRV.Deliver; message is treated as poison" ablehnt — ein
+# Defekt im Postfachspeicher, den nur Microsoft beheben kann. Sobald das Postfach
+# wieder annimmt, hier zurückstellen; bis dahin liefe die Erfassung sonst ins Leere.
+POSTFACH="${PROTOKOLL_POSTFACH:-info@nova-works.de}"
 if [ -z "$PROJEKT" ]; then
   log "Kein PROTOKOLL_PROJEKT gesetzt — nichts zu tun. Für einen laufenden Job in $ENV_FILE eintragen."
   exit 0
