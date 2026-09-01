@@ -267,14 +267,30 @@ const herkunftSatz = ausWhatsApp
 
 function fotoZelle(position) {
   const fotos = Array.isArray(position.fotos) ? position.fotos : [];
-  if (fotos.length === 0) return '<span class="none">keins</span>';
+  const videos = Array.isArray(position.videos) ? position.videos : [];
+
+  /* Videos werden benannt, nicht gezeigt: Als Bild eingebettet ergäben sie ein
+     leeres Rechteck. Verschweigen wäre falsch — sie liegen im Export und sind
+     oft der aussagekräftigere Beleg, weil man den Schwenk über die Traverse
+     sieht statt eines Ausschnitts. */
+  const videoText = videos.length
+    ? `${videos.length} Video${videos.length > 1 ? "s" : ""}`
+    : "";
+
+  if (fotos.length === 0) {
+    return videoText
+      ? `<span class="none">kein Foto</span><span class="sub">${escapeHtml(videoText)}</span>`
+      : '<span class="none">keins</span>';
+  }
+
   const groessen = fotos.map((f) => dateigroesse(f.groesse)).filter(Boolean);
   const label = `${fotos.length} × ${groessen.join(", ") || "Foto"}`;
-  // Klein heißt: vom Mailprogramm verkleinert, Details für einen Nachweis fort.
+  // Klein heißt: beim Versand verkleinert, Details für einen Nachweis fort.
   const klein = fotos.some((f) => typeof f.groesse === "number" && f.groesse < 500 * 1024);
-  return klein
+  const kern = klein
     ? `${escapeHtml(label)} <span class="warn" title="unter 500 KB — beim Versand verkleinert">verkleinert</span>`
     : escapeHtml(label);
+  return videoText ? `${kern}<span class="sub">${escapeHtml(videoText)}</span>` : kern;
 }
 
 function zeile(position) {

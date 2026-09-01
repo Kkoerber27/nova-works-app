@@ -114,7 +114,32 @@ for (let i = 0; i < nachrichten.length; i++) {
   naechste.verbraucht = true;
 }
 
+/* -------------------------------------------- Folgeanhänge zuordnen */
+
+/* WhatsApp verschickt mehrere Bilder als mehrere Nachrichten: Die erste trägt
+   die Beschriftung, die übrigen kommen nackt hinterher, Sekunden später. Ohne
+   diese Zuordnung wird aus einer Meldung mit sechs Anhängen eine Meldung und
+   fünf Geisterzeilen ohne Standort — und im Protokoll steht sechsmal, was einmal
+   gilt. */
+const ANHANG_FENSTER_MS = 2 * 60 * 1000;
+for (let i = 0; i < nachrichten.length; i++) {
+  const n = nachrichten[i];
+  if (!n.anhang || !n.text || n.verbraucht) continue;
+  n.weitere = [];
+  for (let j = i + 1; j < nachrichten.length; j++) {
+    const f = nachrichten[j];
+    if (!f.anhang || f.text || f.verbraucht) break;
+    if (f.absender !== n.absender) break;
+    if (new Date(f.zeit) - new Date(n.zeit) > ANHANG_FENSTER_MS) break;
+    n.weitere.push(f.anhang);
+    f.verbraucht = true;
+  }
+}
+
 /* ------------------------------------------------- Betreff zerlegen */
+
+const BILD = /\.(jpe?g|png|heic|heif|webp|gif)$/i;
+const VIDEO = /\.(mp4|mov|m4v|3gp|avi|mkv|webm)$/i;
 
 const ANZAHL = /^(\d{1,4})\s*(?:st(?:ü|ue)ck|st\.?|x)?$/i;
 const GERAET = /^(?=.*\d)(?=.*[A-Za-zÄÖÜäöü])[A-Za-zÄÖÜäöü0-9._-]{2,20}$/;
@@ -122,7 +147,37 @@ const GERAET = /^(?=.*\d)(?=.*[A-Za-zÄÖÜäöü])[A-Za-zÄÖÜäöü0-9._-]{2,
 /* Wie tatsächlich geschrieben wird: „Hauptzelt 4x w600“ — Standort, Stückzahl,
    Gerätetyp, ohne Kommas. Das ist keine schlampige Fassung des Meldeformats,
    sondern die kürzere: Ort, wie viele, was. */
-const FREI = /^(.*?)[\s,]+(\d{1,4})\s*(?:x|st(?:ü|ue)ck|st\.)\s*(.*)$/i;
+
+/** Zerlegt eine Angabe wie „9x litecraft x7 12x w300 5x w600“ in ihre Gruppen —
+ *  hier neun, zwölf und fünf Geräte, zusammen sechsundzwanzig.
+ *
+ *  Getrennt wird an „<Zahl>x “ mit Leerzeichen dahinter. Das „x7“ in
+ *  „litecraft x7“ hat keine Zahl davor und bleibt deshalb Teil des Gerätenamens.
+ *  Ohne diese Unterscheidung stünde die Zahl der ersten Gruppe für die ganze
+ *  Meldung — bei dieser hier neun statt sechsundzwanzig. */
+const GRUPPE = /(\d{1,4})\s*x\s+/gi;
+
+function gruppen(text) {
+  const t = String(text).trim();
+  const treffer = [...t.matchAll(GRUPPE)];
+  if (treffer.length === 0 || treffer[0].index !== 0) return null;
+  return treffer.map((tr, i) => ({
+    anzahl: Number(tr[1]),
+    typ: t.slice(tr.index + tr[0].length, treffer[i + 1]?.index ?? t.length).trim(),
+  }));
+}
+
+/** Mehrere Gruppen ergeben eine Position — ein Foto, eine Meldung. Die
+ *  Aufteilung bleibt im Gerätetyp lesbar. */
+function ausGruppen(g, standort, zustand) {
+  return {
+    standort,
+    zustand,
+    anzahl: g.reduce((summe, x) => summe + x.anzahl, 0),
+    geraetetyp: g.length > 1 ? g.map((x) => `${x.anzahl}× ${x.typ}`).join(", ") : g[0].typ || undefined,
+  };
+}
+
 
 /** Von hinten lesen: letztes Feld Zustand, vorletztes Anzahl oder Gerät, alles
  *  davor Standort. Von vorn ginge es nicht — der Standort enthält selbst Kommas. */
@@ -136,6 +191,18 @@ function streng(text) {
 
   const zahl = ANZAHL.exec(mitte);
   if (zahl) return { standort, anzahl: Number(zahl[1]), zustand };
+
+  // „12x W600“ und „9x litecraft x7 12x w300 5x w600“.
+  const g = gruppen(mitte);
+  if (g) return ausGruppen(g, standort, zustand);
+
+  // „13 W600“ — Zahl und Typ ohne x. Nur hier erlaubt, nicht in der freien
+  // Form: An dieser Stelle steht durch die Kommas schon fest, dass das Feld
+  // Stückzahl oder Gerät meint. Ohne diese Gewissheit läse sich „Halle 3
+  // Traverse Nord“ als drei Traversen.
+  const zahlTyp = /^(\d{1,4})\s+(.+)$/.exec(mitte);
+  if (zahlTyp) return { standort, anzahl: Number(zahlTyp[1]), geraetetyp: zahlTyp[2].trim(), zustand };
+
   if (GERAET.test(mitte)) return { standort, geraet: mitte, zustand };
   return { fehler: `mittleres Feld ist weder Stückzahl noch Gerätebezeichnung: „${mitte}“` };
 }
@@ -151,12 +218,25 @@ function frei(text) {
     : [[text, ""]];
 
   for (const [links, zustand] of versuche) {
-    const t = FREI.exec(links);
-    if (!t) continue;
-    const standort = t[1].trim().replace(/[,\s]+$/, "");
-    const geraetetyp = t[3].trim();
-    if (!standort) continue;
-    return { standort, anzahl: Number(t[2]), geraetetyp: geraetetyp || undefined, zustand };
+    const roh = links.trim();
+    const erste = /(\d{1,4})\s*x\s+/i.exec(roh);
+    if (!erste) continue;
+
+    let standort = roh.slice(0, erste.index).replace(/[,\s]+$/, "").trim();
+    const g = gruppen(roh.slice(erste.index));
+    if (!g) continue;
+
+    if (!standort) {
+      // „2x X7 bei Scooter“: Erst die Menge, der Ort hinten. Kommt vor, wenn
+      // jemand vom Gerät her denkt. Nur mit Ortswort davor — sonst wäre bei
+      // „5x w600“ nicht zu sagen, ob überhaupt ein Standort gemeint ist.
+      const letzte = g[g.length - 1];
+      const ort = /\s+(bei|am|im|an|auf|neben|hinter|vor)\s+(.+)$/i.exec(letzte.typ);
+      if (!ort) continue;
+      letzte.typ = letzte.typ.slice(0, ort.index).trim();
+      standort = ort[2].trim();
+    }
+    return ausGruppen(g, standort, zustand);
   }
   return null;
 }
@@ -181,6 +261,7 @@ const positionen = [];
 const hinweise = [];
 const uebersprungen = [];
 const geplauder = [];
+const andereDateien = [];
 
 for (const n of nachrichten) {
   if (n.verbraucht) continue;
@@ -194,15 +275,19 @@ for (const n of nachrichten) {
   if (SYSTEM.test(n.text) && !n.anhang) continue;
 
   const fotos = [];
-  if (n.anhang) {
-    const pfad = join(basis, n.anhang);
-    if (existsSync(pfad)) {
-      // Absoluter Pfad: protokoll.mjs löst `datei` relativ zur Datendatei auf,
-      // und die liegt nicht zwingend im Export-Ordner.
-      fotos.push({ name: basename(pfad), groesse: statSync(pfad).size, datei: pfad });
-    } else {
-      uebersprungen.push(`${n.zeit} — Datei fehlt im Export: ${n.anhang}`);
+  const videos = [];
+  for (const name of [n.anhang, ...(n.weitere ?? [])].filter(Boolean)) {
+    const pfad = join(basis, name);
+    if (!existsSync(pfad)) {
+      uebersprungen.push(`${n.zeit} — Datei fehlt im Export: ${name}`);
+      continue;
     }
+    const eintrag = { name: basename(pfad), groesse: statSync(pfad).size };
+    // Ein Video ist ein Beleg, aber kein Bild: Als <img> eingebettet ergäbe es
+    // im PDF ein kaputtes Rechteck. Es wird gezählt und benannt, nicht gezeigt.
+    if (BILD.test(name)) fotos.push({ ...eintrag, datei: pfad });
+    else if (VIDEO.test(name)) videos.push(eintrag);
+    else andereDateien.push(`${n.zeit} — ${basename(pfad)}`);
   }
 
   const zerlegt = n.text ? zerlegen(n.text, Boolean(n.anhang)) : { fehler: "keine Beschriftung" };
@@ -226,6 +311,7 @@ for (const n of nachrichten) {
       zeit: n.zeit,
       hinweis: zerlegt.fehler,
       fotos,
+      ...(videos.length ? { videos } : {}),
       status: "unvollstaendig",
     });
     hinweise.push({
@@ -242,12 +328,13 @@ for (const n of nachrichten) {
     absender: n.absender,
     zeit: n.zeit,
     fotos,
-    // Vollständig heisst: belegt und verortet — Foto, Standort, und wie viele
+    ...(videos.length ? { videos } : {}),
+    // Vollständig heisst: belegt und verortet — Beleg, Standort, und wie viele
     // oder welches Gerät. Der Zustand fehlt meistens, weil nichts zu melden war;
     // ihn zur Bedingung zu machen färbte ein sauber erfasstes Protokoll
     // durchgehend rot und der Balken sagte nichts mehr aus. Er fehlt trotzdem
     // sichtbar: an der Zeile und als Sammelhinweis.
-    status: fotos.length && zerlegt.standort && (zerlegt.anzahl || zerlegt.geraet)
+    status: (fotos.length || videos.length) && zerlegt.standort && (zerlegt.anzahl || zerlegt.geraet)
       ? "vollstaendig"
       : "unvollstaendig",
   };
@@ -256,7 +343,7 @@ for (const n of nachrichten) {
   if (zerlegt.geraetetyp) position.geraetetyp = zerlegt.geraetetyp;
 
   const luecken = [];
-  if (!fotos.length) luecken.push("kein Foto");
+  if (!fotos.length) luecken.push(videos.length ? "nur Video, kein Foto" : "kein Foto");
   if (!zerlegt.zustand) luecken.push("kein Zustand angegeben");
   if (luecken.length) position.hinweis = luecken.join(", ");
 
@@ -293,6 +380,14 @@ if (ohneZustand.length) {
   });
 }
 
+if (andereDateien.length) {
+  hinweise.push({
+    bezug: "Anhänge",
+    titel: `${andereDateien.length} Anhang/Anhänge weder Bild noch Video`,
+    text: `${andereDateien.join("; ")} — nicht übernommen. Als Nachweis taugt nur, was sich ansehen lässt; was das ist, muss ein Mensch entscheiden.`,
+  });
+}
+
 for (const eintrag of uebersprungen) {
   hinweise.push({
     bezug: eintrag.slice(11, 16),
@@ -326,6 +421,8 @@ console.log(`      ${nachrichten.length} Nachrichten gelesen, ${positionen.lengt
 if (geplauder.length) console.log(`      ${geplauder.length} Nachricht(en) ohne Foto und ohne Meldeformat übergangen`);
 console.log(`      ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
 if (ohneZustand.length) console.log(`      davon ${ohneZustand.length} Meldung(en) ohne Zustandsangabe`);
+const videoZahl = positionen.reduce((s, p) => s + (p.videos?.length ?? 0), 0);
+if (videoZahl) console.log(`      ${videoZahl} Video(s) vermerkt, nicht eingebettet`);
 if (hinweise.length) console.log(`      ${hinweise.length} Prüfhinweis(e) — stehen im Protokoll`);
 console.log("");
 console.log("Weiter mit:");
