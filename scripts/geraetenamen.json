@@ -1,0 +1,7 @@
+{
+  "_hinweis": "Schreibweisen aus der Gruppe auf den richtigen Gerätenamen bringen. Links steht, wie es im Protokoll erscheint; rechts, wie es getippt wurde. Verglichen wird ohne Gross-/Kleinschreibung, Leerzeichen und Bindestriche — 'Litecraft X7', 'litecraft-x7' und 'LITECRAFTX7' sind damit schon abgedeckt und müssen nicht einzeln aufgeführt werden. Nur Tippfehler und Kurzformen gehören hierher.",
+
+  "Litecraft X7": ["litecaraft x7", "litecarft x7", "litecraf x7", "lightcraft x7", "x7"],
+  "W600": [],
+  "W300": []
+}

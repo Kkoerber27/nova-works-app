@@ -138,6 +138,33 @@ for (let i = 0; i < nachrichten.length; i++) {
 
 /* ------------------------------------------------- Betreff zerlegen */
 
+/* ------------------------------------------------------- Gerätenamen */
+
+/* In der Gruppe wird auf dem Handy getippt, oft im Stehen: „litecaraft x7“
+   statt „Litecraft X7“. Der Name ist ein Katalogwert, kein Zitat — er gehört
+   im Protokoll richtig geschrieben, damit sich zwei Meldungen desselben Geräts
+   auch als dasselbe Gerät lesen. Der Wortlaut der Meldung bleibt daneben in
+   `wieGemeldet` stehen.
+   Was hier nicht steht, bleibt unangetastet: geraten wird kein Gerätename. */
+const namenDatei = new URL("./geraetenamen.json", import.meta.url);
+const NAMEN = new Map();
+try {
+  for (const [richtig, varianten] of Object.entries(JSON.parse(readFileSync(namenDatei, "utf8")))) {
+    if (richtig.startsWith("_")) continue;
+    for (const v of [richtig, ...varianten]) NAMEN.set(schluessel(v), richtig);
+  }
+} catch (fehler) {
+  console.error(`WARNUNG geraetenamen.json nicht lesbar (${fehler.message}) — Namen bleiben, wie gemeldet.`);
+}
+
+/** Vergleichsform: ohne Gross-/Kleinschreibung, Leerzeichen und Bindestriche.
+ *  „Litecraft X7“, „litecraft-x7“ und „LITECRAFTX7“ sind damit dasselbe. */
+function schluessel(wert) {
+  return String(wert).toLowerCase().replace(/[\s._-]+/g, "");
+}
+
+const richtigerName = (wert) => (wert ? NAMEN.get(schluessel(wert)) ?? wert : wert);
+
 const BILD = /\.(jpe?g|png|heic|heif|webp|gif)$/i;
 const VIDEO = /\.(mp4|mov|m4v|3gp|avi|mkv|webm)$/i;
 
@@ -170,11 +197,17 @@ function gruppen(text) {
 /** Mehrere Gruppen ergeben eine Position — ein Foto, eine Meldung. Die
  *  Aufteilung bleibt im Gerätetyp lesbar. */
 function ausGruppen(g, standort, zustand) {
+  const berichtigt = g.map((x) => ({ ...x, typ: richtigerName(x.typ) }));
+  const roh = g.length > 1 ? g.map((x) => `${x.anzahl}× ${x.typ}`).join(", ") : g[0].typ;
+  const typ = berichtigt.length > 1
+    ? berichtigt.map((x) => `${x.anzahl}× ${x.typ}`).join(", ")
+    : berichtigt[0].typ || undefined;
   return {
     standort,
     zustand,
-    anzahl: g.reduce((summe, x) => summe + x.anzahl, 0),
-    geraetetyp: g.length > 1 ? g.map((x) => `${x.anzahl}× ${x.typ}`).join(", ") : g[0].typ || undefined,
+    anzahl: berichtigt.reduce((summe, x) => summe + x.anzahl, 0),
+    geraetetyp: typ,
+    ...(typ && roh !== typ ? { wieGemeldet: roh } : {}),
   };
 }
 
@@ -201,9 +234,13 @@ function streng(text) {
   // Stückzahl oder Gerät meint. Ohne diese Gewissheit läse sich „Halle 3
   // Traverse Nord“ als drei Traversen.
   const zahlTyp = /^(\d{1,4})\s+(.+)$/.exec(mitte);
-  if (zahlTyp) return { standort, anzahl: Number(zahlTyp[1]), geraetetyp: zahlTyp[2].trim(), zustand };
+  if (zahlTyp) {
+    const roh = zahlTyp[2].trim();
+    const typ = richtigerName(roh);
+    return { standort, anzahl: Number(zahlTyp[1]), geraetetyp: typ, zustand, ...(roh !== typ ? { wieGemeldet: roh } : {}) };
+  }
 
-  if (GERAET.test(mitte)) return { standort, geraet: mitte, zustand };
+  if (GERAET.test(mitte)) return { standort, geraet: richtigerName(mitte), zustand };
   return { fehler: `mittleres Feld ist weder Stückzahl noch Gerätebezeichnung: „${mitte}“` };
 }
 
@@ -341,6 +378,7 @@ for (const n of nachrichten) {
   if (zerlegt.anzahl) position.anzahl = zerlegt.anzahl;
   if (zerlegt.geraet) position.geraet = zerlegt.geraet;
   if (zerlegt.geraetetyp) position.geraetetyp = zerlegt.geraetetyp;
+  if (zerlegt.wieGemeldet) position.wieGemeldet = zerlegt.wieGemeldet;
 
   const luecken = [];
   if (!fotos.length) luecken.push(videos.length ? "nur Video, kein Foto" : "kein Foto");

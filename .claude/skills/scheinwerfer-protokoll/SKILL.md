@@ -82,6 +82,17 @@ Nachrichten **ohne Foto und ohne Meldeformat** sind Gruppengeplauder und werden
 übergangen, nicht als leere Zeile aufgenommen. Der Lauf sagt, wie viele es
 waren.
 
+**Mehrere Anhänge zu einer Meldung** gehören zusammen: WhatsApp verschickt
+Bilderserien als einzelne Nachrichten, von denen nur die erste beschriftet ist.
+Anhänge ohne Text vom selben Absender innerhalb von zwei Minuten werden der
+Meldung davor zugeschlagen. Videos zählen als Beleg, werden aber nur benannt,
+nicht eingebettet.
+
+**Gerätenamen** bringt `scripts/geraetenamen.json` in die richtige Schreibweise
+(`litecaraft x7` → `Litecraft X7`). Neue Tippfehler dort ergänzen, nicht im
+Skript. Was nicht in der Tabelle steht, bleibt, wie gemeldet — ein Gerätename
+wird nie geraten. Der Wortlaut bleibt als `wieGemeldet` in den Daten.
+
 Nur der gewünschte Tag: `--tag 2026-09-05`. Ohne das steht der ganze Export im
 Protokoll, und in einer Gruppe, die über mehrere Tage läuft, sind das mehrere
 Jobs in einem Dokument.

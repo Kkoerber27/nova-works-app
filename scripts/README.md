@@ -158,6 +158,15 @@ als Bedingung färbte er ein sauber erfasstes Protokoll durchgehend rot. Fehlt e
 steht das an der Zeile und einmal gesammelt in den Prüfhinweisen — erfunden wird
 er nie.
 
+**Gerätenamen** kommen aus `scripts/geraetenamen.json` in die richtige
+Schreibweise: In der Gruppe wird auf dem Handy getippt, und „litecaraft x7"
+und „Litecraft X7" sollen im Protokoll nicht als zwei Geräte dastehen.
+Verglichen wird ohne Gross-/Kleinschreibung, Leerzeichen und Bindestriche —
+in die Datei gehören nur Tippfehler und Kurzformen. Was dort nicht steht,
+bleibt unangetastet; geraten wird kein Name. Der Wortlaut der Meldung bleibt
+in `wieGemeldet` in der `daten.json` erhalten. Ist die Datei unlesbar, sagt der
+Lauf das und übernimmt die Namen, wie gemeldet.
+
 Zwei Schreibweisen werden gelesen: die genaue mit Kommas
 (`Halle 3, Traverse Nord, 6, alle ok`) und die kurze, wie sie in der Gruppe
 tatsächlich entsteht (`Hauptzelt 4x w600`) — dort wird der Gerätetyp als solcher
