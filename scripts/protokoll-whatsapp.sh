@@ -59,16 +59,39 @@ command -v unzip >/dev/null 2>&1 || { echo "FEHLER 'unzip' nicht im PATH." >&2; 
 
 # ------------------------------------------------------------- Export finden
 
+SUCHORT="${PROTOKOLL_DOWNLOADS:-$HOME/Downloads}"
+
 if [ -z "$QUELLE" ]; then
-  # Neuester WhatsApp-Export in ~/Downloads. Bewusst nur dort und bewusst nur
-  # nach Namensmuster: Irgendein beliebiges ZIP zu entpacken wäre geraten.
-  QUELLE="$(ls -t "$HOME/Downloads/"*[Ww]hats[Aa]pp*.zip 2>/dev/null | head -1 || true)"
+  # Erst nach Namen: das ist der Regelfall und kostet nichts.
+  QUELLE="$(ls -t "$SUCHORT/"*[Ww]hats[Aa]pp*.zip 2>/dev/null | head -1 || true)"
+
+  # Sonst hineinsehen. WhatsApp benennt den Export je nach Weg verschieden —
+  # über "Teilen" heisst er oft nur nach der Gruppe, und beim Herunterladen
+  # hängt der Browser eine Zählung an. Entscheidend ist nicht der Name, sondern
+  # ob eine _chat.txt drin liegt. Geprüft werden die zehn neuesten Archive;
+  # gelesen wird dabei nur das Inhaltsverzeichnis, nichts wird entpackt.
   if [ -z "$QUELLE" ]; then
-    echo "FEHLER Kein WhatsApp-Export in ~/Downloads gefunden." >&2
+    while IFS= read -r kandidat; do
+      [ -n "$kandidat" ] || continue
+      if unzip -l "$kandidat" 2>/dev/null | grep -q "_chat\.txt"; then
+        QUELLE="$kandidat"
+        echo "Gefunden:  Archiv ohne WhatsApp im Namen, enthält aber eine _chat.txt"
+        break
+      fi
+    done <<EOF
+$(ls -t "$SUCHORT/"*.zip 2>/dev/null | head -10)
+EOF
+  fi
+
+  if [ -z "$QUELLE" ]; then
+    echo "FEHLER Kein Chatexport in $SUCHORT gefunden." >&2
+    echo "       Geprüft wurden Archive mit WhatsApp im Namen und die zehn" >&2
+    echo "       neuesten ZIP-Dateien auf eine enthaltene _chat.txt." >&2
     echo "       Pfad mitgeben:  $0 ~/Downloads/\"WhatsApp Chat - Technik.zip\"" >&2
     exit 1
   fi
   echo "Export:    $QUELLE"
+  echo "           $(date -r "$QUELLE" "+%d.%m.%Y %H:%M" 2>/dev/null || true), $(du -h "$QUELLE" 2>/dev/null | cut -f1)"
 fi
 
 if [ ! -e "$QUELLE" ]; then

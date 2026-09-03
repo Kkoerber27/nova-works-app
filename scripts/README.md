@@ -133,8 +133,14 @@ Chat exportieren — **mit Medien** — und einen Befehl laufen lassen:
 ./scripts/protokoll-whatsapp.sh --tag 2026-09-01
 ```
 
-Ohne Pfad wird der neueste WhatsApp-Export in `~/Downloads` genommen; sonst den
-Pfad zur ZIP oder zum entpackten Ordner mitgeben. Projektnummer und Objekt kommen
+Ohne Pfad wird der Export in `~/Downloads` gesucht — erst nach `WhatsApp` im
+Namen, und wenn das nichts findet, in den zehn neuesten ZIP-Dateien nach einer
+enthaltenen `_chat.txt`. WhatsApp benennt den Export je nach Weg verschieden;
+über „Teilen" heisst er oft nur nach der Gruppe. Entscheidend ist deshalb der
+Inhalt, nicht der Name — gelesen wird dabei nur das Inhaltsverzeichnis, entpackt
+wird nichts. Der Suchort lässt sich über `PROTOKOLL_DOWNLOADS` umstellen; sonst
+einfach den Pfad zur ZIP oder zum entpackten Ordner mitgeben. Der Lauf nennt die
+gewählte Datei mit Datum und Größe, bevor er loslegt. Projektnummer und Objekt kommen
 aus `~/.nova-works/env`, lassen sich aber mit `--projekt` und `--objekt`
 überschreiben. Das Skript entpackt in ein temporäres Verzeichnis, wertet aus,
 rendert, legt ab und räumt wieder auf.
