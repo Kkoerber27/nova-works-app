@@ -106,6 +106,13 @@ Anhänge ohne Text vom selben Absender innerhalb von zwei Minuten werden der
 Meldung davor zugeschlagen. Videos zählen als Beleg, werden aber nur benannt,
 nicht eingebettet.
 
+**Live-Fotos** liefern zwei Dateien — Standbild und einen kurzen Clip. Das
+Standbild ist der Beleg, der Clip wird übergangen; entschieden wird an der
+Spieldauer (bis 3,5 s neben einem Standbild). Es gibt daraus nichts
+herauszuholen: Das Bild liegt bereits vor. Nur wenn ein kurzer Clip **ohne**
+Standbild ankommt, ist er der einzige Beleg — dann steht er als Video im
+Protokoll und ein Einzelbild daraus wäre erst dort ein Gewinn.
+
 **Gerätenamen** bringt `scripts/geraetenamen.json` in die richtige Schreibweise
 (`litecaraft x7` → `Litecraft X7`). Neue Tippfehler dort ergänzen, nicht im
 Skript. Was nicht in der Tabelle steht, bleibt, wie gemeldet — ein Gerätename

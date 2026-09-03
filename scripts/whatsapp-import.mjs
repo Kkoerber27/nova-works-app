@@ -16,7 +16,7 @@
  * Protokoll waren darüber nicht zu bekommen. Hier liegen sie einfach da.
  */
 
-import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
 import { basename, join, resolve } from "node:path";
 
 /* ------------------------------------------------------------------ Eingabe */
@@ -167,6 +167,42 @@ function schluessel(wert) {
 const richtigerName = (wert) => (wert ? NAMEN.get(schluessel(wert)) ?? wert : wert);
 
 const BILD = /\.(jpe?g|png|heic|heif|webp|gif)$/i;
+
+/* Ein Live-Foto kommt aus dem Export als zwei Dateien: das Standbild als JPG und
+   die anderthalb Sekunden Bewegung als MP4. Das Standbild ist der Beleg, der
+   Clip nur sein Beiwerk. Ihn als eigenes Video zu zählen machte aus drei Fotos
+   „3 Fotos, 3 Videos“ — und wer das liest, sucht nach Videos, die niemand
+   gedreht hat.
+
+   WhatsApp entfernt beim Umkodieren Apples Live-Kennung, es bleibt also nur die
+   Länge: Bewegtteile sind ein bis drei Sekunden lang. Gemessen an einem echten
+   Export lagen alle sieben zwischen 0,6 und 2,7 Sekunden. Ein wirkliches Video
+   ist länger und bleibt eines. */
+const LIVE_SEKUNDEN = 3.5;
+
+/** Spieldauer aus der mvhd-Box, ohne zusätzliches Werkzeug. Null, wenn sich die
+ *  Datei nicht lesen lässt — dann gilt sie im Zweifel als richtiges Video. */
+function spieldauer(pfad) {
+  let fd;
+  try {
+    fd = openSync(pfad, "r");
+    const kopf = Buffer.alloc(Math.min(statSync(pfad).size, 512 * 1024));
+    readSync(fd, kopf, 0, kopf.length, 0);
+    const i = kopf.indexOf("mvhd");
+    if (i < 0) return null;
+    const version = kopf[i + 4];
+    if (version === 0) {
+      const skala = kopf.readUInt32BE(i + 16);
+      return skala ? kopf.readUInt32BE(i + 20) / skala : null;
+    }
+    const skala = kopf.readUInt32BE(i + 24);
+    return skala ? Number(kopf.readBigUInt64BE(i + 28)) / skala : null;
+  } catch {
+    return null;
+  } finally {
+    if (fd !== undefined) closeSync(fd);
+  }
+}
 const VIDEO = /\.(mp4|mov|m4v|3gp|avi|mkv|webm)$/i;
 
 const ANZAHL = /^(\d{1,4})\s*(?:st(?:ü|ue)ck|st\.?|x)?$/i;
@@ -318,6 +354,7 @@ const uebersprungen = [];
 const geplauder = [];
 const andereDateien = [];
 let ausserhalb = 0;
+let liveGesamt = 0;
 
 for (const n of nachrichten) {
   if (n.verbraucht) continue;
@@ -342,9 +379,18 @@ for (const n of nachrichten) {
     // Ein Video ist ein Beleg, aber kein Bild: Als <img> eingebettet ergäbe es
     // im PDF ein kaputtes Rechteck. Es wird gezählt und benannt, nicht gezeigt.
     if (BILD.test(name)) fotos.push({ ...eintrag, datei: pfad });
-    else if (VIDEO.test(name)) videos.push(eintrag);
+    else if (VIDEO.test(name)) videos.push({ ...eintrag, dauer: spieldauer(pfad) });
     else andereDateien.push(`${n.zeit} — ${basename(pfad)}`);
   }
+
+  /* Kurze Clips neben einem Standbild sind Live-Fotos. Ohne Standbild bleibt der
+     Clip der einzige Beleg und wird als Video geführt, egal wie kurz er ist. */
+  const kurz = (v) => typeof v.dauer === "number" && v.dauer <= LIVE_SEKUNDEN;
+  const liveTeile = fotos.length ? videos.filter(kurz) : [];
+  const echteVideos = videos.filter((v) => !liveTeile.includes(v));
+  liveGesamt += liveTeile.length;
+  videos.length = 0;
+  videos.push(...echteVideos.map(({ dauer, ...rest }) => rest));
 
   const zerlegt = n.text ? zerlegen(n.text, Boolean(n.anhang)) : { fehler: "keine Beschriftung" };
 
@@ -504,6 +550,9 @@ if (geplauder.length) console.log(`      ${geplauder.length} Nachricht(en) ohne 
 console.log(`      ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
 if (ohneZustand.length) console.log(`      davon ${ohneZustand.length} Meldung(en) ohne Zustandsangabe`);
 const videoZahl = positionen.reduce((s, p) => s + (p.videos?.length ?? 0), 0);
+if (liveGesamt) {
+  console.log(`      ${liveGesamt} Live-Foto(s) — Bewegtteil übergangen, das Standbild ist im Protokoll`);
+}
 if (videoZahl) console.log(`      ${videoZahl} Video(s) vermerkt, nicht eingebettet`);
 if (hinweise.length) console.log(`      ${hinweise.length} Prüfhinweis(e) — stehen im Protokoll`);
 // Im Einzelbefehl (protokoll-whatsapp.sh) folgt der Aufruf sowieso — dann wäre

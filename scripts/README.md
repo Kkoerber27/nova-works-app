@@ -208,6 +208,16 @@ bleibt unangetastet; geraten wird kein Name. Der Wortlaut der Meldung bleibt
 in `wieGemeldet` in der `daten.json` erhalten. Ist die Datei unlesbar, sagt der
 Lauf das und übernimmt die Namen, wie gemeldet.
 
+**Live-Fotos** kommen aus dem Export als zwei Dateien: das Standbild als JPG und
+die anderthalb Sekunden Bewegung als MP4. Das Standbild ist der Beleg und landet
+im Protokoll; der Clip wird übergangen. Sonst stünde bei drei Fotos „3 Fotos,
+3 Videos", und wer das liest, sucht nach Videos, die niemand gedreht hat.
+
+Erkannt wird das an der Spieldauer — WhatsApp entfernt beim Umkodieren Apples
+Live-Kennung, es bleibt nur die Länge. Bis 3,5 Sekunden **neben einem Standbild**
+gilt als Bewegtteil; ohne Standbild ist der Clip der einzige Beleg und wird als
+Video geführt, egal wie kurz er ist. Ein wirkliches Video bleibt eines.
+
 Zwei Schreibweisen werden gelesen: die genaue mit Kommas
 (`Halle 3, Traverse Nord, 6, alle ok`) und die kurze, wie sie in der Gruppe
 tatsächlich entsteht (`Hauptzelt 4x w600`) — dort wird der Gerätetyp als solcher
