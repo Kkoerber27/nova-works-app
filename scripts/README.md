@@ -162,10 +162,23 @@ node scripts/whatsapp-import.mjs /tmp/wa --objekt "Glücksgefühle" --projekt 26
 node scripts/protokoll.mjs /tmp/wa/daten.json --pdf --ablegen
 ```
 
-`--tag 2026-09-05` beschränkt auf einen Tag; ohne das steht der ganze Export im
-Protokoll, und eine Gruppe, die über mehrere Tage läuft, ergäbe mehrere Jobs in
-einem Dokument. `--out` legt die `daten.json` woanders ab, Vorgabe ist der
+`--tag 2026-09-05` beschränkt auf einen Tag, `--ab` und `--bis` auf einen
+Zeitraum — etwa um den Testtag vor dem Aufbau wegzulassen, ohne alles andere
+mit wegzuwerfen. Ohne Angabe steht der ganze Export im Protokoll; über mehrere
+Tage nennt der Kopf dann die Spanne statt einer Uhrzeit, und der Dateiname trägt
+beide Tage. `--out` legt die `daten.json` woanders ab, Vorgabe ist der
 Export-Ordner.
+
+Der Lauf nennt immer, **von wann bis wann der Export reicht** und wie viele
+Nachrichten der Zeitraum ausgelassen hat:
+
+```
+81 Nachrichten gelesen (31.08.2026 bis 03.09.2026), 4 Meldungen erkannt
+77 Nachricht(en) nicht vom 2026-09-03 — nicht ausgewertet
+```
+
+Ohne diese zweite Zeile sieht ein zu dünnes Protokoll wie ein Erkennungsfehler
+aus, und man sucht in der Zerlegung nach einem Fehler, der dort nicht ist.
 
 Dieser Weg ist der Regelfall, weil die Fotos **als Dateien** im Export liegen und
 damit ohne weiteres Zutun im PDF landen. Aus dem Postfach sind sie nicht

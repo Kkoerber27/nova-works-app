@@ -4,6 +4,7 @@
  *
  *   node scripts/whatsapp-import.mjs <ordner> --objekt "Glücksgefühle" --projekt 26-0032
  *   node scripts/whatsapp-import.mjs <ordner> --out daten.json --tag 2026-09-05
+ *   node scripts/whatsapp-import.mjs <ordner> --ab 2026-09-01 --bis 2026-09-03
  *
  * <ordner> ist der entpackte Export: eine `_chat.txt` und die Bilddateien
  * daneben. Danach:
@@ -27,7 +28,7 @@ const wert = (name) => {
 };
 const quelle = args.filter((a, i) => !a.startsWith("--") && !args[i - 1]?.startsWith("--"))[0];
 if (!quelle) {
-  console.error("Aufruf: node scripts/whatsapp-import.mjs <export-ordner> [--objekt N] [--projekt N] [--tag JJJJ-MM-TT] [--out datei.json]");
+  console.error("Aufruf: node scripts/whatsapp-import.mjs <export-ordner> [--objekt N] [--projekt N] [--tag JJJJ-MM-TT | --ab … --bis …] [--out datei.json]");
   process.exit(2);
 }
 const basis = resolve(quelle);
@@ -293,16 +294,34 @@ function zerlegen(text, hatFoto) {
 
 /* ------------------------------------------------------ Positionen bauen */
 
+/* Zeitraum. --tag ist die Kurzform für einen einzelnen Tag; --ab und --bis
+   grenzen einen Abschnitt ein, etwa um den Testtag vor dem Aufbau wegzulassen,
+   ohne gleich alles andere mit wegzuwerfen. Verglichen wird auf den zehn Zeichen
+   JJJJ-MM-TT, da genügt der Zeichenkettenvergleich. */
 const tagFilter = wert("--tag");
+const abTag = wert("--ab") ?? tagFilter;
+const bisTag = wert("--bis") ?? tagFilter;
+for (const [name, wertchen] of [["--tag", tagFilter], ["--ab", abTag], ["--bis", bisTag]]) {
+  if (wertchen && !/^\d{4}-\d{2}-\d{2}$/.test(wertchen)) {
+    console.error(`FEHLER ${name} muss JJJJ-MM-TT lauten, war: ${wertchen}`);
+    process.exit(2);
+  }
+}
+const imZeitraum = (zeit) => {
+  const tag = String(zeit).slice(0, 10);
+  return (!abTag || tag >= abTag) && (!bisTag || tag <= bisTag);
+};
+
 const positionen = [];
 const hinweise = [];
 const uebersprungen = [];
 const geplauder = [];
 const andereDateien = [];
+let ausserhalb = 0;
 
 for (const n of nachrichten) {
   if (n.verbraucht) continue;
-  if (tagFilter && !n.zeit.startsWith(tagFilter)) continue;
+  if (!imZeitraum(n.zeit)) { ausserhalb++; continue; }
   if (!n.anhang && !n.text) continue;
 
   // Systemmeldungen des Chats sind keine Meldungen der Crew. WhatsApp schreibt
@@ -390,7 +409,8 @@ for (const n of nachrichten) {
 
 if (positionen.length === 0) {
   console.error("FEHLER Keine verwertbaren Meldungen gefunden.");
-  console.error(`Der Export enthält ${nachrichten.length} Nachrichten${tagFilter ? `, aber keine vom ${tagFilter}` : ""}.`);
+  console.error(`Der Export enthält ${nachrichten.length} Nachrichten vom ${spanne()}.`);
+  if (ausserhalb) console.error(`${ausserhalb} davon lagen ausserhalb des gewählten Zeitraums.`);
   process.exit(1);
 }
 
@@ -434,11 +454,25 @@ for (const eintrag of uebersprungen) {
   });
 }
 
+/** Von wann bis wann der Export reicht — als Satz für die Ausgabe. */
+function spanne() {
+  const tage = nachrichten.map((n) => n.zeit.slice(0, 10)).sort();
+  const de = (t) => t.split("-").reverse().join(".");
+  if (tage.length === 0) return "unbekannt";
+  return tage[0] === tage[tage.length - 1]
+    ? de(tage[0])
+    : `${de(tage[0])} bis ${de(tage[tage.length - 1])}`;
+}
+
 const daten = {
   objekt: wert("--objekt") ?? "",
   projekt: wert("--projekt") ?? undefined,
   postfach: "WhatsApp-Export",
-  datum: positionen[0].zeit.slice(0, 10),
+  /* Erster und letzter erfasster Tag. Ein Export läuft über den ganzen Aufbau;
+     nur den ersten Tag zu nennen machte aus einem Protokoll über vier Tage eines
+     vom 31.08. — im Dateinamen wie im Kopf. */
+  datum: positionen.map((p) => p.zeit.slice(0, 10)).sort()[0],
+  datumBis: positionen.map((p) => p.zeit.slice(0, 10)).sort().at(-1),
   erstellt: new Date().toISOString(),
   positionen,
   hinweise,
@@ -455,7 +489,17 @@ const vollstaendig = positionen
   .reduce((s, p) => s + (p.anzahl ?? 1), 0);
 
 console.log(`DATEN ${ziel}`);
-console.log(`      ${nachrichten.length} Nachrichten gelesen, ${positionen.length} Meldungen erkannt`);
+console.log(`      ${nachrichten.length} Nachrichten gelesen (${spanne()}), ${positionen.length} Meldungen erkannt`);
+/* Der häufigste Grund für ein zu dünnes Protokoll ist kein Erkennungsfehler,
+   sondern ein Zeitraum, der die Meldungen nicht enthält. Das muss dastehen —
+   sonst sucht man den Fehler in der Zerlegung, wo keiner ist. */
+if (ausserhalb) {
+  const raum = abTag && bisTag && abTag === bisTag ? `vom ${abTag}`
+    : abTag && bisTag ? `von ${abTag} bis ${bisTag}`
+    : abTag ? `ab ${abTag}`
+    : `bis ${bisTag}`;
+  console.log(`      ${ausserhalb} Nachricht(en) nicht ${raum} — nicht ausgewertet`);
+}
 if (geplauder.length) console.log(`      ${geplauder.length} Nachricht(en) ohne Foto und ohne Meldeformat übergangen`);
 console.log(`      ${scheinwerfer} Scheinwerfer, ${vollstaendig} vollständig`);
 if (ohneZustand.length) console.log(`      davon ${ohneZustand.length} Meldung(en) ohne Zustandsangabe`);

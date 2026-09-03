@@ -111,9 +111,13 @@ nicht eingebettet.
 Skript. Was nicht in der Tabelle steht, bleibt, wie gemeldet — ein Gerätename
 wird nie geraten. Der Wortlaut bleibt als `wieGemeldet` in den Daten.
 
-Nur der gewünschte Tag: `--tag 2026-09-05`. Ohne das steht der ganze Export im
-Protokoll, und in einer Gruppe, die über mehrere Tage läuft, sind das mehrere
-Jobs in einem Dokument.
+Zeitraum: `--tag 2026-09-05` für einen Tag, `--ab` und `--bis` für eine Spanne.
+Ohne Angabe steht der ganze Export im Protokoll.
+
+**Erst nachsehen, was der Export überhaupt enthält.** Der Lauf nennt die Spanne
+und wie viele Nachrichten der Filter ausgelassen hat. Ein Export vom Handy reicht
+über den ganzen Aufbau; ein Filter auf den heutigen Tag lässt dann fast alles
+weg, und das Ergebnis sieht aus wie ein Erkennungsfehler, ist aber keiner.
 
 **Beschriftung.** Sie darf im Bild stehen oder als eigene Nachricht direkt
 danach — das Skript nimmt die nächste Nachricht desselben Absenders innerhalb

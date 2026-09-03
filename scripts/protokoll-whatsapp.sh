@@ -6,6 +6,7 @@
 #   ./scripts/protokoll-whatsapp.sh
 #   ./scripts/protokoll-whatsapp.sh ~/Downloads/"WhatsApp Chat - Technik.zip"
 #   ./scripts/protokoll-whatsapp.sh --tag 2026-09-01
+#   ./scripts/protokoll-whatsapp.sh --ab 2026-09-01 --bis 2026-09-03
 #   ./scripts/protokoll-whatsapp.sh --projekt 26-0032 --objekt "Glücksgefühle Festival"
 #
 # Ohne Pfad wird der neueste WhatsApp-Export in ~/Downloads genommen.
@@ -24,6 +25,8 @@ ENV_FILE="${NOVA_ENV_FILE:-$HOME/.nova-works/env}"
 
 QUELLE=""
 TAG=""
+AB=""
+BIS=""
 PROJEKT="${PROTOKOLL_PROJEKT:-}"
 OBJEKT="${PROTOKOLL_OBJEKT:-}"
 BEHALTEN=0
@@ -31,6 +34,8 @@ BEHALTEN=0
 while [ $# -gt 0 ]; do
   case "$1" in
     --tag)     TAG="${2:-}"; shift 2 ;;
+    --ab)      AB="${2:-}";  shift 2 ;;
+    --bis)     BIS="${2:-}"; shift 2 ;;
     --projekt) PROJEKT="${2:-}"; shift 2 ;;
     --objekt)  OBJEKT="${2:-}"; shift 2 ;;
     --behalten) BEHALTEN=1; shift ;;   # entpackten Ordner nicht löschen
@@ -137,10 +142,13 @@ EIN=("$ORDNER")
 [ -n "$OBJEKT" ]  && EIN+=(--objekt "$OBJEKT")
 [ -n "$PROJEKT" ] && EIN+=(--projekt "$PROJEKT")
 [ -n "$TAG" ]     && EIN+=(--tag "$TAG")
+[ -n "$AB" ]      && EIN+=(--ab "$AB")
+[ -n "$BIS" ]     && EIN+=(--bis "$BIS")
 EIN+=(--out "$DATEN")
 
-if [ -z "$TAG" ]; then
-  echo "Zeitraum:  der ganze Export — für einen Tag:  --tag JJJJ-MM-TT"
+if [ -z "$TAG$AB$BIS" ]; then
+  echo "Zeitraum:  der ganze Export — einschränken mit  --tag JJJJ-MM-TT"
+  echo "           oder  --ab JJJJ-MM-TT --bis JJJJ-MM-TT"
 fi
 
 echo

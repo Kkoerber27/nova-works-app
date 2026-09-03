@@ -111,6 +111,18 @@ function datumLang(wert) {
   return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${d.getFullYear()}`;
 }
 
+/** "31.08." — ohne Jahr, weil das Jahr rechts daneben schon steht. */
+function datumKurz(iso) {
+  const teile = String(iso).split("-");
+  return teile.length === 3 ? `${teile[2]}.${teile[1]}.` : String(iso);
+}
+
+/** Anzahl Kalendertage einschliesslich Anfang und Ende. */
+function tageZwischen(von, bis) {
+  const tag = 24 * 60 * 60 * 1000;
+  return Math.round((Date.parse(`${bis}T00:00:00Z`) - Date.parse(`${von}T00:00:00Z`)) / tag) + 1;
+}
+
 /* ------------------------------------------------------------- Miniaturen */
 
 /** Längste Kante der eingebetteten Miniatur. Ein Originalfoto ist rund 5 MB;
@@ -247,13 +259,17 @@ const vollstaendig = echte
   .reduce((summe, p) => summe + anzahlVon(p), 0);
 
 const zeiten = positionen.map((p) => p.zeit).filter(Boolean).sort();
-const zeitraum =
+const zeitraumRoh =
   daten.zeitraum ||
   (zeiten.length >= 2
     ? `${uhrzeit(zeiten[0])} – ${uhrzeit(zeiten[zeiten.length - 1])}`
     : uhrzeit(zeiten[0]) || "—");
 
 const datum = daten.datum || (zeiten[0] ? zeiten[0].slice(0, 10) : "");
+/* Über mehrere Tage ist eine Uhrzeitspanne sinnlos: "21:05 – 16:44" liest sich
+   wie ein Tag und war keiner. Dann zählen die Tage, nicht die Stunden. */
+const datumBis = daten.datumBis || (zeiten.length ? zeiten[zeiten.length - 1].slice(0, 10) : datum);
+const mehrtaegig = Boolean(datumBis && datumBis !== datum);
 
 /* Woher die Meldungen kamen, steht im Kopf — sonst liest jemand später „aus der
    Betreffzeile“ über einem Protokoll, das aus einem Gruppenchat stammt, und
@@ -545,8 +561,8 @@ try {
 const titel = daten.objekt ? `Scheinwerfer-Protokoll ${daten.objekt}` : "Scheinwerfer-Protokoll";
 
 const metaFelder = [
-  ["Datum", datumLang(datum) || "—"],
-  ["Zeitraum", zeitraum],
+  ["Datum", mehrtaegig ? `${datumKurz(datum)} – ${datumLang(datumBis)}` : datumLang(datum) || "—"],
+  ["Zeitraum", mehrtaegig ? `${tageZwischen(datum, datumBis)} Tage` : zeitraumRoh],
   ["Meldungen", String(positionen.length)],
   ["Scheinwerfer", String(scheinwerfer)],
   ["Vollständig", `${vollstaendig} von ${scheinwerfer}`],
@@ -813,7 +829,8 @@ function ablegen(pdfPfad) {
 
   // Vorhandenes nicht überschreiben: ein überschriebener Nachweis ist ein
   // verlorener Nachweis. Stattdessen durchnummerieren.
-  const stamm = `Scheinwerfer-Protokoll_${daten.objekt || "Protokoll"}_${datum || "ohne-Datum"}`;
+  const spanne = mehrtaegig ? `${datum}_bis_${datumBis}` : datum || "ohne-Datum";
+  const stamm = `Scheinwerfer-Protokoll_${daten.objekt || "Protokoll"}_${spanne}`;
   let name = `${stamm}.pdf`;
   let n = 2;
   while (existsSync(join(ziel, name))) name = `${stamm}_${n++}.pdf`;
