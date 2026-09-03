@@ -110,8 +110,11 @@ nicht eingebettet.
 Standbild ist der Beleg, der Clip wird übergangen; entschieden wird an der
 Spieldauer (bis 3,5 s neben einem Standbild). Es gibt daraus nichts
 herauszuholen: Das Bild liegt bereits vor. Nur wenn ein kurzer Clip **ohne**
-Standbild ankommt, ist er der einzige Beleg — dann steht er als Video im
-Protokoll und ein Einzelbild daraus wäre erst dort ein Gewinn.
+Standbild ankommt, ist er der einzige Beleg. Dann wird ein Einzelbild daraus
+gewonnen (`ffmpeg`, ersatzweise `qlmanage`) und im Protokoll als
+**„Einzelbild aus Video"** ausgewiesen — ein Beleg, aber keine Aufnahme, die
+jemand gemacht hat. Fehlt beides Werkzeug, bleibt der Vermerk „nur Video, kein
+Foto" stehen.
 
 **Gerätenamen** bringt `scripts/geraetenamen.json` in die richtige Schreibweise
 (`litecaraft x7` → `Litecraft X7`). Neue Tippfehler dort ergänzen, nicht im

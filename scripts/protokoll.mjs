@@ -301,12 +301,23 @@ function fotoZelle(position) {
 
   const groessen = fotos.map((f) => dateigroesse(f.groesse)).filter(Boolean);
   const label = `${fotos.length} × ${groessen.join(", ") || "Foto"}`;
+
+  /* Ein aus einem Clip gegriffenes Bild ist ein Beleg, aber keine Aufnahme, die
+     jemand gemacht hat — und meist eine Vorschau, keine volle Auflösung. Wer
+     später einen Schaden daran festmachen will, muss das wissen. */
+  const ausVideo = fotos.filter((f) => f.ausVideo).length;
+  const herkunft = ausVideo
+    ? `<span class="sub">${ausVideo === fotos.length ? "Einzelbild aus Video" : `${ausVideo}× Einzelbild aus Video`}</span>`
+    : "";
   // Klein heißt: beim Versand verkleinert, Details für einen Nachweis fort.
   const klein = fotos.some((f) => typeof f.groesse === "number" && f.groesse < 500 * 1024);
-  const kern = klein
+  // Ein Einzelbild aus einem Clip ist naturgemäss klein; die Warnung „verkleinert"
+  // wäre dort doppelt gemoppelt, die Herkunft sagt es schon.
+  const klein2 = klein && ausVideo < fotos.length;
+  const kern = klein2
     ? `${escapeHtml(label)} <span class="warn" title="unter 500 KB — beim Versand verkleinert">verkleinert</span>`
     : escapeHtml(label);
-  return videoText ? `${kern}<span class="sub">${escapeHtml(videoText)}</span>` : kern;
+  return `${kern}${herkunft}${videoText ? `<span class="sub">${escapeHtml(videoText)}</span>` : ""}`;
 }
 
 function zeile(position) {

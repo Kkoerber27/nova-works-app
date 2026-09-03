@@ -218,6 +218,17 @@ Live-Kennung, es bleibt nur die Länge. Bis 3,5 Sekunden **neben einem Standbild
 gilt als Bewegtteil; ohne Standbild ist der Clip der einzige Beleg und wird als
 Video geführt, egal wie kurz er ist. Ein wirkliches Video bleibt eines.
 
+**Kommt ein Clip ohne Standbild**, ist er der einzige Beleg — und ein Protokoll,
+in dem an dieser Stelle nichts zu sehen ist, belegt nichts. Dann wird ein
+Einzelbild daraus gewonnen: mit `ffmpeg`, falls vorhanden (volle Auflösung, eine
+halbe Sekunde hinein, weil das erste Bild oft noch unscharf ist), sonst mit
+`qlmanage` aus macOS — das liefert eine Vorschau, keine volle Auflösung. Fehlt
+beides, bleibt es beim blossen Vermerk „nur Video, kein Foto".
+
+Im Protokoll steht so ein Bild als **„Einzelbild aus Video"**, an der Zeile wie
+in der Fotospalte. Es ist ein Beleg, aber keine Aufnahme, die jemand gemacht
+hat — wer später einen Schaden daran festmachen will, muss das wissen.
+
 Zwei Schreibweisen werden gelesen: die genaue mit Kommas
 (`Halle 3, Traverse Nord, 6, alle ok`) und die kurze, wie sie in der Gruppe
 tatsächlich entsteht (`Hauptzelt 4x w600`) — dort wird der Gerätetyp als solcher

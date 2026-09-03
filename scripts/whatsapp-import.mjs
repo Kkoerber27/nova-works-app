@@ -16,8 +16,9 @@
  * Protokoll waren darüber nicht zu bekommen. Hier liegen sie einfach da.
  */
 
+import { execFileSync } from "node:child_process";
 import { closeSync, existsSync, openSync, readdirSync, readFileSync, readSync, statSync, writeFileSync } from "node:fs";
-import { basename, join, resolve } from "node:path";
+import { basename, dirname, join, resolve } from "node:path";
 
 /* ------------------------------------------------------------------ Eingabe */
 
@@ -179,6 +180,41 @@ const BILD = /\.(jpe?g|png|heic|heif|webp|gif)$/i;
    Export lagen alle sieben zwischen 0,6 und 2,7 Sekunden. Ein wirkliches Video
    ist länger und bleibt eines. */
 const LIVE_SEKUNDEN = 3.5;
+
+/** Holt ein Einzelbild aus einem Clip. Nur nötig, wenn der Clip der einzige
+ *  Beleg ist — bei einem Live-Foto liegt das Standbild ohnehin daneben.
+ *  Rückgabe: Pfad zum Bild oder null. */
+function standbild(videoPfad) {
+  const jpg = `${videoPfad.replace(/\.[^.]+$/, "")}-standbild.jpg`;
+  if (existsSync(jpg)) return jpg;
+
+  const brauchbar = (pfad) => existsSync(pfad) && statSync(pfad).size > 1000;
+
+  // ffmpeg zuerst: volle Auflösung und ein wählbarer Zeitpunkt. Eine halbe
+  // Sekunde hinein, weil das allererste Bild oft noch unscharf ist — die
+  // Kamera stellt beim Auslösen noch nach.
+  try {
+    execFileSync("ffmpeg", ["-nostdin", "-loglevel", "error", "-y", "-ss", "0.5",
+      "-i", videoPfad, "-frames:v", "1", "-q:v", "3", jpg], { stdio: "ignore", timeout: 30_000 });
+    if (brauchbar(jpg)) return jpg;
+  } catch {
+    // ffmpeg ist auf einem Mac selten installiert — dann der Bordweg.
+  }
+
+  // qlmanage gehört zu macOS. Es liefert eine Vorschau, keine volle Auflösung:
+  // für „was hängt da“ reicht das, als Nahaufnahme eines Schadens nicht. Besser
+  // ein knappes Bild im Nachweis als gar keines.
+  try {
+    const ordner = dirname(videoPfad);
+    execFileSync("qlmanage", ["-t", "-s", "1400", "-o", ordner, videoPfad],
+      { stdio: "ignore", timeout: 30_000 });
+    const png = join(ordner, `${basename(videoPfad)}.png`);
+    if (brauchbar(png)) return png;
+  } catch {
+    // Kein Quick Look (etwa über SSH ohne Sitzung) — dann bleibt es beim Video.
+  }
+  return null;
+}
 
 /** Spieldauer aus der mvhd-Box, ohne zusätzliches Werkzeug. Null, wenn sich die
  *  Datei nicht lesen lässt — dann gilt sie im Zweifel als richtiges Video. */
@@ -355,6 +391,7 @@ const geplauder = [];
 const andereDateien = [];
 let ausserhalb = 0;
 let liveGesamt = 0;
+let standbilder = 0;
 
 for (const n of nachrichten) {
   if (n.verbraucht) continue;
@@ -391,6 +428,19 @@ for (const n of nachrichten) {
   liveGesamt += liveTeile.length;
   videos.length = 0;
   videos.push(...echteVideos.map(({ dauer, ...rest }) => rest));
+
+  /* Ohne Standbild ist der Clip der einzige Beleg — und ein Protokoll, in dem
+     an dieser Stelle nichts zu sehen ist, belegt nichts. Dann wird ein
+     Einzelbild daraus gewonnen und als solches ausgewiesen: Es ist ein Griff
+     ins Video, keine Aufnahme, die jemand gemacht hat. */
+  if (!fotos.length) {
+    for (const v of echteVideos) {
+      const bild = standbild(join(basis, v.name));
+      if (!bild) continue;
+      fotos.push({ name: basename(bild), groesse: statSync(bild).size, datei: bild, ausVideo: v.name });
+      standbilder += 1;
+    }
+  }
 
   const zerlegt = n.text ? zerlegen(n.text, Boolean(n.anhang)) : { fehler: "keine Beschriftung" };
 
@@ -447,6 +497,7 @@ for (const n of nachrichten) {
 
   const luecken = [];
   if (!fotos.length) luecken.push(videos.length ? "nur Video, kein Foto" : "kein Foto");
+  else if (fotos.every((f) => f.ausVideo)) luecken.push("Einzelbild aus Video, kein aufgenommenes Foto");
   if (!zerlegt.zustand) luecken.push("kein Zustand angegeben");
   if (luecken.length) position.hinweis = luecken.join(", ");
 
@@ -554,6 +605,7 @@ if (liveGesamt) {
   console.log(`      ${liveGesamt} Live-Foto(s) — Bewegtteil übergangen, das Standbild ist im Protokoll`);
 }
 if (videoZahl) console.log(`      ${videoZahl} Video(s) vermerkt, nicht eingebettet`);
+if (standbilder) console.log(`      ${standbilder} Einzelbild(er) aus Video gewonnen — im Protokoll als solche gekennzeichnet`);
 if (hinweise.length) console.log(`      ${hinweise.length} Prüfhinweis(e) — stehen im Protokoll`);
 // Im Einzelbefehl (protokoll-whatsapp.sh) folgt der Aufruf sowieso — dann wäre
 // die Zeile eine Anleitung zu etwas, das gerade von selbst passiert.
