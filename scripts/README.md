@@ -369,7 +369,21 @@ des Browsers öffnet — „Als PDF sichern" führt dort zum selben Ergebnis wie
 Knopf ausgeblendet; auf einem Nachweis hat er nichts verloren.
 
 Für das PDF wird ein installierter Chromium-Browser kopflos benutzt — gesucht
-werden Chrome, Edge, Brave und Chromium in dieser Reihenfolge. Bewusst keine
+werden Chrome, Edge, Brave und Chromium in dieser Reihenfolge. **Scheitert einer,
+kommt der nächste dran**: Auf einem Mac mit Microsoft 365 ist Edge ohnehin da,
+und wenn Chrome zickt, druckt Edge dasselbe. Erst wenn alle scheitern, bricht der
+Lauf ab und nennt jeden Fehler einzeln.
+
+Chrome startet beim kopflosen Lauf sonst nebenher seinen Updater, sucht nach
+Erweiterungen und fragt nach dem Standardbrowser — auf einem Rechner, auf dem
+Chrome ohnehin läuft, endet der Start daran mit einem Fehler, obwohl mit dem
+Drucken alles in Ordnung wäre. Die entsprechenden Schalter sind deshalb gesetzt.
+Und weil Chrome das PDF gelegentlich schreibt und trotzdem mit einem Fehlercode
+endet, zählt die entstandene Datei, nicht der Rückgabewert: Ist es ein
+brauchbares PDF, wird es genommen.
+
+Liegt ein Browser woanders, hilft `NOVA_BROWSER` mit einem oder mehreren Pfaden,
+durch Doppelpunkt getrennt; sie werden vor der eingebauten Liste probiert. Bewusst keine
 zusätzliche Abhängigkeit: Edge ist auf einem Mac mit Microsoft 365 ohnehin da,
 und ein Paket, das nur zum Drucken installiert wird, veraltet zwischen zwei
 Protokollen. Wird kein Browser gefunden, sagt das Skript das und das fertige HTML

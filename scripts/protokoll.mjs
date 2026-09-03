@@ -21,7 +21,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readSync, readdirSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, extname, join, resolve } from "node:path";
 import { createHash } from "node:crypto";
@@ -652,6 +652,7 @@ if (!flags.has("--pdf")) {
 /* --------------------------------------------------------------------- PDF */
 
 const BROWSER = [
+  ...(process.env.NOVA_BROWSER ? process.env.NOVA_BROWSER.split(":") : []),
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
   "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge",
   "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser",
@@ -662,8 +663,8 @@ const BROWSER = [
   "/usr/bin/google-chrome",
 ];
 
-const browser = BROWSER.find((pfad) => existsSync(pfad));
-if (!browser) {
+const browser = BROWSER.filter((pfad) => existsSync(pfad));
+if (browser.length === 0) {
   console.error("");
   console.error("PDF nicht erzeugt: kein Chromium-Browser gefunden.");
   console.error(`Das HTML liegt fertig unter ${zielHtml} —`);
@@ -673,39 +674,82 @@ if (!browser) {
 }
 
 const zielPdf = zielHtml.replace(/\.html$/i, ".pdf");
-// Eigenes Profil, damit ein laufender Browser den kopflosen Start nicht abfängt.
-const profil = mkdtempSync(join(tmpdir(), "nova-protokoll-"));
 
 // Als root verweigert Chromium den Start mit aktiver Sandbox. Das betrifft
 // Container und CI, nicht den Mac — dort bleibt die Sandbox deshalb an.
 const alsRoot = typeof process.getuid === "function" && process.getuid() === 0;
 
-try {
-  execFileSync(
-    browser,
-    [
-      "--headless=new",
-      "--disable-gpu",
-      ...(alsRoot ? ["--no-sandbox"] : []),
-      `--user-data-dir=${profil}`,
-      "--no-pdf-header-footer",
-      "--print-to-pdf-no-header",
-      `--print-to-pdf=${zielPdf}`,
-      `file://${zielHtml}`,
-    ],
-    { stdio: ["ignore", "ignore", "pipe"], timeout: 60_000 },
-  );
-} catch (err) {
-  console.error("");
-  console.error(`PDF nicht erzeugt: ${basename(browser)} endete mit einem Fehler.`);
-  const details = err.stderr ? String(err.stderr).trim().split("\n").slice(-3).join("\n") : err.message;
-  if (details) console.error(details);
-  console.error(`Das HTML liegt unter ${zielHtml} und lässt sich von Hand drucken.`);
-  process.exit(3);
+/** Ein PDF, das diesen Namen verdient: vorhanden, nicht leer, mit Kennung. */
+function istPdf(pfad) {
+  if (!existsSync(pfad) || statSync(pfad).size < 1000) return false;
+  const kopf = Buffer.alloc(5);
+  const fd = openSync(pfad, "r");
+  try { readSync(fd, kopf, 0, 5, 0); } finally { closeSync(fd); }
+  return kopf.toString("latin1") === "%PDF-";
 }
 
-if (!existsSync(zielPdf)) {
-  console.error(`PDF nicht erzeugt: ${zielPdf} wurde nicht angelegt.`);
+function drucken(pfad) {
+  // Eigenes Profil je Versuch, damit ein laufender Browser den kopflosen Start
+  // nicht abfängt und zwei Versuche sich nicht ins Gehege kommen.
+  const profil = mkdtempSync(join(tmpdir(), "nova-protokoll-"));
+  try {
+    execFileSync(
+      pfad,
+      [
+        "--headless=new",
+        "--disable-gpu",
+        ...(alsRoot ? ["--no-sandbox"] : []),
+        `--user-data-dir=${profil}`,
+        // Ohne diese vier startet Chrome nebenher seinen Updater, sucht nach
+        // Erweiterungen und fragt nach dem Standardbrowser. Auf einem Rechner,
+        // auf dem Chrome ohnehin läuft, endet der kopflose Start daran mit
+        // einem Fehler, obwohl mit dem Drucken alles in Ordnung wäre.
+        "--no-first-run",
+        "--no-default-browser-check",
+        "--disable-extensions",
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--no-pdf-header-footer",
+        "--print-to-pdf-no-header",
+        `--print-to-pdf=${zielPdf}`,
+        `file://${zielHtml}`,
+      ],
+      { stdio: ["ignore", "ignore", "pipe"], timeout: 60_000 },
+    );
+  } catch (err) {
+    // Chrome schreibt das PDF gelegentlich und endet trotzdem mit einem
+    // Fehlercode — meist wegen des Updaters, nicht wegen des Drucks. Deshalb
+    // zählt die Datei, nicht der Rückgabewert.
+    if (!istPdf(zielPdf)) {
+      const roh = err.stderr ? String(err.stderr).trim() : err.message;
+      // Die VERBOSE-Zeilen des Updaters sagen nichts über den Druck aus.
+      const zeilen = roh.split("\n").filter((z) => !/VERBOSE\d|updater/i.test(z));
+      return { fehler: (zeilen.length ? zeilen : roh.split("\n")).slice(-3).join("\n") };
+    }
+  } finally {
+    rmSync(profil, { recursive: true, force: true });
+  }
+  return istPdf(zielPdf) ? { ok: true } : { fehler: "kein PDF angelegt" };
+}
+
+/* Mehrere Browser der Reihe nach. Auf einem Mac mit Microsoft 365 ist Edge
+   ohnehin da, und wenn Chrome zickt, druckt Edge dasselbe. Aufzugeben, weil der
+   erste von vieren gescheitert ist, wäre voreilig. */
+const gescheitert = [];
+let erfolg = false;
+for (const pfad of browser) {
+  const ergebnis = drucken(pfad);
+  if (ergebnis.ok) { erfolg = true; break; }
+  gescheitert.push(`${basename(pfad)}: ${ergebnis.fehler}`);
+  rmSync(zielPdf, { force: true });
+}
+
+if (!erfolg) {
+  console.error("");
+  console.error(`PDF nicht erzeugt — ${gescheitert.length} Browser versucht:`);
+  for (const z of gescheitert) console.error(`  ${z}`);
+  console.error(`Das HTML liegt unter ${zielHtml} und lässt sich von Hand drucken:`);
+  console.error(`  open "${zielHtml}"   dann Cmd+P → „Als PDF sichern“`);
   process.exit(3);
 }
 

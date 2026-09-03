@@ -165,10 +165,18 @@ echo
 node "$REPO/scripts/protokoll.mjs" "${AUS[@]}"
 CODE=$?
 
-if [ "$CODE" -eq 4 ]; then
-  echo
-  echo "Das PDF ist erzeugt, aber nicht abgelegt — der Grund steht darüber."
-  echo "Der entpackte Ordner bleibt deshalb liegen."
+# Ging etwas schief, bleibt der entpackte Ordner liegen. Dort steht das, was
+# gerettet werden kann: bei Rückgabewert 4 das fertige PDF, das nur nicht
+# abgelegt wurde, bei 3 das HTML, das sich von Hand drucken lässt. Aufräumen
+# hiesse hier, das Ergebnis wegzuwerfen.
+if [ "$CODE" -ne 0 ]; then
   BEHALTEN=1
+  echo
+  case "$CODE" in
+    4) echo "Das PDF ist erzeugt, aber nicht abgelegt — der Grund steht darüber." ;;
+    3) echo "Kein PDF, aber das HTML ist fertig — der Grund steht darüber." ;;
+    *) echo "Der Lauf endete mit Rückgabewert $CODE." ;;
+  esac
+  echo "Der entpackte Ordner bleibt deshalb liegen."
 fi
 exit "$CODE"
