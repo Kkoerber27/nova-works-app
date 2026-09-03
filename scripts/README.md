@@ -10,8 +10,9 @@ Protokoll nach `~/.nova-works/`.
 | NAS-Sicherung | nachts 03:15 | `nas-backup.sh` | `~/.nova-works/nas-backup.log` |
 | Scheinwerfer-Protokoll | nachts 01:00 | `protokoll-nacht.sh` | `~/.nova-works/protokoll.log` |
 
-Von Hand dazu: `nas-restore.sh` für das Zurückspielen, `whatsapp-import.mjs` und
-`protokoll.mjs` für das Scheinwerfer-Protokoll.
+Von Hand dazu: `nas-restore.sh` für das Zurückspielen und
+`protokoll-whatsapp.sh` für das Scheinwerfer-Protokoll aus einem
+WhatsApp-Export.
 
 ## NAS-Sicherung
 
@@ -126,7 +127,28 @@ Schlüssel ohne `nw_`-Präfix.
 
 Die Crew meldet in der WhatsApp-Gruppe: ein Foto, darunter als Bildunterschrift
 `Standort, Anzahl, Zustand` oder kurz `Hauptzelt 4x w600`. Am Ende des Tages den
-Chat exportieren — **mit Medien** — und die ZIP hier in den Chat hängen.
+Chat exportieren — **mit Medien** — und einen Befehl laufen lassen:
+
+```bash
+./scripts/protokoll-whatsapp.sh --tag 2026-09-01
+```
+
+Ohne Pfad wird der neueste WhatsApp-Export in `~/Downloads` genommen; sonst den
+Pfad zur ZIP oder zum entpackten Ordner mitgeben. Projektnummer und Objekt kommen
+aus `~/.nova-works/env`, lassen sich aber mit `--projekt` und `--objekt`
+überschreiben. Das Skript entpackt in ein temporäres Verzeichnis, wertet aus,
+rendert, legt ab und räumt wieder auf.
+
+**Der Export bleibt auf diesem Rechner.** Mit Medien sind schnell fünfzig
+Megabyte beisammen — zu viel, um ihn in einen Chat zu hängen, und unnötig: Hier
+liegen die Bilder, hier liegt der synchronisierte Projektordner. Hochgeladen wird
+nichts.
+
+Was der Lauf liegen lässt, statt aufzuräumen: den entpackten Ordner, wenn keine
+Projektnummer gesetzt war oder die Ablage misslang. Dann steht das PDF darin und
+wäre sonst mitgelöscht.
+
+Die drei Schritte einzeln, wenn etwas zu prüfen ist:
 
 ```bash
 unzip -q "WhatsApp Chat - Technik.zip" -d /tmp/wa

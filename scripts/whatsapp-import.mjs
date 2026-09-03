@@ -462,6 +462,10 @@ if (ohneZustand.length) console.log(`      davon ${ohneZustand.length} Meldung(e
 const videoZahl = positionen.reduce((s, p) => s + (p.videos?.length ?? 0), 0);
 if (videoZahl) console.log(`      ${videoZahl} Video(s) vermerkt, nicht eingebettet`);
 if (hinweise.length) console.log(`      ${hinweise.length} Prüfhinweis(e) — stehen im Protokoll`);
-console.log("");
-console.log("Weiter mit:");
-console.log(`      node scripts/protokoll.mjs ${ziel} --pdf --ablegen`);
+// Im Einzelbefehl (protokoll-whatsapp.sh) folgt der Aufruf sowieso — dann wäre
+// die Zeile eine Anleitung zu etwas, das gerade von selbst passiert.
+if (!process.env.PROTOKOLL_KETTE) {
+  console.log("");
+  console.log("Weiter mit:");
+  console.log(`      node scripts/protokoll.mjs ${ziel} --pdf --ablegen`);
+}

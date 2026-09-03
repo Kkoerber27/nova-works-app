@@ -57,13 +57,31 @@ gibt sie aber nicht als Datei heraus.
 
 ## Weg 1: WhatsApp-Export
 
-Der Export kommt als ZIP hier in den Chat. Entpacken, einlesen, rendern:
+**Auf dem Arbeitsrechner ein Befehl:**
+
+```bash
+./scripts/protokoll-whatsapp.sh --tag 2026-09-01
+```
+
+Nimmt ohne Pfad den neuesten WhatsApp-Export aus `~/Downloads`, entpackt,
+wertet aus, rendert, legt ab, räumt auf.
+
+**Das ist der Regelweg**, nicht die Ausnahme: Ein Export mit Medien hat leicht
+fünfzig Megabyte — zu viel für den Chat, und unnötig, weil auf dem Rechner
+sowohl die Bilder als auch der synchronisierte Projektordner liegen.
+
+Soll das Protokoll hier im Chat entstehen, geht das nur mit einem kleinen
+Export. Dann einzeln:
 
 ```bash
 unzip -q "WhatsApp Chat - Technik.zip" -d /tmp/wa
 node scripts/whatsapp-import.mjs /tmp/wa --objekt "Glücksgefühle" --projekt 26-0032
 node scripts/protokoll.mjs /tmp/wa/daten.json --pdf --ablegen
 ```
+
+Für eine reine Auswertungsfrage — warum wurde eine Meldung nicht erkannt —
+reicht die `_chat.txt` allein; sie ist wenige Kilobyte gross. Ohne die Bilder
+entsteht daraus aber kein brauchbares Protokoll, nur eine Diagnose.
 
 `whatsapp-import.mjs` macht das Zerlegen, die Dublettenprüfung und den Status selbst — es zerlegt von
 hinten nach demselben Muster, erkennt Dubletten und setzt den Status. Was es
