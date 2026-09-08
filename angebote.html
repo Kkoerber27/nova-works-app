@@ -444,6 +444,10 @@
   <section class="view" id="view-forecast">
     <div class="page-head">
       <div><h1>Forecast</h1><div class="sub" id="fc-sub">Umsatz- und Margenvorschau je Monat · alle Beträge netto</div></div>
+      <div class="toolbar">
+        <button class="btn" id="fc-ppt" title="Forecast als PowerPoint im Nova-Works-Stil">📽 PowerPoint</button>
+        <button class="btn primary" id="fc-pdf" title="Forecast als PDF-Report im Nova-Works-Stil">🖨 Forecast PDF</button>
+      </div>
     </div>
     <div class="card panel-pad" id="fc-body"></div>
   </section>
@@ -1282,6 +1286,8 @@ if(rePdfBtn&&rePdfFile){ rePdfBtn.onclick=function(){ rePdfFile.value=""; rePdfF
 var pdAwPrint=document.getElementById("pd-aw-print"); if(pdAwPrint) pdAwPrint.onclick=function(){ if(typeof curProject!=="undefined"&&curProject) exportProjectAuswertungPDF(curProject); };
 var awPrintAll=document.getElementById("aw-print"); if(awPrintAll) awPrintAll.onclick=function(){ exportAllAuswertungPDF(); };
 var awVgl=document.getElementById("aw-vergleich"); if(awVgl) awVgl.onclick=openVglPicker;
+var fcPdfBtn=document.getElementById("fc-pdf"); if(fcPdfBtn) fcPdfBtn.onclick=function(){ fcPDF(); };
+var fcPptBtn=document.getElementById("fc-ppt"); if(fcPptBtn) fcPptBtn.onclick=function(){ fcPPT(); };
 document.getElementById("aw-file").onchange=function(e){ var f=e.target.files[0]; if(!f)return; var r=new FileReader(); r.onload=function(){ try{ importAuswertung(JSON.parse(r.result)); }catch(err){ toast("Fehler: "+err.message); } }; r.readAsText(f); e.target.value=""; };
 document.getElementById("crew-import-file").onchange=function(e){ if(e.target.files[0]) handleCrewImport(e.target.files[0]); e.target.value=""; };
 document.getElementById("crew-search").oninput=function(){ renderCrewList(); };
@@ -4210,13 +4216,9 @@ function fcPlanRow(it,cur){
 function renderForecast(){
   var el=document.getElementById("fc-body"); if(!el) return;
   if(typeof RESTRICTED!=="undefined"&&RESTRICTED){ el.innerHTML='<div class="card panel-pad muted">Nur für Admin.</div>'; return; }
-  var D=fcBuild(), months=D.months, M=D.M, cur=fcCurMonth();
-  var T={conf:0,open:0,wc:0,wo:0,erl:0,soll:0,personal:0,transport:0,miete:0,fix:0};
-  var maxV=0;
-  months.forEach(function(mk){ var x=M[mk]; x.fix=fcFix(mk); Object.keys(T).forEach(function(k){ T[k]+=x[k]; }); var v=Math.max(x.wc+x.wo,x.erl); if(v>maxV) maxV=v; });
+  var C=fcCalc(), D=C.D, months=C.months, M=C.M, T=C.T, cur=C.cur, maxV=C.maxV, rangeLbl=C.rangeLbl;
   var y=new Date().getFullYear();
-  var rangeLbl=fcRange==="jahr"?("Kalenderjahr "+y):(fcRange==="next"?("Kalenderjahr "+(y+1)):"nächste 12 Monate");
-  var planIn=D.plan.filter(function(it){return it.inRange;}).length;
+  var planIn=C.planIn.length;
   var sub=document.getElementById("fc-sub"); if(sub) sub.textContent=rangeLbl+" · "+D.rows.length+" Projekte + "+planIn+" Planeinträge · alle Beträge netto";
   /* Kopf: Zeitraum + Standard-Wahrscheinlichkeit */
   var h='<div class="toolbar" style="margin-bottom:14px">'+
@@ -4228,7 +4230,7 @@ function renderForecast(){
     '</div>';
   /* Kacheln */
   var tile=function(l,v,c){ return '<div style="background:var(--gold-bg);border-radius:10px;padding:10px 16px;min-width:150px;flex:1"><div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">'+l+'</div><div style="font-size:17px;font-weight:700;margin-top:2px;'+(c?('color:'+c):'')+'">'+v+'</div></div>'; };
-  var marge=(T.wc+T.wo)-T.soll, erg=marge-T.fix;
+  var marge=T.marge, erg=T.erg;
   h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px">'+
     tile("Bestätigt / fest",eur(T.conf),"#2d7a4f")+
     tile("Offen (gewichtet)",eur(T.wo),"#b8860b")+
@@ -4313,6 +4315,175 @@ function renderForecast(){
     save(); renderForecast(); }; });
   el.querySelectorAll(".fc-pl-reload").forEach(function(b){ b.onclick=function(){ var e=findE(b.dataset.id), p=e&&findP(e.srcId); if(!p){ toast("Projekt nicht mehr vorhanden"); return; } if(!confirm("Umsatz, Kosten, Monat und Status neu aus dem Projekt laden? Deine Zahlen in dieser Zeile werden überschrieben.")) return; fcPlanFill(e,p); save(); renderForecast(); toast("Aus Projekt aktualisiert"); }; });
   el.querySelectorAll(".fc-pl-del").forEach(function(b){ b.onclick=function(){ var e=findE(b.dataset.id); if(!e) return; if(!confirm("Planeintrag „"+(e.name||"ohne Namen")+"“ löschen?"+(e.srcId?" Das Projekt zählt danach wieder automatisch.":""))) return; var L=fcPlanList(); L.splice(L.indexOf(e),1); save(); renderForecast(); }; });
+}
+/* ---- Forecast-Report: gemeinsame Zahlen für Ansicht, PDF und PowerPoint ---- */
+function fcCalc(){
+  var D=fcBuild(), months=D.months, M=D.M, y=new Date().getFullYear();
+  var T={conf:0,open:0,wc:0,wo:0,erl:0,soll:0,personal:0,transport:0,miete:0,fix:0}, maxV=0;
+  months.forEach(function(mk){ var x=M[mk]; x.fix=fcFix(mk); Object.keys(T).forEach(function(k){ T[k]+=x[k]; }); var v=Math.max(x.wc+x.wo,x.erl); if(v>maxV) maxV=v; });
+  T.marge=(T.wc+T.wo)-T.soll; T.erg=T.marge-T.fix;
+  var rangeLbl=fcRange==="jahr"?("Kalenderjahr "+y):(fcRange==="next"?("Kalenderjahr "+(y+1)):"nächste 12 Monate");
+  var from=fcMonthLabel(months[0]), to=fcMonthLabel(months[months.length-1]);
+  return {D:D,months:months,M:M,T:T,maxV:maxV,cur:fcCurMonth(),rangeLbl:rangeLbl,periodLbl:from+" – "+to,planIn:D.plan.filter(function(it){return it.inRange;})};
+}
+function fcMonShort(mk){ return fcMonthLabel(mk).split(" ")[0]+" "+mk.slice(2,4); }
+/* --- PDF-Report im Stil des Vergleichs-Reports --- */
+function fcPDF(){
+  var C=fcCalc(), D=C.D, M=C.M, T=C.T, months=C.months;
+  var lbl=function(t){ return '<div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:'+NW_MG+';font-weight:500">'+t+'</div>'; };
+  var kpi=function(l,v,sub,col){ return '<div style="flex:1;min-width:100px;border-top:1px solid '+NW_HL+';padding-top:6px">'+lbl(l)+'<div style="font-size:14px;font-weight:700;color:'+(col||NW_CH)+';margin-top:3px">'+v+'</div>'+(sub?('<div style="font-size:8px;color:'+NW_MG+';margin-top:2px">'+sub+'</div>'):'')+'</div>'; };
+  var mc=function(v){ return v>=0?NW_CH:"#c0392b"; };
+  var kEur=function(v){ if(!v||Math.abs(v)<0.5) return ""; return Math.abs(v)>=1000?(Math.round(v/1000).toLocaleString("de-DE")+" T€"):Math.round(v).toLocaleString("de-DE"); };
+  var head='<div class="phead" style="border-bottom:1px solid '+NW_HL+'">'+
+    ((typeof logoDataUrl!=="undefined"&&logoDataUrl)?('<img src="'+logoDataUrl+'" style="height:12mm">'):('<div style="font-size:15px;font-weight:300;letter-spacing:.18em;color:'+NW_CH+'">NOVA WORKS</div>'))+
+    '<div class="ptitle">'+lbl("Forecast")+'<div style="font-size:20px;font-weight:700;color:'+NW_CH+'">Umsatz- und Margenvorschau</div><div style="font-size:9px;color:'+NW_MG+'">'+esc(fmtDate(today()))+' · '+esc(C.periodLbl)+' · alle Beträge netto</div></div></div>';
+  /* 1 · Überblick */
+  var inner=head+'<div class="sec" style="margin-top:6px;border-top:none">'+lbl("1 · Überblick — "+C.rangeLbl)+'</div>'+
+    '<div style="display:flex;gap:10px;margin:8px 0 10px">'+
+      kpi("Bestätigt / fest",eur(T.conf))+kpi("Offen, gewichtet",eur(T.wo),"Angebote × Wahrscheinlichkeit")+kpi("Forecast Umsatz",eur(T.wc+T.wo))+
+      kpi("Abgerechnet",eur(T.erl),"Ausgangsrechnungen")+kpi("Marge",eur(T.marge),(T.wc+T.wo)>0?vglPctF(T.marge/(T.wc+T.wo)*100):null,mc(T.marge))+kpi("nach Fixkosten",eur(T.erg),"Fixkosten "+eur(T.fix),mc(T.erg))+'</div>';
+  inner+='<div style="margin:6px 0 2px">'+lbl("Umsatz je Monat")+'</div>'+
+    vglChartSVG(months.map(function(mk){ var x=M[mk]; return {label:fcMonShort(mk),vals:[x.wc,x.wo,x.erl]}; }),[{name:"Bestätigt / fest",color:NW_CH},{name:"Offen gewichtet",color:"#9a9a9a"},{name:"Abgerechnet",color:"#cfcfcf"}],{h:190,fmt:kEur});
+  inner+='<div style="margin:6px 0 2px">'+lbl("Marge und Ergebnis nach Fixkosten je Monat")+'</div>'+
+    vglChartSVG(months.map(function(mk){ var x=M[mk]; var mg=(x.wc+x.wo)-x.soll; return {label:fcMonShort(mk),vals:[mg,mg-x.fix]}; }),[{name:"Marge",color:NW_CH},{name:"Ergebnis",color:"#9a9a9a"}],{h:170,fmt:kEur});
+  /* Monatstabelle */
+  inner+='<div class="sec" style="page-break-before:always">'+lbl("2 · Monatsübersicht")+'</div>'+
+    '<table><thead><tr><th>Monat</th><th class="r">Bestätigt / fest</th><th class="r">Offen</th><th class="r">Forecast</th><th class="r">Abgerechnet</th><th class="r">Personal</th><th class="r">Transport</th><th class="r">Anmiete</th><th class="r">Marge</th><th class="r">Fixkosten</th><th class="r">Ergebnis</th></tr></thead><tbody>'+
+    months.map(function(mk){ var x=M[mk], w=x.wc+x.wo, mg=w-x.soll, e=mg-x.fix, d=function(v){ return v?eur(v):"–"; };
+      return '<tr'+(mk===C.cur?' style="background:'+NW_GH+'"':'')+'><td>'+fcMonthLabel(mk)+'</td><td class="r">'+d(x.conf)+'</td><td class="r">'+d(x.open)+'</td><td class="r" style="font-weight:700">'+d(w)+'</td><td class="r">'+d(x.erl)+'</td><td class="r" style="color:'+NW_MG+'">'+d(x.personal)+'</td><td class="r" style="color:'+NW_MG+'">'+d(x.transport)+'</td><td class="r" style="color:'+NW_MG+'">'+d(x.miete)+'</td><td class="r" style="color:'+mc(mg)+'">'+((w||x.soll)?eur(mg):"–")+'</td><td class="r">'+d(x.fix)+'</td><td class="r" style="font-weight:700;color:'+mc(e)+'">'+((w||x.soll||x.fix)?eur(e):"–")+'</td></tr>'; }).join("")+
+    '<tr style="font-weight:700;border-top:1px solid '+NW_HL+'"><td>Gesamt</td><td class="r">'+eur(T.conf)+'</td><td class="r">'+eur(T.open)+'</td><td class="r">'+eur(T.wc+T.wo)+'</td><td class="r">'+eur(T.erl)+'</td><td class="r">'+eur(T.personal)+'</td><td class="r">'+eur(T.transport)+'</td><td class="r">'+eur(T.miete)+'</td><td class="r" style="color:'+mc(T.marge)+'">'+eur(T.marge)+'</td><td class="r">'+eur(T.fix)+'</td><td class="r" style="color:'+mc(T.erg)+'">'+eur(T.erg)+'</td></tr>'+
+    '</tbody></table>';
+  var kost=T.personal+T.transport+T.miete;
+  inner+='<div style="margin:10px 0 2px">'+lbl("Kostenstruktur gesamt (gewichtet)")+'</div>'+
+    '<div style="display:flex;gap:16px;align-items:flex-start"><div style="flex:1">'+vglChartSVG([{label:"Personal",vals:[T.personal]},{label:"Transport",vals:[T.transport]},{label:"Anmiete",vals:[T.miete]}],[{name:"Kosten",color:NW_CH}],{h:150,w:420})+'</div>'+
+    '<table style="flex:1"><thead><tr><th>Posten</th><th class="r">Kosten</th><th class="r">Anteil an Kosten</th><th class="r">Anteil am Umsatz</th></tr></thead><tbody>'+
+    [["Personal",T.personal],["Transport",T.transport],["Anmiete",T.miete]].map(function(r0){ return '<tr><td>'+r0[0]+'</td><td class="r">'+eur(r0[1])+'</td><td class="r">'+(kost>0?vglPctF(r0[1]/kost*100):"–")+'</td><td class="r">'+((T.wc+T.wo)>0?vglPctF(r0[1]/(T.wc+T.wo)*100):"–")+'</td></tr>'; }).join("")+
+    '<tr style="font-weight:700;border-top:1px solid '+NW_HL+'"><td>Summe Kosten</td><td class="r">'+eur(kost)+'</td><td class="r">'+(kost>0?"100,0 %":"–")+'</td><td class="r">'+((T.wc+T.wo)>0?vglPctF(kost/(T.wc+T.wo)*100):"–")+'</td></tr></tbody></table></div>';
+  /* 3 · Planung */
+  if(C.planIn.length){
+    var PT={u:0,p:0,t:0,m:0,w:0};
+    inner+='<div class="sec" style="page-break-before:always">'+lbl("3 · Planung — "+C.planIn.length+" Eintr"+(C.planIn.length===1?"ag":"äge"))+'</div>'+
+      '<table><thead><tr><th>Projekt</th><th>Kunde</th><th>Monat</th><th>Status</th><th class="r">Wahrsch.</th><th class="r">Umsatz</th><th class="r">Personal</th><th class="r">Transport</th><th class="r">Anmiete</th><th class="r">Marge</th><th class="r">Gewichtet</th></tr></thead><tbody>'+
+      C.planIn.map(function(it){ var e=it.e, u=fcNum(e.umsatz), mg=u-it.kosten; PT.u+=u; PT.p+=fcNum(e.personal); PT.t+=fcNum(e.transport); PT.m+=fcNum(e.miete); PT.w+=it.w;
+        return '<tr><td><b>'+esc(e.name||"–")+'</b>'+(e.srcId?('<div style="font-size:8px;color:'+NW_MG+'">aus Projekt '+esc(e.srcNr||"")+'</div>'):'')+'</td><td>'+esc(e.kunde||"")+'</td><td>'+fcMonthLabel(e.monat)+'</td><td>'+(e.fest?"fest":"offen")+'</td><td class="r">'+it.prob+' %</td><td class="r">'+eur(u)+'</td><td class="r">'+eur(fcNum(e.personal))+'</td><td class="r">'+eur(fcNum(e.transport))+'</td><td class="r">'+eur(fcNum(e.miete))+'</td><td class="r" style="color:'+mc(mg)+'">'+eur(mg)+(u>0?(' <span style="font-size:8px;color:'+NW_MG+'">'+Math.round(mg/u*100)+' %</span>'):'')+'</td><td class="r" style="font-weight:700">'+eur(it.w)+'</td></tr>'; }).join("")+
+      '<tr style="font-weight:700;border-top:1px solid '+NW_HL+'"><td colspan="5">Summe</td><td class="r">'+eur(PT.u)+'</td><td class="r">'+eur(PT.p)+'</td><td class="r">'+eur(PT.t)+'</td><td class="r">'+eur(PT.m)+'</td><td class="r" style="color:'+mc(PT.u-PT.p-PT.t-PT.m)+'">'+eur(PT.u-PT.p-PT.t-PT.m)+'</td><td class="r">'+eur(PT.w)+'</td></tr></tbody></table>';
+  }
+  /* 4 · Projekte */
+  if(D.rows.length){
+    inner+='<div class="sec"'+(C.planIn.length?'':' style="page-break-before:always"')+'>'+lbl((C.planIn.length?"4":"3")+" · Projekte automatisch im Forecast — "+D.rows.length)+'</div>'+
+      '<table><thead><tr><th>Projekt</th><th>Kunde</th><th>Status</th><th>Zeitraum</th><th class="r">Umsatz</th><th class="r">Personal</th><th class="r">Transport</th><th class="r">Anmiete</th><th class="r">Wahrsch.</th><th class="r">Gewichtet</th></tr></thead><tbody>'+
+      D.rows.map(function(r){ var p=r.p, zr=r.per.manual?fcMonthLabel(r.per.von.slice(0,7)):(fmtDateAny(r.per.von)+(r.per.bis!==r.per.von?(" – "+fmtDateAny(r.per.bis)):""));
+        return '<tr><td><b>'+esc(p.nummer||"")+'</b> '+esc(p.name||"")+'</td><td>'+esc(fcKundeName(p))+'</td><td>'+(r.conf?"bestätigt":"auf Anfrage")+'</td><td>'+zr+(r.share<0.999?(' <span style="font-size:8px;color:'+NW_MG+'">'+Math.round(r.share*100)+' % im Zeitraum</span>'):'')+'</td><td class="r">'+eur(r.amt)+'</td><td class="r">'+(r.split.personal?eur(r.split.personal):"–")+'</td><td class="r">'+(r.split.transport?eur(r.split.transport):"–")+'</td><td class="r">'+(r.split.miete?eur(r.split.miete):"–")+'</td><td class="r">'+r.prob+' %</td><td class="r" style="font-weight:700">'+eur(r.w)+'</td></tr>'; }).join("")+
+      '</tbody></table>';
+  }
+  if(D.noDate.length) inner+='<div style="font-size:8px;color:'+NW_MG+';margin-top:6px">Nicht enthalten, weil ohne Termin: '+D.noDate.map(function(r){ return esc(r.p.nummer||r.p.name||""); }).join(", ")+'</div>';
+  inner+='<div style="font-size:8px;color:'+NW_MG+';margin-top:14px;line-height:1.5">Bestätigt / fest = Projektsumme bestätigter Projekte und feste Planeinträge · Offen = Angebots-Netto der Projekte „Auf Anfrage“ und offene Planeinträge · Forecast = Bestätigt + Offen × Wahrscheinlichkeit · Abgerechnet = Ausgangsrechnungen nach Rechnungsdatum · Personal / Transport / Anmiete = geplante Kosten (Kalkulations-Soll, sonst Angebots-EK), gewichtet · Fixkosten = Plan aus dem Overhead · Projekte werden nach ihrem Leistungszeitraum tageweise auf die Monate verteilt, Planeinträge zählen ganz in ihrem Monat.</div>';
+  inner+='<div style="position:fixed;bottom:0;left:0;right:0;border-top:1px solid '+NW_HL+';padding-top:4px;font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:'+NW_MG+'">Nova Works · systems creating moments</div>';
+  var extra='@page{size:A4 landscape;margin:12mm 14mm 16mm}body{color:'+NW_CH+';font-size:9px}'+
+    'th{background:none!important;color:'+NW_MG+'!important;font-size:7.5px;letter-spacing:.12em;font-weight:500;border-bottom:1px solid '+NW_HL+';padding:5px}'+
+    'td{border-bottom:1px solid #ececec;padding:4px 5px}tbody tr:nth-child(even){background:none}'+
+    '.r{text-align:right;white-space:nowrap}.sec{margin-top:22px;padding-top:10px;border-top:1px solid '+NW_HL+'}svg{margin:2px 0 6px}';
+  printDoc("Nova Works – Forecast "+awTodayDE(), inner, extra);
+}
+/* --- PowerPoint im Stil des Vergleichs-Reports --- */
+function fcPPT(){
+  var C=fcCalc(), D=C.D, M=C.M, T=C.T, months=C.months;
+  toast("PowerPoint wird erstellt …");
+  ensurePptx().then(function(){
+    var CH="2D2F33",MG="777777",HL="C8C8C8",RD="C0392B",F="Helvetica Neue";
+    var pptx=new PptxGenJS(); pptx.defineLayout({name:"NW",width:13.33,height:7.5}); pptx.layout="NW";
+    pptx.author="Nova Works GmbH"; pptx.company="Nova Works GmbH"; pptx.title="Forecast – Umsatz- und Margenvorschau";
+    var chartAxis={catAxisLabelColor:MG,catAxisLabelFontSize:10,catAxisLabelFontFace:F,valAxisLabelColor:MG,valAxisLabelFontSize:9,valAxisLabelFontFace:F,valGridLine:{style:"solid",color:HL,size:0.5},catAxisLineColor:HL,valAxisLineColor:HL,dataLabelFontFace:F};
+    var mc=function(v){ return v>=0?CH:RD; };
+    function newSlide(eyebrow,title){
+      var s=pptx.addSlide(); s.background={color:"FFFFFF"};
+      if(typeof logoDataUrl!=="undefined"&&logoDataUrl) s.addImage({data:logoDataUrl,x:11.35,y:0.42,w:1.5,h:0.5});
+      if(eyebrow) s.addText(eyebrow.toUpperCase(),{x:0.6,y:0.42,w:9,h:0.3,fontSize:11,color:MG,charSpacing:3,fontFace:F});
+      if(title) s.addText(title,{x:0.6,y:0.68,w:10.5,h:0.6,fontSize:26,bold:true,color:CH,fontFace:F});
+      s.addShape(pptx.ShapeType.line,{x:0.6,y:1.35,w:12.13,h:0,line:{color:HL,width:0.75}});
+      s.addShape(pptx.ShapeType.line,{x:0.6,y:7.02,w:12.13,h:0,line:{color:HL,width:0.75}});
+      s.addText("NOVA WORKS · SYSTEMS CREATING MOMENTS",{x:0.6,y:7.08,w:8,h:0.28,fontSize:8,color:MG,charSpacing:3,fontFace:F});
+      return s;
+    }
+    function kpiBox(s,x,l,v,sub,col,w){
+      w=w||2.85;
+      s.addShape(pptx.ShapeType.line,{x:x,y:1.75,w:w,h:0,line:{color:HL,width:0.75}});
+      s.addText(l.toUpperCase(),{x:x,y:1.82,w:w,h:0.28,fontSize:9.5,color:MG,charSpacing:2,fontFace:F});
+      s.addText(v,{x:x,y:2.08,w:w,h:0.5,fontSize:19,bold:true,color:col||CH,fontFace:F});
+      if(sub) s.addText(sub,{x:x,y:2.56,w:w,h:0.26,fontSize:8.5,color:MG,fontFace:F});
+    }
+    var TH=function(t,r){ return {text:t,options:{bold:false,color:MG,fontSize:8,fontFace:F,charSpacing:1.5,align:r?"right":"left",border:[{type:"none"},{type:"none"},{type:"solid",color:HL,pt:0.75},{type:"none"}]}}; };
+    var TD=function(t,o){ o=o||{}; return {text:t,options:{color:o.col||CH,fontSize:o.fs||9,fontFace:F,bold:!!o.b,align:o.r?"right":"left",fill:o.fill?{color:o.fill}:undefined,border:[{type:"none"},{type:"none"},{type:"solid",color:"ECECEC",pt:0.5},{type:"none"}]}}; };
+    var labs=months.map(fcMonShort);
+    /* Titel */
+    var s1=pptx.addSlide(); s1.background={color:"FFFFFF"};
+    if(typeof logoDataUrl!=="undefined"&&logoDataUrl) s1.addImage({data:logoDataUrl,x:0.6,y:0.7,w:3.0,h:1.0});
+    s1.addText("FORECAST",{x:0.6,y:3.0,w:9,h:0.35,fontSize:13,color:MG,charSpacing:4,fontFace:F});
+    s1.addText("Umsatz- und Margenvorschau",{x:0.6,y:3.3,w:11,h:0.9,fontSize:40,bold:true,color:CH,fontFace:F});
+    s1.addText(fmtDate(today())+"  ·  "+C.periodLbl+"  ·  "+D.rows.length+" Projekte, "+C.planIn.length+" Planeinträge  ·  alle Beträge netto",{x:0.6,y:4.3,w:12,h:0.8,fontSize:12,color:MG,fontFace:F});
+    s1.addShape(pptx.ShapeType.line,{x:0.6,y:7.02,w:12.13,h:0,line:{color:HL,width:0.75}});
+    s1.addText("NOVA WORKS · SYSTEMS CREATING MOMENTS",{x:0.6,y:7.08,w:8,h:0.28,fontSize:8,color:MG,charSpacing:3,fontFace:F});
+    /* 1 · Überblick */
+    var s2=newSlide("1 · Überblick · "+C.rangeLbl,"Wie entwickelt sich der Umsatz?");
+    kpiBox(s2,0.6,"Forecast Umsatz",eur(T.wc+T.wo),"bestätigt "+eur(T.conf)+" · offen gewichtet "+eur(T.wo));
+    kpiBox(s2,3.65,"Abgerechnet",eur(T.erl),"Ausgangsrechnungen");
+    kpiBox(s2,6.7,"Marge",eur(T.marge),(T.wc+T.wo)>0?vglPctF(T.marge/(T.wc+T.wo)*100):null,mc(T.marge));
+    kpiBox(s2,9.75,"nach Fixkosten",eur(T.erg),"Fixkosten "+eur(T.fix),mc(T.erg));
+    s2.addChart(pptx.ChartType.bar,[
+        {name:"Bestätigt / fest",labels:labs,values:months.map(function(mk){return Math.round(M[mk].wc);})},
+        {name:"Offen gewichtet",labels:labs,values:months.map(function(mk){return Math.round(M[mk].wo);})},
+        {name:"Abgerechnet",labels:labs,values:months.map(function(mk){return Math.round(M[mk].erl);})}],
+      Object.assign({x:0.6,y:3.0,w:12.1,h:3.8,barDir:"col",barGrouping:"clustered",chartColors:[CH,"9A9A9A","CFCFCF"],showLegend:true,legendPos:"b",legendColor:MG,legendFontSize:10,legendFontFace:F,showTitle:true,title:"UMSATZ JE MONAT (€)",titleColor:MG,titleFontSize:10,titleFontFace:F,valAxisLabelFormatCode:"#,##0"},chartAxis));
+    /* 2 · Marge */
+    var s3=newSlide("2 · Marge und Ergebnis","Was bleibt je Monat übrig?");
+    var kost=T.personal+T.transport+T.miete;
+    kpiBox(s3,0.6,"Marge",eur(T.marge),(T.wc+T.wo)>0?vglPctF(T.marge/(T.wc+T.wo)*100)+" vom Umsatz":null,mc(T.marge));
+    kpiBox(s3,3.65,"Kosten geplant",eur(kost),"Personal · Transport · Anmiete");
+    kpiBox(s3,6.7,"Fixkosten",eur(T.fix),"Plan aus Overhead");
+    kpiBox(s3,9.75,"Ergebnis",eur(T.erg),"Marge − Fixkosten",mc(T.erg));
+    s3.addChart(pptx.ChartType.bar,[
+        {name:"Marge",labels:labs,values:months.map(function(mk){ var x=M[mk]; return Math.round((x.wc+x.wo)-x.soll); })},
+        {name:"Fixkosten",labels:labs,values:months.map(function(mk){ return Math.round(M[mk].fix); })},
+        {name:"Ergebnis",labels:labs,values:months.map(function(mk){ var x=M[mk]; return Math.round((x.wc+x.wo)-x.soll-x.fix); })}],
+      Object.assign({x:0.6,y:3.0,w:7.6,h:3.8,barDir:"col",chartColors:[CH,"CFCFCF","9A9A9A"],showLegend:true,legendPos:"b",legendColor:MG,legendFontSize:10,legendFontFace:F,showTitle:true,title:"MARGE, FIXKOSTEN UND ERGEBNIS JE MONAT (€)",titleColor:MG,titleFontSize:10,titleFontFace:F,valAxisLabelFormatCode:"#,##0"},chartAxis));
+    s3.addChart(pptx.ChartType.bar,[{name:"Kosten",labels:["Personal","Transport","Anmiete"],values:[T.personal,T.transport,T.miete].map(Math.round)}],
+      Object.assign({x:8.5,y:3.0,w:4.2,h:3.8,barDir:"col",chartColors:[CH],showLegend:false,showValue:true,dataLabelColor:MG,dataLabelFontSize:9,dataLabelFormatCode:"#,##0\\ €",showTitle:true,title:"KOSTENSTRUKTUR (GEWICHTET)",titleColor:MG,titleFontSize:10,titleFontFace:F,valAxisLabelFormatCode:"#,##0"},chartAxis));
+    /* 3 · Monatstabelle */
+    var s4=newSlide("3 · Monatsübersicht","Zahlen je Monat");
+    var d=function(v){ return v?eur(v):"–"; };
+    var rowsM=[[TH("Monat"),TH("Bestätigt / fest",1),TH("Offen",1),TH("Forecast",1),TH("Abgerechnet",1),TH("Personal",1),TH("Transport",1),TH("Anmiete",1),TH("Marge",1),TH("Fixkosten",1),TH("Ergebnis",1)]];
+    months.forEach(function(mk){ var x=M[mk], w=x.wc+x.wo, mg=w-x.soll, e=mg-x.fix, cur=(mk===C.cur), fill=cur?"F0F0F0":null;
+      rowsM.push([TD(fcMonthLabel(mk),{b:cur,fill:fill}),TD(d(x.conf),{r:1,fill:fill}),TD(d(x.open),{r:1,fill:fill}),TD(d(w),{r:1,b:1,fill:fill}),TD(d(x.erl),{r:1,fill:fill}),TD(d(x.personal),{r:1,col:MG,fill:fill}),TD(d(x.transport),{r:1,col:MG,fill:fill}),TD(d(x.miete),{r:1,col:MG,fill:fill}),TD((w||x.soll)?eur(mg):"–",{r:1,col:mc(mg),fill:fill}),TD(d(x.fix),{r:1,fill:fill}),TD((w||x.soll||x.fix)?eur(e):"–",{r:1,b:1,col:mc(e),fill:fill})]); });
+    rowsM.push([TD("Gesamt",{b:1}),TD(eur(T.conf),{r:1,b:1}),TD(eur(T.open),{r:1,b:1}),TD(eur(T.wc+T.wo),{r:1,b:1}),TD(eur(T.erl),{r:1,b:1}),TD(eur(T.personal),{r:1,b:1}),TD(eur(T.transport),{r:1,b:1}),TD(eur(T.miete),{r:1,b:1}),TD(eur(T.marge),{r:1,b:1,col:mc(T.marge)}),TD(eur(T.fix),{r:1,b:1}),TD(eur(T.erg),{r:1,b:1,col:mc(T.erg)})]);
+    s4.addTable(rowsM,{x:0.6,y:1.55,w:12.13,colW:[1.13,1.2,1.1,1.15,1.15,1.05,1.05,1.05,1.15,1.05,1.05],rowH:0.36,fontFace:F,fontSize:9,margin:[2,4,2,4]});
+    /* 4 · Planung (max. 12 Zeilen je Folie) */
+    var planNo=C.planIn.length?4:0;
+    if(C.planIn.length){
+      var per=12, pages=Math.ceil(C.planIn.length/per);
+      for(var pg=0;pg<pages;pg++){
+        var s5=newSlide("4 · Planung"+(pages>1?(" · "+(pg+1)+" von "+pages):""),"Planprojekte und übernommene Projekte");
+        var rowsP=[[TH("Projekt"),TH("Kunde"),TH("Monat"),TH("Status"),TH("Wahrsch.",1),TH("Umsatz",1),TH("Personal",1),TH("Transport",1),TH("Anmiete",1),TH("Marge",1),TH("Gewichtet",1)]];
+        C.planIn.slice(pg*per,(pg+1)*per).forEach(function(it){ var e=it.e, u=fcNum(e.umsatz), mg=u-it.kosten;
+          rowsP.push([TD((e.name||"–")+(e.srcId?("\naus Projekt "+(e.srcNr||"")):""),{b:1}),TD(e.kunde||""),TD(fcMonthLabel(e.monat)),TD(e.fest?"fest":"offen"),TD(it.prob+" %",{r:1}),TD(eur(u),{r:1}),TD(eur(fcNum(e.personal)),{r:1}),TD(eur(fcNum(e.transport)),{r:1}),TD(eur(fcNum(e.miete)),{r:1}),TD(eur(mg)+(u>0?("  "+Math.round(mg/u*100)+" %"):""),{r:1,col:mc(mg)}),TD(eur(it.w),{r:1,b:1})]); });
+        if(pg===pages-1){ var PT={u:0,p:0,t:0,m:0,w:0}; C.planIn.forEach(function(it){ var e=it.e; PT.u+=fcNum(e.umsatz); PT.p+=fcNum(e.personal); PT.t+=fcNum(e.transport); PT.m+=fcNum(e.miete); PT.w+=it.w; });
+          rowsP.push([TD("Summe",{b:1}),TD(""),TD(""),TD(""),TD(""),TD(eur(PT.u),{r:1,b:1}),TD(eur(PT.p),{r:1,b:1}),TD(eur(PT.t),{r:1,b:1}),TD(eur(PT.m),{r:1,b:1}),TD(eur(PT.u-PT.p-PT.t-PT.m),{r:1,b:1,col:mc(PT.u-PT.p-PT.t-PT.m)}),TD(eur(PT.w),{r:1,b:1})]); }
+        s5.addTable(rowsP,{x:0.6,y:1.55,w:12.13,colW:[2.3,1.6,0.95,0.7,0.8,1.15,1.1,1.1,1.1,1.28,1.05],rowH:0.36,fontFace:F,fontSize:9,margin:[2,4,2,4]});
+      }
+    }
+    /* 5 · Projekte automatisch */
+    if(D.rows.length){
+      var per2=12, pages2=Math.ceil(D.rows.length/per2), no=planNo?5:4;
+      for(var pg2=0;pg2<pages2;pg2++){
+        var s6=newSlide(no+" · Projekte"+(pages2>1?(" · "+(pg2+1)+" von "+pages2):""),"Projekte automatisch im Forecast");
+        var rowsR=[[TH("Projekt"),TH("Kunde"),TH("Status"),TH("Zeitraum"),TH("Umsatz",1),TH("Personal",1),TH("Transport",1),TH("Anmiete",1),TH("Wahrsch.",1),TH("Gewichtet",1)]];
+        D.rows.slice(pg2*per2,(pg2+1)*per2).forEach(function(r){ var p=r.p, zr=r.per.manual?fcMonthLabel(r.per.von.slice(0,7)):(fmtDateAny(r.per.von)+(r.per.bis!==r.per.von?(" – "+fmtDateAny(r.per.bis)):""));
+          rowsR.push([TD((p.nummer||"")+" "+(p.name||""),{b:1}),TD(fcKundeName(p)),TD(r.conf?"bestätigt":"auf Anfrage"),TD(zr+(r.share<0.999?("  ("+Math.round(r.share*100)+" %)"):"")),TD(eur(r.amt),{r:1}),TD(r.split.personal?eur(r.split.personal):"–",{r:1}),TD(r.split.transport?eur(r.split.transport):"–",{r:1}),TD(r.split.miete?eur(r.split.miete):"–",{r:1}),TD(r.prob+" %",{r:1}),TD(eur(r.w),{r:1,b:1})]); });
+        s6.addTable(rowsR,{x:0.6,y:1.55,w:12.13,colW:[2.6,1.7,0.95,1.9,1.1,1.0,1.0,1.0,0.78,1.1],rowH:0.36,fontFace:F,fontSize:9,margin:[2,4,2,4]});
+      }
+    }
+    pptx.writeFile({fileName:"Nova Works – Forecast "+awTodayDE().replace(/\./g,"-")+".pptx"});
+    toast("PowerPoint erstellt – Download startet");
+  }).catch(function(e){ toast("PowerPoint-Fehler: "+(e&&e.message||e)); });
 }
 function renderOverhead(){
   var el=document.getElementById("oh-body"); if(!el) return;
