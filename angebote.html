@@ -234,6 +234,7 @@
   </div>
   <div class="spacer"></div>
   <button class="btn primary" id="btn-new-project" style="white-space:nowrap">+ Neues Projekt</button>
+  <span class="muted app-version" style="font-size:10px;margin-left:10px;letter-spacing:.04em"></span>
   <span id="cloud-dot" title="Sync" style="width:9px;height:9px;border-radius:50%;background:#bbb;display:inline-block;margin:0 4px 0 12px"></span>
   <button class="btn ghost sm" id="logout-btn">Abmelden</button>
 </div>
@@ -711,6 +712,7 @@
     <div class="field"><label>Passwort</label><input id="login-pw" type="password" autocomplete="current-password"></div>
     <button class="btn primary" id="login-btn" style="width:100%">Anmelden</button>
     <div id="login-msg" class="muted" style="font-size:12px;margin-top:12px;text-align:center;min-height:16px"></div>
+<div class="muted app-version" style="font-size:10px;margin-top:10px;text-align:center;letter-spacing:.06em"></div>
   </div>
 </div>
 
@@ -893,6 +895,9 @@ function plusDays(iso,n){ var d=iso?new Date(iso+"T12:00:00"):new Date(); d.setD
 function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
+/* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
+var APP_VERSION="2026-09-08.4";
+document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 function showView(v){
