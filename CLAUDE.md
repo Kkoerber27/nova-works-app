@@ -13,3 +13,7 @@ Weitere Dateien: `scripts/` (Mac-/NAS-Skripte, Scheinwerfer-Protokoll, Rechnungs
 - Zustand liegt im globalen Objekt `DB` (localStorage + Supabase `app_state`), Änderungen immer über `save()`.
 - Neue Ansicht = Nav-Button (`data-view`), `<section class="view" id="view-…">`, Hook in `showView()`, Render-Funktion.
 - Prüfen: Inline-Skripte mit `node --check`, dann Headless-Test mit Playwright (Login-Overlay per `hideLogin()` ausblenden, Testdaten in `DB` setzen, `showView("…")`).
+
+## Arbeitsweise (Wunsch des Inhabers)
+
+Änderungen werden direkt auf `main` committet und gepusht, ohne Pull Request und ohne Vorschau. Netlify baut `main` automatisch und stellt es live (Crewplanung auf `nova-works-data`, Angebots-Tool auf `nova-works-angebote`). Vor dem Push immer prüfen: `node --check` für die Inline-Skripte und ein Headless-Test der geänderten Ansicht. Geht trotzdem etwas schief, den Commit sofort mit `git revert` zurücknehmen.
