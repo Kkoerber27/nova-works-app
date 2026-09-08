@@ -234,7 +234,7 @@
   </div>
   <div class="spacer"></div>
   <button class="btn primary" id="btn-new-project" style="white-space:nowrap">+ Neues Projekt</button>
-  <span class="muted app-version" style="font-size:10px;margin-left:10px;letter-spacing:.04em"></span>
+  <span class="muted app-version" style="font-size:10px;margin-left:10px;letter-spacing:.04em;white-space:nowrap"></span>
   <span id="cloud-dot" title="Sync" style="width:9px;height:9px;border-radius:50%;background:#bbb;display:inline-block;margin:0 4px 0 12px"></span>
   <button class="btn ghost sm" id="logout-btn">Abmelden</button>
 </div>
@@ -896,7 +896,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-08.4";
+var APP_VERSION="2026-09-08.5";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4160,17 +4160,40 @@ function fcBuild(){
   });
   return {months:months,M:M,rows:rows,noDate:noDate,outside:outside,plan:plan,taken:taken};
 }
-/* Gewichtete Pipeline eines Kunden (für CRM): laufende und künftige Projekte */
-function fcCustomerPipeline(c){
-  var cur=fcCurMonth(), sum=0, taken=fcPlanTaken();
+/* Forecast-Einträge eines Kunden (für CRM): automatische Projekte + Planeinträge.
+   Planeinträge gehören zum Kunden, wenn sie aus einem seiner Projekte stammen oder der Kundenname übereinstimmt. */
+function fcCustomerItems(c){
+  var cur=fcCurMonth(), taken=fcPlanTaken(), out=[], own={};
+  var norm=function(s){ return String(s||"").trim().toLowerCase().replace(/\s+/g," "); }, cn=norm(c.firma);
   crmProjects(c).forEach(function(p){
-    if(p.parentNr||p.ampel==="abgesagt") return;
-    if(taken[p.id]){ var e=taken[p.id]; if(!e.monat||e.monat>=cur) sum+=fcNum(e.umsatz)*fcPlanProb(e)/100; return; }
+    own[p.id]=1;
+    if(p.parentNr||p.ampel==="abgesagt"||taken[p.id]) return;
     var amt=fcAmount(p); if(!(amt>0)) return;
-    var per=fcPeriod(p); if(per&&per.bis.slice(0,7)<cur) return;
-    sum+=amt*fcProb(p)/100;
+    var per=fcPeriod(p), prob=fcProb(p), soll=fcSoll(p), mk=per?per.von.slice(0,7):"";
+    out.push({type:"proj",id:p.id,label:((p.nummer?p.nummer+" ":"")+(p.name||"")).trim(),mk:mk,mkEnd:per?per.bis.slice(0,7):"",
+      zeit:per?(per.manual?fcMonthLabel(mk):(fmtDateAny(per.von)+(per.bis!==per.von?(" – "+fmtDateAny(per.bis)):""))):"",
+      status:p.ampel==="bestaetigt"?"bestätigt":"auf Anfrage",fest:p.ampel==="bestaetigt",amt:amt,prob:prob,w:amt*prob/100,marge:(amt-soll)*prob/100,
+      past:!!(per&&per.bis.slice(0,7)<cur)});
   });
-  return sum;
+  fcPlanList().forEach(function(e){
+    if(!((e.srcId&&own[e.srcId])||(cn&&norm(e.kunde)===cn))) return;
+    var u=fcNum(e.umsatz), prob=fcPlanProb(e);
+    out.push({type:"plan",id:e.id,label:e.name||"Planeintrag",mk:e.monat||"",mkEnd:e.monat||"",zeit:e.monat?fcMonthLabel(e.monat):"",
+      status:(e.srcId?"übernommen":"Plan")+(e.fest?" · fest":""),fest:!!e.fest,amt:u,prob:prob,w:u*prob/100,marge:(u-fcPlanCosts(e))*prob/100,
+      past:!!(e.monat&&e.monat<cur)});
+  });
+  out.sort(function(a,b){ return (a.mk||"~").localeCompare(b.mk||"~")||a.label.localeCompare(b.label,"de"); });
+  return out;
+}
+/* Gewichtete Pipeline eines Kunden (für CRM): laufende und künftige Projekte und Planeinträge */
+function fcCustomerPipeline(c){
+  return fcCustomerItems(c).reduce(function(s,it){ return s+(it.past?0:it.w); },0);
+}
+/* Planeintrag für einen Kunden anlegen und im Forecast öffnen */
+function fcPlanNewForCustomer(c){
+  var e=fcPlanNew(fcCurMonth()); e.kunde=c.firma||""; save();
+  showView("forecast");
+  var inp=document.querySelector('.fc-pl[data-id="'+e.id+'"][data-k="name"]'); if(inp){ inp.focus(); inp.scrollIntoView({block:"center"}); }
 }
 function fcStatusPill(p){ var i=ampelInfo(p.ampel); return '<span class="pill" style="background:'+i.c+'1a;color:'+i.c+';border:1px solid '+i.c+'55">'+i.t+'</span>'; }
 function fcPeriodText(r){
@@ -8066,6 +8089,28 @@ function crmDetailHtml(){
     crmTile("Forecast (gewichtet)",(typeof fcCustomerPipeline==="function")?eur(fcCustomerPipeline(c)):"—")+
     crmTile("Letztes Projekt",k.last?fmtDateAny(k.last):"—")+
     '</div></div>';
+  // Forecast (Projekte + Planeinträge des Kunden)
+  if(typeof fcCustomerItems==="function"){
+    var fi=fcCustomerItems(c), fiCur=fi.filter(function(it){return !it.past;}), fiPast=fi.length-fiCur.length;
+    var fw=0, fm=0; fiCur.forEach(function(it){ fw+=it.w; fm+=it.marge; });
+    h+='<div style="background:#fff;border:1px solid var(--line,#e4e2da);border-radius:12px;padding:14px 16px;margin-bottom:12px">'+
+      '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px">Forecast</b><span class="muted" style="font-size:12px">'+fiCur.length+' Eintr'+(fiCur.length===1?'ag':'äge')+(fiPast?(' · '+fiPast+' vergangene ausgeblendet'):'')+'</span><span style="flex:1"></span>'+
+      '<button class="btn sm" id="crm-fc-plan" title="Planeintrag mit diesem Kunden anlegen und im Forecast bearbeiten">+ Planeintrag</button><button class="btn ghost sm" id="crm-fc-open">Forecast öffnen →</button></div>';
+    if(!fiCur.length) h+='<div class="muted" style="font-size:12px;margin-top:6px">Nichts im Forecast: kein offenes oder bestätigtes Projekt und kein Planeintrag mit diesem Kunden.</div>';
+    else{
+      h+='<div style="overflow-x:auto;margin-top:8px"><table class="lines" style="font-size:12.5px"><thead><tr><th>Eintrag</th><th>Zeitraum</th><th>Status</th><th class="right">Umsatz</th><th class="right">Wahrsch.</th><th class="right">Gewichtet</th><th class="right" title="Umsatz − geplante Kosten, gewichtet">Marge</th></tr></thead><tbody>'+
+        fiCur.map(function(it){ var col=it.fest?"#2d7a4f":"#b8860b";
+          return '<tr class="crm-fc-row" data-type="'+it.type+'" data-id="'+esc(it.id)+'" style="cursor:pointer">'+
+            '<td><b>'+esc(it.label)+'</b>'+(it.type==="plan"?'<div class="muted" style="font-size:10.5px">Planung</div>':'')+'</td>'+
+            '<td class="nowrap">'+(it.zeit||'<span style="color:#c0392b">kein Termin</span>')+'</td>'+
+            '<td class="nowrap"><span class="pill" style="background:'+col+'1a;color:'+col+';border:1px solid '+col+'55">'+esc(it.status)+'</span></td>'+
+            '<td class="right nowrap">'+eur(it.amt)+'</td><td class="right nowrap">'+it.prob+' %</td><td class="right nowrap" style="font-weight:700">'+eur(it.w)+'</td>'+
+            '<td class="right nowrap" style="color:'+(it.marge>=0?'#2d7a4f':'#c0392b')+'">'+eur(it.marge)+'</td></tr>'; }).join("")+
+        '<tr style="border-top:2px solid #b9b2a2;font-weight:700;background:#faf8f3"><td colspan="5">Summe gewichtet</td><td class="right nowrap">'+eur(fw)+'</td><td class="right nowrap" style="color:'+(fm>=0?'#2d7a4f':'#c0392b')+'">'+eur(fm)+'</td></tr>'+
+        '</tbody></table></div>';
+    }
+    h+='</div>';
+  }
   // Wiedervorlage
   var nx=crm.next||{};
   h+='<div style="background:#fff;border:1px solid var(--line,#e4e2da);border-radius:12px;padding:14px 16px;margin-bottom:12px">'+
@@ -8130,6 +8175,9 @@ function crmWireDetail(){
     };
   });
   document.querySelectorAll(".crm-proj").forEach(function(el2){ el2.onclick=function(){ openProject(el2.dataset.pid); }; });
+  var fcPl=document.getElementById("crm-fc-plan"); if(fcPl) fcPl.onclick=function(){ var c=(DB.customers||[]).find(function(x){return x.id===crmSel;}); if(c) fcPlanNewForCustomer(c); };
+  var fcOp=document.getElementById("crm-fc-open"); if(fcOp) fcOp.onclick=function(){ showView("forecast"); };
+  document.querySelectorAll(".crm-fc-row").forEach(function(tr){ tr.onclick=function(){ if(tr.dataset.type==="proj") openProject(tr.dataset.id); else { showView("forecast"); var inp=document.querySelector('.fc-pl[data-id="'+tr.dataset.id+'"][data-k="name"]'); if(inp){ inp.focus(); inp.scrollIntoView({block:"center"}); } } }; });
 }
 function openCrmCustomer(id){ crmSel=id; showView("crm"); }
 
