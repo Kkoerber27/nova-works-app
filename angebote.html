@@ -898,7 +898,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-09.2";
+var APP_VERSION="2026-09-09.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4082,10 +4082,7 @@ function fcCostSplit(p){
   var projs=[p].concat(childProjects(p.nummer)), soll=0;
   projs.forEach(function(x){ (pKosten(x).positionen||[]).forEach(function(pos){ var v=Number(pos.soll)||0; soll+=v; if(pos.kat==="personal") s.personal+=v; else if(pos.kat==="transport") s.transport+=v; else s.miete+=v; }); });
   if(soll>0) return s;
-  var offs=(p.offers||[]).filter(function(o){return o.status!=="abgelehnt";}); if(!offs.length) return s;
-  var acc=offs.filter(function(o){return o.status==="angenommen";});
-  var pick=acc.length?acc:[offs.reduce(function(m,o){ return (!m||calcTotals(o).netto>calcTotals(m).netto)?o:m; },null)];
-  pick.forEach(function(o){ var t=fcOfferSplit(o); s.personal+=t.personal; s.transport+=t.transport; s.miete+=t.miete; });
+  kostenOffers(p).forEach(function(o){ var t=fcOfferSplit(o); s.personal+=t.personal; s.transport+=t.transport; s.miete+=t.miete; });
   return s;
 }
 function fcSoll(p){ var s=fcCostSplit(p); return s.personal+s.transport+s.miete; }
@@ -5945,14 +5942,23 @@ function addOfferPositions(k,o,prefix){
   (o.jobs||[]).forEach(function(j){ if(abg[j.id]) return; (j.groups||[]).forEach(function(g){
     var ek=groupEK(g);
     var kat=g.kat==="personal"?"personal":g.kat==="transport"?"transport":"miete";
-    k.positionen.push({id:uid(),label:pre+(g.name||"Position"),kat:kat,soll:(ek||null),paid:false,paidDate:""}); add++;
+    k.positionen.push({id:uid(),label:pre+(g.name||"Position"),kat:kat,soll:(ek||null),paid:false,paidDate:"",auto:true}); add++;
   }); });
-  (o.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; var ek=(Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); k.positionen.push({id:uid(),label:pre+(c.funktion||"Crew"),kat:"personal",soll:(ek||null),paid:false,paidDate:""}); add++; });
-  (o.transport||[]).forEach(function(t){ if(t.jobId&&abg[t.jobId]) return; var ek=(Number(t.anz)||0)*(Number(t.ek)||0); k.positionen.push({id:uid(),label:pre+(typeof transportLabel==="function"?transportLabel(t.typ):(t.typ||"Transport")),kat:"transport",soll:(ek||null),paid:false,paidDate:""}); add++; });
+  (o.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; var ek=(Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); k.positionen.push({id:uid(),label:pre+(c.funktion||"Crew"),kat:"personal",soll:(ek||null),paid:false,paidDate:"",auto:true}); add++; });
+  (o.transport||[]).forEach(function(t){ if(t.jobId&&abg[t.jobId]) return; var ek=(Number(t.anz)||0)*(Number(t.ek)||0); k.positionen.push({id:uid(),label:pre+(typeof transportLabel==="function"?transportLabel(t.typ):(t.typ||"Transport")),kat:"transport",soll:(ek||null),paid:false,paidDate:"",auto:true}); add++; });
   return add;
 }
+/* Angebote, die für Kosten/Soll zählen – gleiche Basis wie der Umsatz:
+   bestätigt = alle nicht abgelehnten (wie Projektsumme), sonst angenommene, sonst das größte Angebot (wie Angebots-Netto). */
+function kostenOffers(project){
+  var offs=(project.offers||[]).filter(function(o){ return o.status!=="abgelehnt"; });
+  if(!offs.length) return [];
+  if(project.ampel==="bestaetigt") return offs;
+  var acc=offs.filter(function(o){ return o.status==="angenommen"; }); if(acc.length) return acc;
+  return [offs.reduce(function(m,o){ return (!m||calcTotals(o).netto>calcTotals(m).netto)?o:m; },null)];
+}
 function seedAllOffers(k,project){
-  var offs=(project.offers||[]); var multi=offs.length>1, add=0;
+  var offs=kostenOffers(project); var multi=offs.length>1, add=0;
   offs.forEach(function(o){ add+=addOfferPositions(k,o,multi?(o.titel||"Angebot"):""); });
   return add;
 }
@@ -5984,6 +5990,21 @@ function seedKalkFromOffer(project){
   });
   k._autoSeeded=true; save(); renderProjectAuswertung();
   toast("Forecast zusammengeführt: "+added+" neu, "+filled+" Soll aufgefüllt — nichts überschrieben oder gelöscht");
+}
+/* Soll komplett neu aus den maßgeblichen Angeboten aufbauen. Positionen mit zugeordneten
+   Eingangsrechnungen bleiben erhalten, alles andere wird ersetzt. */
+function rebuildKalkFromOffer(project){
+  var offs=kostenOffers(project); if(!offs.length){ toast("Kein Angebot vorhanden"); return; }
+  var k=pKosten(project);
+  var usedPos={}; Object.keys(k.rech||{}).forEach(function(rid){ var s=k.rech[rid]; if(s&&s.posId) usedPos[s.posId]=1; });
+  var keep=k.positionen.filter(function(x){ return usedPos[x.id]; }), drop=k.positionen.length-keep.length;
+  var names=offs.map(function(o){ return o.titel||"Angebot"; }).join(", ");
+  if(!confirm("Kalkulation neu aus dem Angebot aufbauen?\n\nGrundlage: "+names+"\n"+drop+" Position"+(drop===1?"":"en")+" werden ersetzt"+(keep.length?(", "+keep.length+" mit zugeordneten Rechnungen bleiben erhalten"):"")+".")) return;
+  k.positionen=keep;
+  var add=seedAllOffers(k,project);
+  k._autoSeeded=true; save(); renderProjectAuswertung();
+  if(typeof renderProjectKpis==="function"&&document.getElementById("pd-kpis")) renderProjectKpis();
+  toast("Kalkulation neu aufgebaut: "+add+" Positionen aus "+names);
 }
 /* --- Aktionen (app-nativ, sofort gespeichert) --- */
 function kPosSoll(project,id,val){ var k=pKosten(project); var pos=k.positionen.filter(function(x){return x.id===id;})[0]; if(pos) pos.soll=awNumOr(val,null); save(); renderProjectAuswertung(); }
@@ -6321,7 +6342,7 @@ function renderProjectAuswertung(){
 
   /* Kalkulation / Soll-Positionen */
   html+='<div class="pbar" style="display:flex;justify-content:space-between;align-items:center;gap:8px">Forecast / Kostenplanung (Soll)'+
-    '<span><button class="btn sm aw-seed">↻ Forecast aus Angebot'+(ekSoll?(" ("+eur(ekSoll)+")"):"")+'</button> <button class="btn sm aw-add" data-add="pos">+ Position</button></span></div>';
+    '<span><button class="btn sm aw-seed" title="Fehlende Positionen ergänzen, leeres Soll auffüllen – nichts wird überschrieben">↻ Forecast aus Angebot'+(ekSoll?(" ("+eur(ekSoll)+")"):"")+'</button> <button class="btn sm aw-rebuild" title="Alle Positionen durch den aktuellen Angebots-Einkauf ersetzen (Positionen mit zugeordneten Rechnungen bleiben)">⟲ Neu aus Angebot</button> <button class="btn sm aw-add" data-add="pos">+ Position</button></span></div>';
   if(positions.length){
     html+='<table class="lines"><thead><tr><th>Position</th><th>Kategorie</th><th class="right">Soll €</th><th class="right">Ist (Rechn.)</th>'+awDiffTh("right")+'<th>bezahlt</th><th>Datum</th><th></th></tr></thead><tbody>';
     var awMehrSum=0, awWenSum=0;
@@ -6427,6 +6448,7 @@ function renderProjectAuswertung(){
   el.querySelectorAll(".aw-del").forEach(function(b){ b.onclick=function(){ if(b.dataset.del==="abschlag") kAbschlagDel(project,b.dataset.id); else kPosDel(project,b.dataset.id); }; });
   el.querySelectorAll(".aw-add").forEach(function(b){ b.onclick=function(){ if(b.dataset.add==="abschlag") kAbschlagAdd(project); else kPosAdd(project,"sonstiges"); }; });
   var seed=el.querySelector(".aw-seed"); if(seed) seed.onclick=function(){ seedKalkFromOffer(project); };
+  var rebuild=el.querySelector(".aw-rebuild"); if(rebuild) rebuild.onclick=function(){ rebuildKalkFromOffer(project); };
   el.querySelectorAll(".ag-f").forEach(function(n){ n.onchange=function(){ agSet(project,n.dataset.id,n.dataset.f,n.value); }; });
   el.querySelectorAll(".ag-del").forEach(function(b){ b.onclick=function(){ agDel(project,b.dataset.id); }; });
   var agadd=el.querySelector(".aw-agadd"); if(agadd) agadd.onclick=function(){ agAdd(project); };
