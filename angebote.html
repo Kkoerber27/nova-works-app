@@ -898,7 +898,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-09.1";
+var APP_VERSION="2026-09-09.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -7003,10 +7003,11 @@ function zusaetzeHTML(m){
   const z=(m.zusaetze||[]);
   const netto=z.reduce(function(s,x){return s+(Number(x.amount)||0);},0);
   const mwst=netto*(Number(m.mwst)||0)/100;
+  const preise=(m.preise!==false);
   let n=0, rows="";
   z.forEach(function(x){ n++;
-    rows+='<tr><td class="pn">'+n+'</td><td class="an" style="font-weight:400;white-space:nowrap">'+esc(fmtDateAny(x.datum||""))+'</td><td>'+esc(x.label||"Zusatz")+(x.note?('<div style="color:#888;font-size:8.5px;margin-top:1px;font-style:italic">'+esc(x.note).replace(/\n/g,"<br>")+'</div>'):'')+'</td><td class="r">'+eur(Number(x.amount)||0)+'</td></tr>'; });
-  rows+='<tr class="grp-sum"><td colspan="4" class="r">Summe Zusatzleistungen: <b>'+eur(netto)+'</b></td></tr>';
+    rows+='<tr><td class="pn">'+n+'</td><td class="an" style="font-weight:400;white-space:nowrap">'+esc(fmtDateAny(x.datum||""))+'</td><td>'+esc(x.label||"Zusatz")+(x.note?('<div style="color:#888;font-size:8.5px;margin-top:1px;font-style:italic">'+esc(x.note).replace(/\n/g,"<br>")+'</div>'):'')+'</td>'+(preise?('<td class="r">'+eur(Number(x.amount)||0)+'</td>'):'')+'</tr>'; });
+  rows+='<tr class="grp-sum"><td colspan="'+(preise?4:3)+'" class="r">Summe Zusatzleistungen: <b>'+eur(netto)+'</b></td></tr>';
   const totalsHtml=`<table class="totals"><tr class="net"><td>Nettosumme:</td><td class="r">${eur(netto)}</td></tr><tr><td>MwSt ${fmtPct(m.mwst)} %:</td><td class="r">${eur(mwst)}</td></tr><tr class="gross"><td>Bruttosumme:</td><td class="r">${eur(netto+mwst)}</td></tr></table>`;
   const cover=`<div class="cover">
     <div class="sender">${COMPANY.name} - ${COMPANY.strasse} - ${COMPANY.plz} - ${COMPANY.ort}</div>
@@ -7025,7 +7026,7 @@ function zusaetzeHTML(m){
     <p>${salut},</p>
     <p>${esc(m.anschreiben)}</p>
     <div class="projbar" style="display:flex;justify-content:space-between;align-items:center;gap:12px"><span>${esc(m.projekt)}</span><span>Netto gesamt: ${eur(netto)}</span></div>
-    <table class="pos"><thead><tr><th>Pos.</th><th>Datum</th><th>Bezeichnung</th><th class="r">Netto</th></tr></thead><tbody>${rows}</tbody></table>
+    <table class="pos"><thead><tr><th>Pos.</th><th>Datum</th><th>Bezeichnung</th>${preise?'<th class="r">Netto</th>':''}</tr></thead><tbody>${rows}</tbody></table>
     ${totalsHtml}
     <p class="cond">${esc(m.schluss)}<br>Bitte beachten Sie unsere allgemeinen Geschäftsbedingungen unter ${COMPANY.web}.</p>
     <p class="mfg">Mit freundlichen Grüßen<br><br>${esc(m.ansprechpartner||COMPANY.ap)}</p>
@@ -7044,11 +7045,33 @@ function zusaetzeFileTitle(m){
   return [ymd, clean(m.projekt)].filter(Boolean).join("_")+"_Zusatzleistungen";
 }
 function zusaetzePDF(project){
+  if(!pZusaetze(project).length){ toast("Noch keine Zusätze erfasst"); return; }
+  var bg=document.getElementById("zupdf-bg");
+  if(!bg){
+    bg=document.createElement("div"); bg.className="modal-bg"; bg.id="zupdf-bg";
+    bg.innerHTML='<div class="modal sm"><div class="modal-head"><h3>Zusätze PDF – Preise</h3><button class="x" data-close="zupdf-bg">×</button></div><div class="modal-body">'+
+      '<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;cursor:pointer"><input type="radio" name="zupdf-mode" value="einzel" style="margin-top:3px"><span><b>Einzelpreise auflisten</b><div class="muted" style="font-size:12px">Jede Position mit Nettobetrag, darunter Summe, MwSt und Brutto.</div></span></label>'+
+      '<label style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;cursor:pointer"><input type="radio" name="zupdf-mode" value="gesamt" style="margin-top:3px"><span><b>Nur Gesamtsumme</b><div class="muted" style="font-size:12px">Positionen ohne Einzelpreise, nur Summe, MwSt und Brutto.</div></span></label>'+
+      '</div><div class="modal-foot"><button class="btn" data-close="zupdf-bg" type="button">Abbrechen</button><button class="btn primary" id="zupdf-go" type="button">PDF erstellen</button></div></div>';
+    document.body.appendChild(bg);
+    bg.onclick=function(e){ if(e.target===bg) closeModal("zupdf-bg"); };
+    bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("zupdf-bg"); }; });
+  }
+  var last="einzel"; try{ last=localStorage.getItem("zupdf_mode")||"einzel"; }catch(e){}
+  bg.querySelectorAll('input[name="zupdf-mode"]').forEach(function(r){ r.checked=(r.value===last); });
+  document.getElementById("zupdf-go").onclick=function(){
+    var sel=bg.querySelector('input[name="zupdf-mode"]:checked'); var mode=sel?sel.value:"einzel";
+    try{ localStorage.setItem("zupdf_mode",mode); }catch(e){}
+    closeModal("zupdf-bg"); zusaetzePDFGo(project, mode!=="gesamt");
+  };
+  openModal("zupdf-bg");
+}
+function zusaetzePDFGo(project, preise){
   var z=pZusaetze(project).slice().sort(function(a,b){ return String(a.datum||"").localeCompare(String(b.datum||"")); });
   if(!z.length){ toast("Noch keine Zusätze erfasst"); return; }
   var acc=accOffer(project);
   var merged={ nummer:project.nummer, projekt:project.name, kunde:project.kunde, ansprechpartner:project.ansprechpartner,
-    datum:today(), mwst:(acc&&acc.mwst!=null&&acc.mwst!=="")?acc.mwst:19, zusaetze:z,
+    datum:today(), mwst:(acc&&acc.mwst!=null&&acc.mwst!=="")?acc.mwst:19, zusaetze:z, preise:(preise!==false),
     anschreiben:"im Rahmen des laufenden Projekts sind die nachfolgend aufgeführten Zusatzleistungen angefallen bzw. von Ihnen beauftragt worden. Diese werden zusätzlich zum bestehenden Angebot berechnet.",
     schluss:"Die Zusatzleistungen werden mit der Schlussrechnung abgerechnet." };
   var clean=zusaetzeHTML(merged);
