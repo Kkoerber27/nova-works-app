@@ -456,3 +456,45 @@ falsche Protokolle oder ein falsches Druckbild erzeugen:
   Seiten.
 - **Das Kopf-Raster ist eine Flexzeile.** Bei ungerader Feldzahl streckt sich die
   letzte Zeile über die volle Breite; ein Raster ließe dort eine Lücke stehen.
+
+## Ladestrom-Abrechnung
+
+Erzeugt aus den Screenshots der Wallbox-App den monatlichen Erstattungsbeleg.
+Den Ablauf beschreibt die Skill `ladestrom-abrechnung`; dieses Skript rechnet und
+setzt das PDF.
+
+```bash
+./scripts/ladestrom.sh --monat "Juni 2026" --sessions @sessions.json
+```
+
+Das PDF landet im Monatsordner, mit den Screenshots als Nachweis im Anhang.
+
+### Einrichten
+
+Einmalig `reportlab` und `Pillow` installieren:
+
+```bash
+python3 -m pip install --user reportlab pillow
+```
+
+Alles Persönliche steht in `~/.nova-works/env` und **nicht im Repository** —
+dieses ist öffentlich, und Anschriften gehören dort nicht hinein:
+
+```bash
+export LADESTROM_BASIS="$HOME/Stromabrechnung privat"
+export LADESTROM_SATZ="0,35"
+export LADESTROM_LADEORT="…"
+export LADESTROM_ABSENDER_NAME="…"
+export LADESTROM_ABSENDER_STRASSE="…"
+export LADESTROM_ABSENDER_ORT="…"
+export LADESTROM_EMPFAENGER_NAME="…"
+export LADESTROM_EMPFAENGER_STRASSE="…"
+export LADESTROM_EMPFAENGER_ORT="…"
+```
+
+### Was das Skript aussortiert
+
+Überlappende Screenshots erzeugen Doppeleinträge; das Skript entdoppelt über
+Datum, kWh und Betrag. Sessions ohne Euro-Betrag und — wenn `ort` mitgegeben
+wird — fremde Ladeorte fallen ebenfalls weg. Was verworfen wurde, steht im
+Ergebnis, damit es nachvollziehbar bleibt.
