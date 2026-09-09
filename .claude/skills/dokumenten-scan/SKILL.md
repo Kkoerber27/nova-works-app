@@ -1,6 +1,6 @@
 ---
 name: dokumenten-scan
-description: Erkennt, was für ein Dokument hereingekommen ist — Scan, Foto, Screenshot oder PDF — und übergibt es an den passenden Ablauf. Nutzen, wenn Dateien ohne Erklärung hochgeladen werden, wenn gefragt wird was mit einer Unterlage zu tun ist, oder wenn ein Dokumententyp erkannt, zugeordnet oder ergänzt werden soll.
+description: Erkennt, was für ein Dokument hereingekommen ist — Scan, Foto, Screenshot oder PDF — und übergibt es an den passenden Ablauf. Kennt die Typen Autostrom, Ausgangsrechnung und Scheinwerfer-Meldung. Nutzen, wenn Dateien ohne Erklärung hochgeladen werden, wenn gefragt wird was mit einer Unterlage zu tun ist, oder wenn ein Dokumententyp erkannt, zugeordnet oder ergänzt werden soll.
 ---
 
 # Dokumenten-Scan
@@ -10,9 +10,10 @@ bearbeitet es weiter? Erst wenn der Typ feststeht, greift der zugehörige Ablauf
 
 ## Bekannte Dokumententypen
 
-### Autostrom privat
+### Autostrom
 
-Privat geladener Strom, den die Firma dem Inhaber erstattet.
+Privat geladener Strom, den die Firma dem Inhaber erstattet. Auch „Autostrom
+privat" oder „Ladestrom" genannt.
 
 - **Woran erkennbar:** Screenshots aus der Wallbox-App — untereinander eine Liste
   von Ladevorgängen, je Zeile Datum, kWh-Menge, Euro-Betrag, meist ein Ladeort.
@@ -40,7 +41,7 @@ Privat geladener Strom, den die Firma dem Inhaber erstattet.
 Das ist der Punkt, an dem ein Scan-Schritt am ehesten danebengreift: Er sieht
 eine Datei und hält sie für den ganzen Vorgang.
 
-- **Autostrom privat:** nie aus einem einzelnen Screenshot abrechnen. Kommt nur
+- **Autostrom:** nie aus einem einzelnen Screenshot abrechnen. Kommt nur
   einer an, ist das kein vollständiger Monat, sondern der Anfang einer Lieferung.
   Nachfragen, ob noch welche folgen. Trudeln sie über mehrere Nachrichten ein,
   alle zusammen auswerten. Überlappungen nicht selbst wegkürzen — das Skript
@@ -53,11 +54,11 @@ eine Datei und hält sie für den ganzen Vorgang.
 
 Nachfragen statt raten. Ein falsch einsortiertes Dokument landet im falschen
 Ordner oder auf einem falschen Beleg, und dort fällt es niemandem mehr auf. Ein
-Satz genügt: „Ich sehe drei Screenshots einer Ladehistorie — Autostrom privat für
+Satz genügt: „Ich sehe drei Screenshots einer Ladehistorie — Autostrom für
 Juni, oder etwas anderes?"
 
 Ebenso nachfragen, wenn der Typ zwar klar ist, aber etwas dazu fehlt: der Monat
-bei Autostrom privat, die Projektnummer bei einer Rechnung.
+bei Autostrom, die Projektnummer bei einer Rechnung.
 
 ## Einen Typ ergänzen
 
