@@ -1,6 +1,6 @@
 ---
 name: ladestrom-abrechnung
-description: Dokumententyp "Autostrom" (Autostrom privat, Ladestrom) — die monatliche Ladestrom-Abrechnung aus den Screenshots der Wallbox-App als PDF-Erstattungsbeleg. Nutzen, wenn Screenshots einer Ladehistorie hochgeladen werden oder wenn nach Autostrom, der Abrechnung für einen Monat, der Ladestrom-Erstattung, dem Stromgeld fürs Privatauto oder dem Auswerten der Ladehistorie-Screenshots gefragt wird. Zu einem Monat gehören immer mehrere Screenshots.
+description: Dokumententyp "Autostrom privat" (Autostrom, Ladestrom) — die monatliche Ladestrom-Abrechnung aus den Screenshots der Wallbox-App als PDF-Erstattungsbeleg. Nutzen, wenn Screenshots einer Ladehistorie hochgeladen werden oder wenn nach Autostrom privat, der Abrechnung für einen Monat, der Ladestrom-Erstattung, dem Stromgeld fürs Privatauto oder dem Auswerten der Ladehistorie-Screenshots gefragt wird. Zu einem Monat gehören immer mehrere Screenshots.
 ---
 
 # Ladestrom-Abrechnung
@@ -11,7 +11,7 @@ im selben Monatsordner wie die Screenshots.
 Auslöser ist ein Satz wie „Erstelle die Abrechnung für Juni" — oder schlicht
 hochgeladene Screenshots einer Ladehistorie, ohne weiteren Text.
 
-## Dokumententyp „Autostrom"
+## Dokumententyp „Autostrom privat"
 
 So heißt diese Art Unterlage. Woran sie zu erkennen ist:
 
