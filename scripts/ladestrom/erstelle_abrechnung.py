@@ -14,6 +14,7 @@ import json
 import os
 import sys
 from datetime import datetime
+from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
 # ── Konfiguration aus der Umgebung ─────────────────────────────────────
@@ -41,6 +42,19 @@ MONAT_LABEL[3] = "März"
 def fehler(text: str):
     print(f"FEHLER {text}", file=sys.stderr)
     sys.exit(1)
+
+
+CENT = Decimal("0.01")
+
+
+def euro(wert) -> Decimal:
+    """Auf Cent runden, kaufmännisch — der halbe Cent geht nach oben.
+
+    round() macht aus 17,775 € eine 17,77 €: es rundet zur geraden Ziffer, und
+    die Binärzahl dahinter liegt ohnehin knapp darunter. Auf einem Beleg wird
+    kaufmännisch gerundet, deshalb Decimal statt float.
+    """
+    return Decimal(str(wert)).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
 def satz() -> float:
@@ -185,13 +199,19 @@ def erstelle_pdf(sessions, monat_label, beleg_nr, ziel, bilder, preis):
     zeilen = [[Paragraph("<b>Datum</b>", ps(font="Helvetica-Bold", size=9)),
                rp("<b>kWh</b>", True), rp("<b>App-Preis</b>", True),
                rp(f"<b>Erstattung ({satz_text})</b>", True)]]
-    kwh_summe = 0.0
+    # Die Zeilenbeträge sind das, was ein Prüfer nachrechnet. Deshalb wird jede
+    # Zeile auf Cent gerundet und die Endsumme aus genau diesen Zeilen gebildet
+    # — so geht die Spalte auf, statt um einen Cent danebenzuliegen.
+    kwh_summe = Decimal("0")
+    gesamt = Decimal("0")
     for s in sessions:
-        kwh_summe += s["kwh"]
+        kwh_summe += Decimal(str(s["kwh"]))
+        zeile = euro(Decimal(str(s["kwh"])) * Decimal(str(preis)))
+        gesamt += zeile
         zeilen.append([Paragraph(s["datum"], ps()),
                        rp(f"{s['kwh']:g}".replace(".", ",")),
                        rp(f"{s['eur']:.2f} €".replace(".", ",")),
-                       rp(f"{s['kwh'] * preis:.2f} €".replace(".", ","))])
+                       rp(f"{zeile:.2f} €".replace(".", ","))])
 
     tbl = Table(zeilen, colWidths=[W * 0.22, W * 0.12, W * 0.22, W * 0.44], repeatRows=1)
     tbl.setStyle(TableStyle([
@@ -203,8 +223,6 @@ def erstelle_pdf(sessions, monat_label, beleg_nr, ziel, bilder, preis):
         ("LEFTPADDING", (0, 0), (-1, -1), 4), ("RIGHTPADDING", (0, 0), (-1, -1), 4),
     ]))
     story += [tbl, Spacer(1, 6 * mm)]
-
-    gesamt = round(kwh_summe * preis, 2)
 
     def sb(t, sz=9):
         return Paragraph(f"<b>{t}</b>", ps(font="Helvetica-Bold", size=sz))
@@ -319,8 +337,8 @@ def main():
 
     print(json.dumps({
         "monat": label, "beleg_nr": beleg_nr, "ordner": str(ordner),
-        "sessions": len(sessions), "kwh": round(kwh_summe, 3),
-        "satz": preis, "betrag": gesamt, "screenshots": len(bilder),
+        "sessions": len(sessions), "kwh": float(round(kwh_summe, 3)),
+        "satz": preis, "betrag": float(gesamt), "screenshots": len(bilder),
         "verworfen": {k: len(v) for k, v in verworfen.items()},
         "verworfene_daten": verworfen,
         "pdf": str(ziel),
