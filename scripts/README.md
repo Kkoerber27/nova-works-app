@@ -471,11 +471,17 @@ Das PDF landet im Monatsordner, mit den Screenshots als Nachweis im Anhang.
 
 ### Einrichten
 
-Einmalig `reportlab` und `Pillow` installieren:
+Einmalig `reportlab` und `Pillow` in einer eigenen Umgebung installieren:
 
 ```bash
-python3 -m pip install --user reportlab pillow
+python3 -m venv scripts/ladestrom/.venv
+scripts/ladestrom/.venv/bin/pip install reportlab pillow
 ```
+
+Eine eigene Umgebung, weil Homebrew-Python seit PEP 668 keine Installationen ins
+System zulässt — `pip install --user` scheitert dort mit
+`externally-managed-environment`. Das Skript findet die Umgebung von selbst; liegt
+keine vor, nimmt es das System-Python, falls dort beides schon installiert ist.
 
 Alles Persönliche steht in `~/.nova-works/env` und **nicht im Repository** —
 dieses ist öffentlich, und Anschriften gehören dort nicht hinein:
