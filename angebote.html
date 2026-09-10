@@ -903,7 +903,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-10.2";
+var APP_VERSION="2026-09-10.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5973,16 +5973,17 @@ function renderAuswertung(){
   if(!projs.length){ el.innerHTML='<div class="muted">Keine Projekte vorhanden.</div>'; return; }
   var rows=projs.map(function(p){
     var aw=awGet(p.nummer); var s=aw?awSummary(aw):null; var invs=projInvoicesFor(p);
+    var _k=pKosten(p), _invIds={}, _kosById={}; invs.forEach(function(r){ _invIds[r.id]=1; var st=_k.rech[r.id]; _kosById[r.id]=(st&&st.posId)?invNet(r):0; });
     var _abg=(p.ampel==="abgesagt");
     var _zu=(p.parentNr||_abg)?0:pZusaetze(p).reduce(function(s,x){return s+(Number(x.amount)||0);},0);
     var _soll=projectSollSum(p);
     var _pek=_abg?0:projectPersonalEK(p);
     var _gag=_abg?0:projectGagenSum(p);
     var _sollEff=_abg?0:((_soll>0)?_soll:projectEK(p));
-    return {p:p, abg:_abg, zu:_zu, soll:_soll, sollEff:_sollEff, pek:_pek, gagen:_gag, ang:((p.parentNr||_abg)?0:projectOfferNet(p)), conf:(p.ampel==="bestaetigt"?projectVolume(p):0), isConf:(p.ampel==="bestaetigt"), erl:(p.parentNr?0:pAusgang(p).reduce(function(a,x){return a+(Number(x.amount)||0);},0)), kos:projectIstSum(p), rsum:invs.reduce(function(a,r){return a+invNet(r);},0), rn:invs.length, parent:awNorm(p.parentNr||""), parentNr:(p.parentNr||"")};
+    return {p:p, abg:_abg, zu:_zu, soll:_soll, sollEff:_sollEff, pek:_pek, gagen:_gag, ang:((p.parentNr||_abg)?0:projectOfferNet(p)), conf:(p.ampel==="bestaetigt"?projectVolume(p):0), isConf:(p.ampel==="bestaetigt"), erl:(p.parentNr?0:pAusgang(p).reduce(function(a,x){return a+(Number(x.amount)||0);},0)), kos:projectIstSum(p), rsum:invs.reduce(function(a,r){return a+invNet(r);},0), rn:invs.length, invs:invs, invIds:_invIds, kosById:_kosById, parent:awNorm(p.parentNr||""), parentNr:(p.parentNr||"")};
   }).sort(function(a,b){ return String(b.p.nummer).localeCompare(String(a.p.nummer)); });
   var _byNr={}; rows.forEach(function(r){ var k=awNorm(r.p.nummer); if(!_byNr[k]||(_byNr[k].p.parentNr&&!r.p.parentNr)) _byNr[k]=r; });
-  rows.forEach(function(r){ if(r.parent && _byNr[r.parent] && _byNr[r.parent]!==r){ var par=_byNr[r.parent]; par.kos+=r.kos; par.rsum+=r.rsum; par.rn+=r.rn; par.soll+=r.soll; par.sollEff+=r.sollEff; par.pek+=r.pek; par.gagen+=r.gagen; par.hasKids=true; r.rolled=true; } });
+  rows.forEach(function(r){ if(r.parent && _byNr[r.parent] && _byNr[r.parent]!==r){ var par=_byNr[r.parent]; r.invs.forEach(function(inv){ if(par.invIds[inv.id]) return; par.invIds[inv.id]=1; par.rsum+=invNet(inv); par.rn++; par.kos+=(r.kosById[inv.id]||0); }); par.soll+=r.soll; par.sollEff+=r.sollEff; par.pek+=r.pek; par.gagen+=r.gagen; par.hasKids=true; r.rolled=true; } });
   var _ce=(localStorage.getItem("aw_crewek")==="1");
   /* Gruppierung: bestätigt / angeboten (offen) / abgesagt — Hilfsprojekte folgen ihrem Hauptprojekt */
   rows.forEach(function(r){ r.grp=r.abg?"abg":(r.isConf?"conf":"open"); });
@@ -6044,7 +6045,8 @@ function renderAuswertung(){
 /* ===== Aufschlüsselung der Eingangsrechnungen eines Projekts (inkl. Hilfsprojekte) ===== */
 function awRechModal(project){
   var items=[];
-  var add=function(p,isChild){ projInvoicesFor(p).forEach(function(r){ items.push({r:r,p:p,child:isChild,netto:invNet(r)}); }); };
+  var seen={};
+  var add=function(p,isChild){ projInvoicesFor(p).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; items.push({r:r,p:p,child:isChild,netto:invNet(r)}); }); };
   var kids=(DB.projects||[]).filter(function(p){ return p!==project&&p.parentNr&&awNorm(p.parentNr)===awNorm(project.nummer); });
   add(project,false); kids.forEach(function(c){ add(c,true); });
   items.sort(function(a,b){ return b.netto-a.netto; });
