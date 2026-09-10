@@ -903,7 +903,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-10.1";
+var APP_VERSION="2026-09-10.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4964,9 +4964,18 @@ function projectOfferNet(p){
   if(acc.length) return acc.reduce(function(s,o){return s+calcTotals(o).netto;},0);
   return offs.reduce(function(m,o){ var n=calcTotals(o).netto; return n>m?n:m; },0);
 }
+/* Rechnungen eines Projekts. Verglichen werden die Ziffern der Projektnummer; gibt es aber ein anderes
+   Projekt, dessen Nummer genau der Nummer auf der Rechnung entspricht (z. B. Hilfsprojekt „26-0007-H“
+   neben „26-0007“), gehört die Rechnung nur dorthin – sonst zählt sie doppelt. */
+function awKey(s){ return String(s||"").toLowerCase().replace(/[^a-z0-9]/g,""); }
 function projectInvoices(nr){
-  var n=awNorm(nr);
-  return reList().filter(function(r){ return r.status==="zugewiesen" && r.assignType==="project" && awNorm(r.projektNr)===n; });
+  var n=awNorm(nr), key=awKey(nr); if(!n) return [];
+  var others={}; (DB.projects||[]).forEach(function(p){ var k=awKey(p.nummer); if(k&&k!==key&&awNorm(p.nummer)===n) others[k]=1; });
+  return reList().filter(function(r){
+    if(r.status!=="zugewiesen"||r.assignType!=="project") return false;
+    if(awNorm(r.projektNr)!==n) return false;
+    var rk=awKey(r.projektNr); return rk===key||!others[rk];
+  });
 }
 function projInvoicesFor(project){ return (project&&project.ignoreRech)?[]:projectInvoices((project&&project.nummer)||""); }
 function childProjects(nr){ var n=awNorm(nr); if(!n) return []; return (DB.projects||[]).filter(function(p){ return p.parentNr && awNorm(p.parentNr)===n && awNorm(p.nummer)!==n; }); }
@@ -5998,7 +6007,7 @@ function renderAuswertung(){
       '<td class="right nowrap muted">'+(r.kos?eur(r.kos):"–")+'</td>'+
       (_ce?('<td class="right nowrap muted">'+(r.pek?eur(r.pek):"–")+'</td>'+
         '<td class="right nowrap" style="'+((r.gagen&&r.pek&&r.gagen>r.pek+0.005)?'color:#c0392b;font-weight:700':(r.gagen?'color:#2d7a4f':''))+'">'+(r.gagen?eur(r.gagen):"–")+((r.gagen&&r.pek)?('<div style="font-size:10px;font-weight:400;color:'+((r.gagen>r.pek+0.005)?'#c0392b':'#2d7a4f')+'">Δ '+eur(r.gagen-r.pek)+'</div>'):'')+'</td>'):'')+
-      '<td class="right nowrap muted">'+(r.rn?(eur(r.rsum)+" · "+r.rn):"–")+'</td>'+
+      '<td class="right nowrap muted">'+(r.rn?('<a href="#" class="aw-rech" data-pid="'+esc(r.p.id)+'" title="Aufschlüsselung der zugeordneten Eingangsrechnungen" style="color:inherit;text-decoration:underline dotted">'+eur(r.rsum)+" · "+r.rn+'</a>'):"–")+'</td>'+
       ((r.abg||r.rolled)?'<td class="right nowrap muted">–'+(r.rolled?'<div style="font-size:10px">im Hauptprojekt</div>':'')+'</td><td class="right nowrap muted">–'+(r.rolled?'<div style="font-size:10px">im Hauptprojekt</div>':'')+'</td>':(
         '<td class="right nowrap" style="color:'+mSc+';font-weight:700">'+eur(mS)+(mSp!=null?(' <span style="font-weight:400;font-size:11px;opacity:.75">'+mSp+'%</span>'):'')+'</td>'+
         '<td class="right nowrap" style="color:'+mIc+';font-weight:700">'+eur(mI)+(mIp!=null?(' <span style="font-weight:400;font-size:11px;opacity:.75">'+mIp+'%</span>'):'')+'</td>'))+'</tr>';
@@ -6026,10 +6035,47 @@ function renderAuswertung(){
     '<td class="right" style="color:'+((tMb-tSollEff)>=0?'#2d7a4f':'#c0392b')+'">'+eur(tMb-tSollEff)+(tMb>0?(' <span style="font-weight:400;font-size:11px">'+Math.round((tMb-tSollEff)/tMb*100)+'%</span>'):'')+'</td>'+
     '<td class="right" style="color:'+((tMb-tIstEff)>=0?'#2d7a4f':'#c0392b')+'">'+eur(tMb-tIstEff)+(tMb>0?(' <span style="font-weight:400;font-size:11px">'+Math.round((tMb-tIstEff)/tMb*100)+'%</span>'):'')+'</td></tr></tbody></table>'+
     '<div class="muted" style="font-size:11px;margin-top:10px">Gruppiert nach Status: Bestätigt / Angeboten (offen) / Abgesagt — Hilfsprojekte stehen bei ihrem Hauptprojekt · Angebot = Netto aus deinen Angeboten · Bestätigt = aktuelle Projektsumme bestätigter Projekte · Erlöse (Ist) = Summe aller Ausgangsrechnungen · Kosten = Kosten Ist (zugeordnete Eingangsrechnungen) · Eingangsrechn. = zugewiesene Rechnungen · Marge Soll = Budget − geplante Kosten (Kalkulations-Soll, sonst Angebots-EK) · Marge Ist = Budget − Kosten Ist</div>';
+  el.querySelectorAll(".aw-rech").forEach(function(a){ a.onclick=function(e){ e.preventDefault(); e.stopPropagation(); var pr=(DB.projects||[]).find(function(x){return x.id===a.dataset.pid;}); if(pr) awRechModal(pr); }; });
   el.querySelectorAll("tr[data-pid]").forEach(function(tr){ tr.onclick=function(){ var pr=(DB.projects||[]).find(function(x){return x.id===tr.dataset.pid;}); if(pr) openProject(pr.id); }; });
   var cek=document.getElementById("aw-crewek");
   if(cek) cek.onchange=function(){ localStorage.setItem("aw_crewek",cek.checked?"1":"0"); renderAuswertung(); };
   renderLieferanten();
+}
+/* ===== Aufschlüsselung der Eingangsrechnungen eines Projekts (inkl. Hilfsprojekte) ===== */
+function awRechModal(project){
+  var items=[];
+  var add=function(p,isChild){ projInvoicesFor(p).forEach(function(r){ items.push({r:r,p:p,child:isChild,netto:invNet(r)}); }); };
+  var kids=(DB.projects||[]).filter(function(p){ return p!==project&&p.parentNr&&awNorm(p.parentNr)===awNorm(project.nummer); });
+  add(project,false); kids.forEach(function(c){ add(c,true); });
+  items.sort(function(a,b){ return b.netto-a.netto; });
+  var sum=items.reduce(function(s,x){ return s+x.netto; },0);
+  var big=items.filter(function(x){ return sum>0&&x.netto>Math.max(50000,sum*0.5); });
+  var bg=document.getElementById("awrech-bg");
+  if(!bg){
+    bg=document.createElement("div"); bg.className="modal-bg"; bg.id="awrech-bg";
+    bg.innerHTML='<div class="modal" style="max-width:960px"><div class="modal-head"><h3 id="awrech-title">Eingangsrechnungen</h3><button class="x" data-close="awrech-bg">×</button></div><div class="modal-body" id="awrech-body" style="max-height:70vh;overflow:auto"></div><div class="modal-foot"><button class="btn" data-close="awrech-bg" type="button">Schließen</button></div></div>';
+    document.body.appendChild(bg);
+    bg.onclick=function(e){ if(e.target===bg) closeModal("awrech-bg"); };
+    bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("awrech-bg"); }; });
+  }
+  document.getElementById("awrech-title").textContent="Eingangsrechnungen · "+(project.nummer||"")+" "+(project.name||"");
+  var body=document.getElementById("awrech-body");
+  var h='<div class="muted" style="font-size:12.5px;margin-bottom:8px">Alle Rechnungen, die diesem Projekt'+(kids.length?' oder einem seiner Hilfsprojekte':'')+' zugeordnet sind (Projektnummer auf der Rechnung, Ziffern verglichen). Netto = eingetragener Betrag, sonst Brutto minus MwSt. Klick auf „Öffnen“ zeigt die Rechnung zum Prüfen oder Umhängen.</div>';
+  if(big.length) h+='<div style="background:#fbeae7;border:1px solid #e7c7c2;border-radius:8px;padding:8px 12px;font-size:12.5px;margin-bottom:8px">⚠ '+big.length+' Rechnung'+(big.length===1?'':'en')+' mit auffällig hohem Betrag – vermutlich falsch ausgelesen. Bitte über „Öffnen“ prüfen.</div>';
+  if(!items.length) h+='<div class="muted">Keine zugeordneten Rechnungen.</div>';
+  else{
+    h+='<table class="lines" style="font-size:12.5px"><thead><tr><th>Absender</th><th>Rechnungs-Nr.</th><th>Datum</th><th>Projekt-Nr. lt. Rechnung</th><th class="right">Netto</th><th></th></tr></thead><tbody>'+
+      items.map(function(x){ var r=x.r, warn=big.indexOf(x)>=0;
+        return '<tr'+(warn?' style="background:#fff5f3"':'')+'><td><b>'+esc(r.senderName||r.senderEmail||"–")+'</b>'+(r.subject?('<div class="muted" style="font-size:11px">'+esc(String(r.subject).slice(0,80))+'</div>'):'')+'</td>'+
+          '<td class="nowrap">'+esc(r.invoiceNumber||r.nr||"")+'</td><td class="nowrap">'+esc(fmtDateAny(r.invoiceDate||r.received||""))+'</td>'+
+          '<td class="nowrap">'+esc(r.projektNr||"")+(x.child?(' <span class="muted">(Hilfsprojekt '+esc(x.p.nummer||"")+')</span>'):'')+'</td>'+
+          '<td class="right nowrap" style="font-weight:700'+(warn?';color:#c0392b':'')+'">'+eur(x.netto)+(r.amount==null||r.amount===""?('<div class="muted" style="font-size:10.5px;font-weight:400">aus Brutto '+eur(invM(r.gross))+' − MwSt '+eur(invM(r.vat))+'</div>'):'')+'</td>'+
+          '<td><button class="btn sm awrech-open" data-id="'+esc(r.id)+'">Öffnen</button></td></tr>'; }).join("")+
+      '<tr style="border-top:2px solid #b9b2a2;font-weight:700;background:#faf8f3"><td colspan="4">Summe · '+items.length+' Rechnung'+(items.length===1?'':'en')+'</td><td class="right nowrap">'+eur(sum)+'</td><td></td></tr></tbody></table>';
+  }
+  body.innerHTML=h;
+  body.querySelectorAll(".awrech-open").forEach(function(b){ b.onclick=function(){ var inv=reList().find(function(r){return r.id===b.dataset.id;}); if(!inv) return; closeModal("awrech-bg"); if(typeof openAssignInvoice==="function") openAssignInvoice(inv); }; });
+  openModal("awrech-bg");
 }
 /* ===== Kostenverwaltung / Soll-Ist – app-nativ am Projekt (project.kosten) ===== */
 var AW_CATS=[{k:"personal",l:"Personal / Crew"},{k:"miete",l:"Miete"},{k:"transport",l:"Transport"},{k:"einkauf",l:"Einkauf"},{k:"sonstiges",l:"Sonstiges"}];
