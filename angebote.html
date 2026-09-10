@@ -404,6 +404,7 @@
     <div class="page-head">
       <div><h1>Crew</h1><div class="sub" id="cm-count"></div></div>
       <div class="toolbar">
+        <button class="btn" id="btn-bday" title="Geburtstagsliste einfügen (Facebook, Kalender, Kontakte) und mit Crew und Adressen abgleichen">🎂 Geburtstage abgleichen</button>
         <button class="btn" id="btn-crew-import">⤓ Crewplanung importieren</button>
         <input type="file" id="crew-import-file" accept=".json,application/json" style="display:none">
         <button class="btn primary" id="btn-new-member">+ Neuer Mitarbeiter</button>
@@ -643,6 +644,10 @@
       <div class="grid2">
         <div class="field"><label>E-Mail</label><input id="c-email"></div>
         <div class="field"><label>Telefon</label><input id="c-tel"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Geburtstag Ansprechpartner</label><input id="c-geb" type="date"></div>
+        <div class="field"></div>
       </div>
       <div class="grid2">
         <div class="field"><label>USt-IdNr.</label><input id="c-ustid"></div>
@@ -898,7 +903,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-09.3";
+var APP_VERSION="2026-09-10.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1285,6 +1290,7 @@ document.getElementById("cm-addfunk").onclick=function(){ var c=document.getElem
 document.getElementById("cm-delete").onclick=deleteCrewMember;
 document.getElementById("pd-add-assign").onclick=addAssignment;
 document.getElementById("btn-crew-import").onclick=function(){document.getElementById("crew-import-file").click();};
+var bdBtn=document.getElementById("btn-bday"); if(bdBtn) bdBtn.onclick=openBdayImport;
 document.getElementById("aw-import").onclick=function(){document.getElementById("aw-file").click();};
 document.getElementById("aw-sync").onclick=syncAuswertung;
 var reSyncBtn=document.getElementById("re-sync"); if(reSyncBtn) reSyncBtn.onclick=function(){ if(typeof SB==="undefined"||!SB){ toast("Nur in der Cloud-Version"); return; } toast("Rechnungen werden geladen …"); awCloudLoad(function(){ renderRechnungen(); toast(reList().length+" Rechnungen geladen"); }); };
@@ -4513,6 +4519,136 @@ function fcPPT(){
     toast("PowerPoint erstellt – Download startet");
   }).catch(function(e){ toast("PowerPoint-Fehler: "+(e&&e.message||e)); });
 }
+/* ===== Geburtstage abgleichen: Liste einfügen (Facebook, Kalender, Kontakte …) → Crew + Adressen ===== */
+var BD_MONTHS={"jan":1,"januar":1,"january":1,"feb":2,"februar":2,"february":2,"mar":3,"marz":3,"mrz":3,"march":3,"apr":4,"april":4,"mai":5,"may":5,"jun":6,"juni":6,"june":6,"jul":7,"juli":7,"july":7,"jn":6,"aug":8,"august":8,"sep":9,"sept":9,"september":9,"okt":10,"oktober":10,"oct":10,"october":10,"nov":11,"november":11,"dez":12,"dezember":12,"dec":12,"december":12};
+function bdNorm(s){ return String(s||"").toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/ae/g,"a").replace(/oe/g,"o").replace(/ue/g,"u").replace(/[^a-z0-9 ]+/g," ").replace(/\s+/g," ").trim(); }
+/* Datum aus einem Textstück: "12. März", "12.03.", "12.03.1985", "12 Mär 85", "March 12", "Mar 12, 1985", "1985-03-12", "12/03/1985" */
+function bdParseDate(s){
+  s=String(s||"").trim(); var m, d, mo, y=null;
+  if((m=/(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s))){ y=+m[1]; mo=+m[2]; d=+m[3]; }
+  else if((m=/(\d{1,2})\.\s?(\d{1,2})\.(?:\s?(\d{2,4}))?/.exec(s))){ d=+m[1]; mo=+m[2]; if(m[3]) y=+m[3]; }
+  else if((m=/(\d{1,2})\.?\s+([A-Za-zÄäÖöÜü]{3,9})\.?(?:,?\s+(\d{2,4}))?/.exec(s))&&BD_MONTHS[bdNorm(m[2]).replace(/ /g,"")]!=null){ d=+m[1]; mo=BD_MONTHS[bdNorm(m[2]).replace(/ /g,"")]; if(m[3]) y=+m[3]; }
+  else if((m=/([A-Za-zÄäÖöÜü]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?(?:,?\s+(\d{2,4}))?/.exec(s))&&BD_MONTHS[bdNorm(m[1]).replace(/ /g,"")]!=null){ mo=BD_MONTHS[bdNorm(m[1]).replace(/ /g,"")]; d=+m[2]; if(m[3]) y=+m[3]; }
+  else if((m=/(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?/.exec(s))){ d=+m[1]; mo=+m[2]; if(m[3]) y=+m[3]; }
+  else return null;
+  if(!(d>=1&&d<=31&&mo>=1&&mo<=12)) return null;
+  if(y!=null){ if(y<100) y+=(y>30?1900:2000); if(y<1900||y>new Date().getFullYear()) y=null; }
+  return {d:d,m:mo,y:y,text:m[0]};
+}
+/* Text in Kandidaten zerlegen: Name + Datum, auch über zwei Zeilen (Facebook: Name, darunter Datum) */
+function bdParseText(txt){
+  var lines=String(txt||"").split(/\r?\n/).map(function(l){ return l.replace(/[·•|\t]+/g," ").replace(/\s+/g," ").trim(); }).filter(Boolean);
+  var out=[], pendingName=null, pendingAge=null, ctx=null, now=new Date(), year=now.getFullYear();
+  var WD=/^(montag|dienstag|mittwoch|donnerstag|freitag|samstag|sonntag|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mo|di|mi|do|fr|sa|so)\b\.?,?\s*/i;
+  var isHeader=function(l){ return /^(heute|morgen|diese woche|nächste woche|kommende|demnächst|später|geburtstage|birthdays|today|tomorrow|this week|next week|later|januar|februar|märz|april|mai|juni|juli|august|september|oktober|november|dezember)\b/i.test(l)&&!/\d/.test(l); };
+  var ageOf=function(l){ var am=/(?:wird|turns|becomes)\s+(\d{1,3})\b/i.exec(l)||/\((\d{1,3})\)/.exec(l); return am?+am[1]:null; };
+  var stripAge=function(l){ return l.replace(/(?:wird|turns|becomes)\s+\d{1,3}\b/i,"").replace(/\(\d{1,3}\)/,"").trim(); };
+  var push=function(name,d,m,y,age,raw){ if(!name) return; if(y==null&&age!=null) y=year-age; out.push({name:name,d:d,m:m,y:y,raw:raw}); };
+  var flushPending=function(){ if(pendingName&&ctx){ push(pendingName,ctx.getDate(),ctx.getMonth()+1,null,pendingAge,pendingName); } pendingName=null; pendingAge=null; };
+  lines.forEach(function(l){
+    if(isHeader(l)){ flushPending(); ctx=null; if(/^(heute|today)\b/i.test(l)) ctx=new Date(now); else if(/^(morgen|tomorrow)\b/i.test(l)){ ctx=new Date(now); ctx.setDate(ctx.getDate()+1); } return; }
+    var lw=l.replace(WD,"");
+    var dt=bdParseDate(lw), age=ageOf(lw);
+    if(dt){
+      var name=stripAge(lw.replace(dt.text,"")).replace(/^(am|on|geburtstag|birthday|hat geburtstag|has a birthday)\b/i,"").replace(/[,\-–:]+/g," ").replace(/\s+/g," ").trim();
+      if(name.length<3||/^\d/.test(name)){ name=pendingName||""; if(age==null) age=pendingAge; }
+      push(name,dt.d,dt.m,dt.y,age,l); pendingName=null; pendingAge=null;
+    } else {
+      var nm=stripAge(lw);
+      if(nm.length>=3&&/[A-Za-zÄäÖöÜü]/.test(nm)&&nm.split(" ").length<=5){ flushPending(); pendingName=nm; pendingAge=age; }
+      else if(age!=null&&pendingName){ pendingAge=age; }
+      else { flushPending(); }
+    }
+  });
+  flushPending();
+  return out;
+}
+function bdIso(c){ return (c.y||1900)+"-"+("0"+c.m).slice(-2)+"-"+("0"+c.d).slice(-2); }
+/* Namensschlüssel für den Abgleich: voller Name, umgedreht, plus Vorname+Nachnamen-Initial */
+function bdKeys(name){
+  var n=bdNorm(name); if(!n) return [];
+  var p=n.split(" "), keys=[n];
+  if(p.length>=2){ keys.push(p.slice(1).join(" ")+" "+p[0]); keys.push(p[0]+" "+p[p.length-1]); keys.push(p[p.length-1]+" "+p[0]); keys.push(p[0]+" "+p[p.length-1].charAt(0)); }
+  return keys;
+}
+function bdTargets(){
+  var t=[];
+  (DB.crew||[]).forEach(function(m){ if(m.name) t.push({typ:"crew",id:m.id,name:m.name,sub:m.funktion||"",geb:m.geburtstag||"",obj:m,keys:bdKeys(m.name)}); });
+  (DB.customers||[]).forEach(function(c){ var ap=((c.vorname||"")+" "+(c.nachname||"")).trim()||c.ap||""; if(ap) t.push({typ:"kunde",id:c.id,name:ap,sub:c.firma||"",geb:c.geburtstag||"",obj:c,keys:bdKeys(ap)}); });
+  return t;
+}
+function bdMatch(cands){
+  var targets=bdTargets();
+  return cands.map(function(c){
+    var keys=bdKeys(c.name), hits=[];
+    targets.forEach(function(t){ var strong=t.keys[0]===keys[0]||(keys.length>1&&t.keys.indexOf(keys[1])>=0)||(t.keys.length>1&&keys.indexOf(t.keys[1])>=0); var weak=!strong&&keys.some(function(k){ return t.keys.indexOf(k)>=0; }); if(strong||weak) hits.push({t:t,strong:strong}); });
+    var strongHits=hits.filter(function(h){return h.strong;});
+    var use=strongHits.length?strongHits:hits;
+    c.hits=use.map(function(h){return h.t;}); c.sure=!!strongHits.length;
+    return c;
+  });
+}
+function openBdayImport(){
+  var bg=document.getElementById("bday-bg");
+  if(!bg){
+    bg=document.createElement("div"); bg.className="modal-bg"; bg.id="bday-bg";
+    bg.innerHTML='<div class="modal" style="max-width:860px"><div class="modal-head"><h3>🎂 Geburtstage abgleichen</h3><button class="x" data-close="bday-bg">×</button></div><div class="modal-body" style="max-height:70vh;overflow:auto">'+
+      '<div class="muted" style="font-size:12.5px;margin-bottom:8px">Liste hier einfügen, zum Beispiel von der Facebook-Geburtstagsseite (alles markieren, kopieren, einfügen), aus dem Kalender oder aus Kontakten. Je Zeile Name und Datum, oder Name und Datum in zwei Zeilen. Ohne Jahr wird der Geburtstag mit „1900“ gespeichert und ohne Alter angezeigt.</div>'+
+      '<textarea id="bday-text" rows="7" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font-size:13px" placeholder="Max Mustermann 12. März&#10;Erika Musterfrau&#10;03.07.1988&#10;…"></textarea>'+
+      '<div style="display:flex;gap:8px;align-items:center;margin:8px 0"><button class="btn sm primary" id="bday-parse" type="button">Abgleichen</button><label style="font-size:12.5px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="bday-overwrite" style="width:15px;height:15px"> vorhandene Geburtstage überschreiben</label><span class="muted" id="bday-info" style="font-size:12px"></span></div>'+
+      '<div id="bday-result"></div></div>'+
+      '<div class="modal-foot"><button class="btn" data-close="bday-bg" type="button">Schließen</button><button class="btn primary" id="bday-apply" type="button" style="display:none">Übernehmen</button></div></div>';
+    document.body.appendChild(bg);
+    bg.onclick=function(e){ if(e.target===bg) closeModal("bday-bg"); };
+    bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("bday-bg"); }; });
+    document.getElementById("bday-parse").onclick=bdayRenderMatches;
+    document.getElementById("bday-overwrite").onchange=bdayRenderMatches;
+    document.getElementById("bday-apply").onclick=bdayApply;
+  }
+  document.getElementById("bday-result").innerHTML=""; document.getElementById("bday-info").textContent=""; document.getElementById("bday-apply").style.display="none";
+  openModal("bday-bg");
+  setTimeout(function(){ var t=document.getElementById("bday-text"); if(t) t.focus(); },50);
+}
+var _bdayCands=[];
+function bdayRenderMatches(){
+  var txt=document.getElementById("bday-text").value, over=document.getElementById("bday-overwrite").checked;
+  _bdayCands=bdMatch(bdParseText(txt));
+  var res=document.getElementById("bday-result"), info=document.getElementById("bday-info");
+  if(!_bdayCands.length){ res.innerHTML='<div class="muted" style="padding:8px 0">Keine Einträge mit Name und Datum erkannt.</div>'; info.textContent=""; document.getElementById("bday-apply").style.display="none"; return; }
+  var nMatch=0, nNew=0;
+  var h='<table class="lines" style="font-size:12.5px"><thead><tr><th></th><th>Aus der Liste</th><th>Datum</th><th>Treffer in der App</th><th>Bisher</th></tr></thead><tbody>';
+  _bdayCands.forEach(function(c,i){
+    var iso=bdIso(c), dateTxt=("0"+c.d).slice(-2)+"."+("0"+c.m).slice(-2)+"."+(c.y||"");
+    if(!c.hits.length){ h+='<tr style="opacity:.55"><td></td><td>'+esc(c.name)+'</td><td class="nowrap">'+dateTxt+'</td><td class="muted">kein Treffer</td><td></td></tr>'; return; }
+    c.hits.forEach(function(t,j){
+      var has=!!String(t.geb||"").trim(), same=String(t.geb||"").slice(0,10)===iso, can=(!has||over)&&!same;
+      var checked=can&&c.sure;
+      if(t.typ==="crew"||t.typ==="kunde") nMatch++; if(checked) nNew++;
+      h+='<tr'+(same?' style="opacity:.55"':'')+'><td><input type="checkbox" class="bday-chk" data-i="'+i+'" data-j="'+j+'"'+(checked?' checked':'')+(can?'':' disabled')+' style="width:15px;height:15px"></td>'+
+        '<td>'+esc(c.name)+(c.sure?'':' <span class="pill" style="background:#fff4d6;color:#8a6d00;border:1px solid #e0c36a" title="Nur teilweise passender Name – bitte prüfen">unsicher</span>')+'</td><td class="nowrap">'+dateTxt+'</td>'+
+        '<td>'+(t.typ==="crew"?'👷 ':'🏢 ')+'<b>'+esc(t.name)+'</b>'+(t.sub?(' <span class="muted">· '+esc(t.sub)+'</span>'):'')+'</td>'+
+        '<td class="nowrap">'+(has?(esc(crewGebDE(t.geb))+(same?' <span class="muted">(gleich)</span>':(over?'':' <span class="muted">(bleibt)</span>'))):'<span class="muted">–</span>')+'</td></tr>';
+    });
+  });
+  h+='</tbody></table>';
+  res.innerHTML=h;
+  info.textContent=_bdayCands.length+" erkannt · "+_bdayCands.filter(function(c){return c.hits.length;}).length+" mit Treffer";
+  document.getElementById("bday-apply").style.display=nMatch?"":"none";
+  res.querySelectorAll(".bday-chk").forEach(function(cb){ cb.onchange=function(){ var n=res.querySelectorAll(".bday-chk:checked").length; document.getElementById("bday-apply").textContent="Übernehmen ("+n+")"; }; });
+  document.getElementById("bday-apply").textContent="Übernehmen ("+nNew+")";
+}
+function bdayApply(){
+  var res=document.getElementById("bday-result"), n=0, nc=0, nk=0;
+  res.querySelectorAll(".bday-chk:checked").forEach(function(cb){
+    var c=_bdayCands[+cb.dataset.i], t=c&&c.hits[+cb.dataset.j]; if(!t) return;
+    t.obj.geburtstag=bdIso(c); n++; if(t.typ==="crew") nc++; else nk++;
+  });
+  if(!n){ toast("Nichts ausgewählt"); return; }
+  save(); closeModal("bday-bg");
+  if(typeof renderCrewList==="function"){ try{ renderCrewList(); }catch(e){} }
+  if(typeof renderCustomers==="function"){ try{ renderCustomers(); }catch(e){} }
+  toast("🎂 "+n+" Geburtstag"+(n===1?"":"e")+" übernommen ("+nc+" Crew, "+nk+" Adressen)");
+}
 function renderOverhead(){
   var el=document.getElementById("oh-body"); if(!el) return;
   if(typeof RESTRICTED!=="undefined"&&RESTRICTED){ el.innerHTML='<div class="card panel-pad muted">Nur für Admin.</div>'; return; }
@@ -6659,7 +6795,7 @@ function renderCustomers(){
   rows.innerHTML=list.map(c=>`<tr class="row-click" data-id="${c.id}">
     <td><strong>${esc(c.firma)}</strong>${c.zusatz?`<div class="muted" style="font-size:11px">${esc(c.zusatz)}</div>`:""}</td>
     <td>${esc([c.plz,c.ort].filter(Boolean).join(" "))}</td>
-    <td>${esc(c.ap||"")}</td>
+    <td>${esc(c.ap||"")}${c.geburtstag?` <span class="muted" style="font-size:11px">🎂 ${esc(crewGebDE(c.geburtstag))}</span>`:""}</td>
     <td class="muted">${esc(c.email||"")}</td>
     <td class="right"><button class="btn sm">Bearbeiten</button></td></tr>`).join("");
   rows.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>openCust(tr.dataset.id));
@@ -6706,7 +6842,7 @@ function openCust(id,ret){
   const set=(k,v)=>document.getElementById(k).value=v||"";
   set("c-firma",c.firma);set("c-zusatz",c.zusatz);set("c-strasse",c.strasse);set("c-plz",c.plz);
   set("c-ort",c.ort);set("c-land",c.land);set("c-email",c.email);set("c-tel",c.tel);
-  set("c-ustid",c.ustid);set("c-zahlung",c.zahlung);set("c-web",c.web);
+  set("c-ustid",c.ustid);set("c-zahlung",c.zahlung);set("c-web",c.web);set("c-geb",c.geburtstag);
   set("c-vorname",c.vorname);set("c-nachname",c.nachname);set("c-salutcustom",c.salutCustom);
   document.getElementById("c-salutmode").value=c.salutMode||"neutral";
   custSalutToggle();
@@ -6717,7 +6853,7 @@ document.getElementById("c-save").onclick=()=>{
   const c=editingCust, g=k=>document.getElementById(k).value.trim();
   c.firma=g("c-firma");c.zusatz=g("c-zusatz");c.strasse=g("c-strasse");c.plz=g("c-plz");
   c.ort=g("c-ort");c.land=g("c-land");c.email=g("c-email");c.tel=g("c-tel");
-  c.ustid=g("c-ustid");c.zahlung=g("c-zahlung");c.web=g("c-web");
+  c.ustid=g("c-ustid");c.zahlung=g("c-zahlung");c.web=g("c-web");c.geburtstag=g("c-geb");
   c.vorname=g("c-vorname");c.nachname=g("c-nachname");c.salutMode=document.getElementById("c-salutmode").value;c.salutCustom=g("c-salutcustom");
   c.ap=((c.vorname||"")+" "+(c.nachname||"")).trim();
   if(!c.firma){toast("Firma fehlt");return;}
@@ -8199,7 +8335,7 @@ function crmDetailHtml(){
     '<select id="crm-status" style="width:140px"><option value="">Status …</option>'+CRM_STATI.map(function(s){return '<option value="'+s[0]+'"'+(crm.status===s[0]?" selected":"")+'>'+s[1]+'</option>';}).join("")+'</select>'+
     '<button class="btn sm" id="crm-edit">Adresse bearbeiten</button></div>'+
     '<div class="muted" style="font-size:12.5px;margin-top:6px">'+
-    [esc(c.ap||""),(c.email?'<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>':""),(c.tel?'<a href="tel:'+esc(c.tel)+'">'+esc(c.tel)+'</a>':""),esc([c.plz,c.ort].filter(Boolean).join(" "))].filter(Boolean).join(" · ")+'</div>'+
+    [esc(c.ap||""),(c.geburtstag?('🎂 '+esc(crewGebDE(c.geburtstag))+(crewAge(c.geburtstag)!=null?(' ('+crewAge(c.geburtstag)+')'):'')):""),(c.email?'<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>':""),(c.tel?'<a href="tel:'+esc(c.tel)+'">'+esc(c.tel)+'</a>':""),esc([c.plz,c.ort].filter(Boolean).join(" "))].filter(Boolean).join(" · ")+'</div>'+
     '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">'+
     crmTile("Projekte",k.n+(k.best?(' <span style="font-size:11px;color:#2d7a4f">('+k.best+' best.)</span>'):''))+
     crmTile("Umsatz (Rechnungen)",eur(k.ums))+
@@ -8510,6 +8646,11 @@ function pushupList(){
     crewBdayToday().forEach(function(m){
       var a=crewAge(m.geburtstag);
       out.push({key:"bday:"+m.id,type:"geburtstag",m:m,alter:a});
+    });
+    var _md=(function(){ var n=new Date(); return ("0"+(n.getMonth()+1)).slice(-2)+"-"+("0"+n.getDate()).slice(-2); })();
+    (DB.customers||[]).forEach(function(c){
+      if(String(c.geburtstag||"").slice(5,10)!==_md) return;
+      out.push({key:"bday-k:"+c.id,type:"geburtstag",m:{id:c.id,name:(c.ap||c.firma||"")+(c.ap&&c.firma?(" ("+c.firma+")"):""),tel:c.tel||""},alter:crewAge(c.geburtstag)});
     });
   }
   (DB.projects||[]).forEach(function(p){
