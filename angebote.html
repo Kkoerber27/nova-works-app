@@ -903,7 +903,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-10.3";
+var APP_VERSION="2026-09-11.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -2521,7 +2521,7 @@ function openDispoCopy(){
   openModal("dcopy-bg");
 }
 function dispoOf(p){ if(!p.dispo) p.dispo={}; var d=p.dispo;
-  if(!d.fields)d.fields={}; ["positions","personnel","hotels","einsatztage","bauzeit","schichttage","funk"].forEach(function(k){ if(!d[k])d[k]=[]; });
+  if(!d.fields)d.fields={}; ["positions","personnel","hotels","einsatztage","bauzeit","schichttage","funk","venues"].forEach(function(k){ if(!d[k])d[k]=[]; });
   if(!d.bauzeit.length && d.einsatztage.length){ d.bauzeit=d.einsatztage.map(function(s){return {datum:s.datum||"",von:s.von||"",bis:s.bis||"",beschreibung:s.gewerk||"",gewerke:"",maschinen:"",phase:s.phase||"aufbau"};}); }
   if(!d.schichttage.length){ var seen={}; d.bauzeit.forEach(function(b){ if(b.datum && !seen[b.datum]){ seen[b.datum]=1; d.schichttage.push({datum:b.datum,phase:b.phase||"aufbau"}); } }); }
   if(!d._hotelV2){ (d.personnel||[]).forEach(function(p){ if(p.hotelId!=null) p.needsHotel=true; });
@@ -2727,8 +2727,40 @@ function dispoCrew(d){
   return html;
 }
 /* ---- Schichtplan (pro Tag, pro Person) ---- */
+/* ---- Venues / Bühnen im Schichtplan: Liste mit Adresse, Stamm-Zuordnung je Person (p.venueId), Zuteilung je Tag (p.shifts[tag].venue) ---- */
+var VENUE_COLORS=["#0078d4","#2d7a4f","#b4493f","#7d5ba6","#e0a800","#0f8b8d"];
+function venueById(d,id){ if(id==null||id==="") return null; return (d.venues||[]).find(function(x){return String(x.id)===String(id);})||null; }
+function venueFor(d,p,dk){
+  var sh=(p&&p.shifts&&p.shifts[dk])||{};
+  var v=venueById(d,sh.venue); if(v) return v;
+  v=venueById(d,p&&p.venueId); if(v) return v;
+  return null;
+}
+function venueLabel(v){ return v?(v.name||("Venue "+v.id)):""; }
+function venuesHtml(d){
+  var vs=d.venues||[], conf=(d.personnel||[]).map(function(p,i){return {p:p,i:i};}).filter(function(x){return x.p.status==="bestaetigt";});
+  var html='<div style="border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:12px">'+
+    '<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><b style="font-size:13px">Venues / Bühnen</b><span class="muted" style="font-size:12px">'+(vs.length?(vs.length+' angelegt · Stamm-Zuordnung hier, Abweichung je Tag unten in der Spalte „Venue“'):'Für Projekte mit mehreren Bühnen oder Spielstätten: Venue anlegen, Adresse eintragen, Crew zuordnen.')+'</span><span style="flex:1"></span><button class="btn sm" id="ve-add">+ Venue</button></div>';
+  vs.forEach(function(v,vi){
+    var crew=conf.filter(function(x){ return String(x.p.venueId)===String(v.id); });
+    var free=conf.filter(function(x){ return String(x.p.venueId)!==String(v.id); });
+    html+='<div style="border:1px solid var(--line);border-left:6px solid '+(v.color||"#888")+';border-radius:8px;padding:10px 12px;margin-top:10px">'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap">'+
+        '<div class="field" style="flex:1;min-width:180px;margin:0"><label>Venue / Bühne</label><input class="ve-name" data-v="'+vi+'" value="'+esc(v.name||"")+'" placeholder="z. B. Main Stage, Halle 2, Club"></div>'+
+        '<div class="field" style="flex:2;min-width:260px;margin:0"><label>Adresse / Infos</label><input class="ve-adresse" data-v="'+vi+'" value="'+esc(v.adresse||"")+'" placeholder="Straße, PLZ Ort · Zufahrt, Ansprechpartner"></div>'+
+        '<div style="display:flex;align-items:flex-end"><button class="btn sm danger" data-delvenue="'+vi+'" title="Venue löschen – Zuordnungen werden aufgehoben">×</button></div>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px"><span class="muted" style="font-size:12px">Stamm-Crew ('+crew.length+'):</span>'+
+        crew.map(function(x){ var gc=gewerkColor(gewerkForFunktion(x.p.gewerk)); return '<span style="display:inline-flex;align-items:center;gap:5px;border:1px solid '+gc+';border-radius:14px;padding:1px 4px 1px 9px;font-size:12px"><span style="width:8px;height:8px;border-radius:50%;background:'+gc+'"></span>'+esc(x.p.name||"?")+'<button class="ve-unassign" data-i="'+x.i+'" title="Zuordnung aufheben" style="border:none;background:none;cursor:pointer;color:#c0392b;font-weight:700;padding:0 4px">×</button></span>'; }).join("")+
+        (free.length?('<select class="ve-assign" data-v="'+vi+'" style="font-size:12px;border:1px solid var(--line);border-radius:6px;padding:3px 6px"><option value="">+ Person zuordnen …</option>'+free.map(function(x){ return '<option value="'+x.i+'">'+esc(x.p.name||"?")+(x.p.gewerk?(' · '+esc(x.p.gewerk)):'')+(venueById(d,x.p.venueId)?(' (jetzt: '+esc(venueLabel(venueById(d,x.p.venueId)))+')'):'')+'</option>'; }).join("")+'</select>'):'')+
+      '</div></div>';
+  });
+  html+='</div>';
+  return html;
+}
 function dispoSchichten(d){
   var html='<div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:8px"><button class="btn sm" id="sch-grid">🖨 Übersicht (A4 quer)</button><button class="btn sm" id="sch-print">🖨 Schichtplan drucken</button></div>';
+  html+=venuesHtml(d);
   if(!d.schichttage.length){ html+='<div class="muted" style="padding:8px">Noch keine Tage. Lege Tage im Bauzeitenplan an oder füge hier einen Tag hinzu.</div>'; html+='<button class="btn sm" id="sch-addday">+ Tag</button>'; return html; }
   var _selDat=(d.schichttage[schichtDay]||{}).datum;
   d.schichttage.sort(function(a,b){ var x=parseDM(a.datum),y=parseDM(b.datum); if(x&&y) return x-y; if(x&&!y) return -1; if(!x&&y) return 1; return 0; });
@@ -2741,15 +2773,27 @@ function dispoSchichten(d){
     '<label style="font-size:11px;font-weight:400;display:flex;gap:4px;align-items:center;cursor:pointer"><input type="checkbox" class="sch-showmail"'+(day.showMail?' checked':'')+'> ✉ E-Mail</label>'+
     '<select class="sch-phase" style="color:#333">'+Object.keys(PHASE_LABEL).map(function(k){return '<option value="'+k+'"'+((day.phase||"aufbau")===k?' selected':'')+'>'+PHASE_LABEL[k]+'</option>';}).join("")+'</select>'+
     '<button class="btn sm danger" id="sch-delday">Tag löschen</button></div>';
-  var groups=groupByGewerk(d), dk=day.datum, hidden=[];
-  html+='<table class="lines"><thead><tr><th style="width:26px"><input type="checkbox" class="sh-selall" title="Alle markieren"></th><th>Gewerk</th><th>Name</th>'+(day.showTel?'<th>Handy</th>':'')+(day.showMail?'<th>E-Mail</th>':'')+'<th title="Anreisedatum der Person">Anreise</th><th title="Abreisedatum der Person">Abreise</th><th>Von</th><th>Bis</th><th>Notiz</th><th></th></tr></thead><tbody>';
+  var groups=groupByGewerk(d), dk=day.datum, hidden=[], hasVen=!!(d.venues||[]).length;
+  var nCols=9+(day.showTel?1:0)+(day.showMail?1:0)+(hasVen?1:0);
+  html+='<div style="overflow-x:auto"><table class="lines"><thead><tr><th style="width:26px"><input type="checkbox" class="sh-selall" title="Alle markieren"></th><th>Gewerk</th><th>Name</th>'+(hasVen?'<th title="Venue an diesem Tag – Standard ist die Stamm-Zuordnung">Venue</th>':'')+(day.showTel?'<th>Handy</th>':'')+(day.showMail?'<th>E-Mail</th>':'')+'<th title="Anreisedatum der Person">Anreise</th><th title="Abreisedatum der Person">Abreise</th><th>Von</th><th>Bis</th><th>Notiz</th><th></th></tr></thead><tbody>';
+  /* Bei Venues: Zeilen nach Venue gruppieren (ohne Venue zuletzt), innerhalb nach Gewerk */
+  var buckets=[], bmap={};
+  var bucketFor=function(v){ var k=v?String(v.id):"_"; if(!bmap[k]){ bmap[k]={v:v,rows:[]}; buckets.push(bmap[k]); } return bmap[k]; };
+  if(hasVen){ (d.venues||[]).forEach(function(v){ bucketFor(v); }); }
   groups.forEach(function(gr){ gr.people.forEach(function(x){ var p=x.p,i=x.i;
     if(p.status!=="bestaetigt") return;
     var sh=(p.shifts&&p.shifts[dk])||{};
     if(sh.aus){ hidden.push({p:p,i:i}); return; }
+    bucketFor(hasVen?venueFor(d,p,dk):null).rows.push({gr:gr,p:p,i:i,sh:sh});
+  }); });
+  buckets.forEach(function(b){
+    if(hasVen) html+='<tr><td colspan="'+nCols+'" style="background:'+(b.v?(b.v.color||"#888"):"#9a9a9a")+';color:#fff;font-weight:700;padding:6px 10px">'+(b.v?(esc(venueLabel(b.v))+(b.v.adresse?(' <span style="font-weight:400;opacity:.9;font-size:11px">· '+esc(b.v.adresse)+'</span>'):'')):'Ohne Venue')+' <span style="font-weight:400;opacity:.85;font-size:11px">· '+b.rows.length+' Person'+(b.rows.length===1?'':'en')+'</span></td></tr>';
+    b.rows.forEach(function(x){ var p=x.p,i=x.i,gr=x.gr,sh=x.sh;
+    var stamm=venueById(d,p.venueId);
+    var venSel=hasVen?('<td><select class="sh-venue" title="Venue nur an diesem Tag ändern" style="max-width:130px;font-size:12px;border:1px solid var(--line);border-radius:5px;padding:2px"><option value="">'+(stamm?('Stamm: '+esc(venueLabel(stamm))):'– keine –')+'</option>'+(d.venues||[]).map(function(v){ return '<option value="'+esc(v.id)+'"'+(String(sh.venue||"")===String(v.id)?' selected':'')+'>'+esc(venueLabel(v))+'</option>'; }).join("")+'</select></td>'):'';
     html+='<tr data-i="'+i+'"><td style="text-align:center"><input type="checkbox" class="sh-sel" title="Für Zeit-Übernahme markieren"></td>'+
       '<td><span style="display:inline-block;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;background:'+gr.gc+'">'+esc(gr.g)+'</span></td>'+
-      '<td>'+esc(p.name||"")+'</td>'+
+      '<td>'+esc(p.name||"")+'</td>'+venSel+
       (day.showTel?('<td class="muted" style="font-size:12px;white-space:nowrap">'+esc(p.tel||"—")+'</td>'):'')+
       (day.showMail?('<td class="muted" style="font-size:12px">'+esc(p.email||"—")+'</td>'):'')+
       '<td><input class="sh-anreise" value="'+esc(p.anreiseDatum||"")+'" placeholder="📅 wählen" readonly style="width:96px;cursor:pointer;background:#fff">'+(p.trip2?('<input class="sh-anreise2" value="'+esc(p.anreiseDatum2||"")+'" placeholder="📅 2. Anreise" readonly style="width:96px;cursor:pointer;background:#fff8e1;margin-top:3px;display:block" title="2. Anreise (z. B. zum Abbau)">'):'')+'</td>'+
@@ -2757,9 +2801,9 @@ function dispoSchichten(d){
       '<td><input class="sh-von" value="'+esc(sh.von||"")+'" placeholder="08:00" style="width:70px"></td>'+
       '<td><input class="sh-bis" value="'+esc(sh.bis||"")+'" placeholder="18:00" style="width:70px"></td>'+
       '<td><input class="sh-notiz" value="'+esc(sh.notiz||"")+'"></td>'+
-      '<td class="right nowrap"><button class="btn sm sh-copy" title="Zeit dieser Person auf alle markierten übernehmen">⧉ auf markierte</button> <button class="btn sm danger sh-del" title="Nur an diesem Tag aus der Liste nehmen">×</button></td></tr>';
+      '<td class="right nowrap"><button class="btn sm sh-copy" title="Zeit'+(hasVen?' und Venue':'')+' dieser Person auf alle markierten übernehmen">⧉ auf markierte</button> <button class="btn sm danger sh-del" title="Nur an diesem Tag aus der Liste nehmen">×</button></td></tr>';
   });});
-  html+='</tbody></table>';
+  html+='</tbody></table></div>';
   if(hidden.length) html+='<div class="muted" style="padding-top:6px;font-size:12px">An diesem Tag entfernt: '+hidden.map(function(x){ return '<button class="btn sm sch-unhide" data-i="'+x.i+'" title="Wieder aufnehmen">'+esc(x.p.name||"?")+' ↩</button>'; }).join(" ")+'</div>';
   html+='<div class="muted" style="padding-top:8px">Nur bestätigte Crew wird angezeigt. Leere Zeiten werden im Druck ausgeblendet. Zeit kopieren: Personen ☑ markieren, dann bei der Quell-Person „⧉ auf markierte“. <button class="btn sm" id="sch-fillday">Alle mit Standardzeit füllen</button></div>';
   return html;
@@ -3206,7 +3250,7 @@ function wireDispo(d){
     if(!src.von&&!src.bis){ toast("Bei dieser Person ist noch keine Zeit eingetragen"); return; }
     var ziele=Array.prototype.slice.call(el.querySelectorAll(".sh-sel:checked")).map(function(cb){ return +cb.closest("tr").dataset.i; }).filter(function(x){ return x!==i; });
     if(!ziele.length){ toast("Erst Personen markieren (☑), dann übernehmen"); return; }
-    ziele.forEach(function(ti){ var p=d.personnel[ti]; if(!p.shifts)p.shifts={}; if(!p.shifts[dk])p.shifts[dk]={}; p.shifts[dk].von=src.von||""; p.shifts[dk].bis=src.bis||""; });
+    ziele.forEach(function(ti){ var p=d.personnel[ti]; if(!p.shifts)p.shifts={}; if(!p.shifts[dk])p.shifts[dk]={}; p.shifts[dk].von=src.von||""; p.shifts[dk].bis=src.bis||""; if(src.venue!=null&&src.venue!=="") p.shifts[dk].venue=src.venue; });
     save(); renderDispo();
     toast("Zeit "+(src.von||"–")+" bis "+(src.bis||"–")+" auf "+ziele.length+" Person(en) übernommen");
   }; });
@@ -3217,6 +3261,13 @@ function wireDispo(d){
   var sad=document.getElementById("sch-addday"); if(sad) sad.onclick=function(){ var dt=prompt("Datum (TT.MM.JJJJ):"); if(!dt)return; dt=dt.trim(); d.schichttage.push({datum:dt,phase:"aufbau"}); d.schichttage.sort(function(a,b){ var x=parseDM(a.datum),y=parseDM(b.datum); if(x&&y) return x-y; if(x&&!y) return -1; if(!x&&y) return 1; return 0; }); schichtDay=Math.max(0,d.schichttage.findIndex(function(t){return t.datum===dt;})); save(); renderDispo(); };
   var sfd=document.getElementById("sch-fillday"); if(sfd) sfd.onclick=function(){ var day=d.schichttage[schichtDay]; var bz=(d.bauzeit||[]).find(function(b){return b.datum===day.datum;})||{}; var vo=bz.von||"08:00",bi=bz.bis||"18:00"; var dk=day.datum; (d.personnel||[]).forEach(function(p){ if(!p.shifts)p.shifts={}; if(!p.shifts[dk])p.shifts[dk]={}; if(!p.shifts[dk].von)p.shifts[dk].von=vo; if(!p.shifts[dk].bis)p.shifts[dk].bis=bi; }); save(); renderDispo(); };
   var spr=document.getElementById("sch-print"); if(spr) spr.onclick=function(){ schichtPrint(d); };
+  // Venues
+  var vea=document.getElementById("ve-add"); if(vea) vea.onclick=function(){ if(!d.venues) d.venues=[]; var maxId=d.venues.reduce(function(m,v){return Math.max(m,+v.id||0);},0); d.venues.push({id:maxId+1,name:"",adresse:"",color:VENUE_COLORS[d.venues.length%VENUE_COLORS.length]}); save(); renderDispo(); var inp=el.querySelector('.ve-name[data-v="'+(d.venues.length-1)+'"]'); if(inp) inp.focus(); };
+  el.querySelectorAll(".ve-name,.ve-adresse").forEach(function(inp){ var vi=+inp.dataset.v, k=inp.className.split(" ")[0].replace("ve-",""); inp.oninput=function(){ d.venues[vi][k]=inp.value; save(); }; inp.onchange=function(){ renderDispo(); }; });
+  el.querySelectorAll("[data-delvenue]").forEach(function(b){ var vi=+b.dataset.delvenue; b.onclick=function(){ var v=d.venues[vi]; if(!confirm("Venue „"+(v.name||("Venue "+v.id))+"“ löschen? Zuordnungen der Crew werden aufgehoben.")) return; (d.personnel||[]).forEach(function(p){ if(String(p.venueId)===String(v.id)) p.venueId=null; Object.keys(p.shifts||{}).forEach(function(dk2){ if(p.shifts[dk2]&&String(p.shifts[dk2].venue)===String(v.id)) delete p.shifts[dk2].venue; }); }); d.venues.splice(vi,1); save(); renderDispo(); }; });
+  el.querySelectorAll(".ve-assign").forEach(function(sel){ var vi=+sel.dataset.v; sel.onchange=function(){ if(sel.value==="") return; var p=d.personnel[+sel.value]; if(!p) return; p.venueId=d.venues[vi].id; save(); renderDispo(); toast((p.name||"Person")+" → "+venueLabel(d.venues[vi])); }; });
+  el.querySelectorAll(".ve-unassign").forEach(function(b){ var i=+b.dataset.i; b.onclick=function(){ d.personnel[i].venueId=null; save(); renderDispo(); }; });
+  el.querySelectorAll(".sh-venue").forEach(function(sel){ var i=+sel.closest("tr").dataset.i; var dk=d.schichttage[schichtDay]&&d.schichttage[schichtDay].datum; sel.onchange=function(){ var p=d.personnel[i]; if(!p.shifts)p.shifts={}; if(!p.shifts[dk])p.shifts[dk]={}; if(sel.value==="") delete p.shifts[dk].venue; else p.shifts[dk].venue=(isNaN(+sel.value)?sel.value:+sel.value); save(); renderDispo(); }; });
   // Bauzeitenplan
   el.querySelectorAll(".bz-datum,.bz-von,.bz-bis,.bz-beschreibung,.bz-gewerke,.bz-maschinen,.bz-helfer").forEach(function(inp){ var i=+inp.closest("tr").dataset.i,k=inp.className.split(" ")[0].replace("bz-","");
     if(k==="datum"){ inp.onclick=function(){ openCalendar(inp.value,function(str){ d.bauzeit[i].datum=str; inp.value=str; save(); },dispoBaseDate(d),true); }; return; }
@@ -3588,15 +3639,21 @@ function cateringPrint(d){
 
 function schichtPrint(d){ var f=d.fields||{};
   var days=(d.schichttage||[]).slice().sort(function(a,b){var x=parseDM(a.datum),y=parseDM(b.datum);return (x&&y)?(x-y):0;});
+  var hasVen=!!(d.venues||[]).length;
   var body=days.map(function(day){ var dk=day.datum, c=PHASE_COLORS[day.phase||"aufbau"];
     var nc=5+(day.showTel?1:0)+(day.showMail?1:0);
-    var rows=groupByGewerk(d).map(function(gr){ return gr.people.map(function(x){ var p=x.p; if(p.status!=="bestaetigt") return ""; var sh=(p.shifts&&p.shifts[dk])||{}; if(sh.aus) return ""; if(!sh.von&&!sh.bis&&!sh.notiz) return "";
-      return '<tr><td><span class="gtag" style="background:'+gr.gc+'">'+esc(gr.g)+'</span></td><td>'+esc(p.name||"")+'</td>'+(day.showTel?('<td class="nowrap">'+esc(p.tel||"–")+'</td>'):'')+(day.showMail?('<td>'+esc(p.email||"–")+'</td>'):'')+'<td>'+esc(sh.von||"")+'</td><td>'+esc(sh.bis||"")+'</td><td>'+esc(sh.notiz||"")+'</td></tr>';}).join(""); }).join("");
-    if(!rows) rows='<tr><td colspan="'+nc+'" class="meta">Keine Zeiten eingetragen</td></tr>';
-    return '<div class="dbar" style="background:'+c+'"><span>'+esc(dowLabel(dk))+'</span><span>'+PHASE_LABEL[day.phase||"aufbau"]+'</span></div>'+
-      '<table><thead><tr><th>Gewerk</th><th>Name</th>'+(day.showTel?'<th style="width:110px">Handy</th>':'')+(day.showMail?'<th>E-Mail</th>':'')+'<th style="width:56px">Von</th><th style="width:56px">Bis</th><th>Notiz</th></tr></thead><tbody>'+rows+'</tbody></table>';
+    var thead='<table><thead><tr><th>Gewerk</th><th>Name</th>'+(day.showTel?'<th style="width:110px">Handy</th>':'')+(day.showMail?'<th>E-Mail</th>':'')+'<th style="width:56px">Von</th><th style="width:56px">Bis</th><th>Notiz</th></tr></thead><tbody>';
+    var rowOf=function(gr,p,sh){ return '<tr><td><span class="gtag" style="background:'+gr.gc+'">'+esc(gr.g)+'</span></td><td>'+esc(p.name||"")+'</td>'+(day.showTel?('<td class="nowrap">'+esc(p.tel||"–")+'</td>'):'')+(day.showMail?('<td>'+esc(p.email||"–")+'</td>'):'')+'<td>'+esc(sh.von||"")+'</td><td>'+esc(sh.bis||"")+'</td><td>'+esc(sh.notiz||"")+'</td></tr>'; };
+    var buckets=[], bmap={}; var bucketFor=function(v){ var k=v?String(v.id):"_"; if(!bmap[k]){ bmap[k]={v:v,rows:""}; buckets.push(bmap[k]); } return bmap[k]; };
+    if(hasVen) (d.venues||[]).forEach(function(v){ bucketFor(v); });
+    groupByGewerk(d).forEach(function(gr){ gr.people.forEach(function(x){ var p=x.p; if(p.status!=="bestaetigt") return; var sh=(p.shifts&&p.shifts[dk])||{}; if(sh.aus) return; if(!sh.von&&!sh.bis&&!sh.notiz) return;
+      bucketFor(hasVen?venueFor(d,p,dk):null).rows+=rowOf(gr,p,sh); }); });
+    var inner=buckets.filter(function(b){ return b.rows; }).map(function(b){
+      return (hasVen?('<div class="vbar" style="border-left:6px solid '+(b.v?(b.v.color||"#888"):"#9a9a9a")+'"><b>'+(b.v?esc(venueLabel(b.v)):"Ohne Venue")+'</b>'+(b.v&&b.v.adresse?('<span>'+esc(b.v.adresse)+'</span>'):'')+'</div>'):'')+thead+b.rows+'</tbody></table>'; }).join("");
+    if(!inner) inner=thead+'<tr><td colspan="'+nc+'" class="meta">Keine Zeiten eingetragen</td></tr></tbody></table>';
+    return '<div class="dbar" style="background:'+c+'"><span>'+esc(dowLabel(dk))+'</span><span>'+PHASE_LABEL[day.phase||"aufbau"]+'</span></div>'+inner;
   }).join("");
-  printDoc("Schichtplan "+(f.veranstaltung||""), printHead(f,"Schichtplan")+body);
+  printDoc("Schichtplan "+(f.veranstaltung||""), printHead(f,"Schichtplan")+body, '.vbar{display:flex;justify-content:space-between;align-items:baseline;gap:10px;background:#f4f2ee;padding:5px 10px;margin:6px 0 2px;font-size:10px}.vbar span{color:#777;font-size:8.5px}');
 }
 function schichtGridPrint(d,only){
   var f=d.fields||{};
@@ -3622,7 +3679,8 @@ function schichtGridPrint(d,only){
       var isAn=(an&&_dt&&an.getTime()===_dt.getTime())||(an2&&_dt&&an2.getTime()===_dt.getTime());
       var isAb=(ab&&_dt&&ab.getTime()===_dt.getTime())||(ab2&&_dt&&ab2.getTime()===_dt.getTime());
       var t=(sh.von||sh.bis)?(esc(sh.von||"")+" – "+esc(sh.bis||"")):"";
-      return '<td>'+(isAn?'<div class="anb">Anreise</div>':'')+(isAb?'<div class="anb" style="background:#4d6c80">Abreise</div>':'')+t+(sh.notiz?('<div class="nt">'+esc(sh.notiz)+'</div>'):'')+'</td>';
+      var vv=((d.venues||[]).length>1)?venueFor(d,p,dk):null;
+      return '<td>'+(isAn?'<div class="anb">Anreise</div>':'')+(isAb?'<div class="anb" style="background:#4d6c80">Abreise</div>':'')+(vv?('<div class="anb" style="background:'+(vv.color||"#888")+'">'+esc(venueLabel(vv))+'</div>'):'')+t+(sh.notiz?('<div class="nt">'+esc(sh.notiz)+'</div>'):'')+'</td>';
     }).join("");
     return '<tr><td style="text-align:left"><b>'+esc(p.name||"")+'</b> <span class="gtag" style="background:'+x.gc+'">'+esc(x.g)+'</span>'+(anyTel&&p.tel?('<div class="nt">📞 '+esc(p.tel)+'</div>'):'')+(anyMail&&p.email?('<div class="nt">✉ '+esc(p.email)+'</div>'):'')+(p.anreiseDatum?('<div class="nt">Anreise: '+esc(p.anreiseDatum)+'</div>'):'')+(p.abreiseDatum?('<div class="nt">Abreise: '+esc(p.abreiseDatum)+'</div>'):'')+((p.anreiseDatum2||p.abreiseDatum2)?('<div class="nt">2. Reise: '+esc(p.anreiseDatum2||"?")+' – '+esc(p.abreiseDatum2||"?")+'</div>'):'')+'</td>'+cells+'</tr>';
   }).join("");
@@ -8006,8 +8064,8 @@ function teamMap(){ var m={}; teamList().forEach(function(t){ if(t.active===fals
 
 /* --- Dispo-Zeitstempel je BEREICH + Merge (verhindert Ueberschreiben mit altem Stand) --- */
 var _dispoJsonCache={}, _dispoGrpCache={};
-var DISPO_GROUPS=["fields","positions","personnel","hotels","einsatztage","bauzeit","schichttage","catering","helfer","daysheets","dsLogo"];
-var DISPO_TAB_GROUPS={crew:["personnel","fields","helfer"],schichten:["schichttage"],bauzeit:["bauzeit","schichttage"],daysheet:["daysheets","dsLogo"],hotels:["hotels","personnel"],catering:["catering"],funk:["personnel"],eck:["fields"],leitung:["positions"]};
+var DISPO_GROUPS=["fields","positions","personnel","hotels","einsatztage","bauzeit","schichttage","catering","helfer","daysheets","dsLogo","venues"];
+var DISPO_TAB_GROUPS={crew:["personnel","fields","helfer"],schichten:["schichttage","venues"],bauzeit:["bauzeit","schichttage"],daysheet:["daysheets","dsLogo"],hotels:["hotels","personnel"],catering:["catering"],funk:["personnel"],eck:["fields"],leitung:["positions"]};
 function dispoAllGroups(){ var m={}; DISPO_GROUPS.forEach(function(g){m[g]=1;}); for(var i=0;i<arguments.length;i++){ var o=arguments[i]; if(o) Object.keys(o).forEach(function(k){ if(k!=="_ts"&&k!=="_gts") m[k]=1; }); } return Object.keys(m); }
 function seedDispoCache(p,force){
   if(!p||!p.dispo) return;
