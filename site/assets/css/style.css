@@ -851,6 +851,34 @@ a { color: inherit; }
   -webkit-appearance: none;
   appearance: none;
 }
+/* Projekt ohne Foto. Kein Schalter, keine Grossansicht - nur der Rahmen
+   in der roten Kennzeichnung, die auf dieser Seite ueberall "hier fehlt
+   noch etwas" bedeutet. So bleibt die Zeile im Raster stehen, statt dass
+   der Text allein auf halber Breite haengt. */
+.ref__bild--offen {
+  /* min-width: 0 ist hier kein Schoenheitsfehler, sondern noetig: Das
+     Feld ist ein Raster und traegt aspect-ratio. Ohne die Angabe leitet
+     der Browser seine Mindestbreite aus der Hoehe des umbrochenen Textes
+     ab (Hoehe x 3/2) - am Handy wurde der Kasten dadurch 424 statt
+     350 px breit und die ganze Seite lief seitlich ueber. */
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: .4rem;
+  margin: 0;
+  padding: 1.5rem;
+  border-style: dashed;
+  border-color: var(--danger);
+  background-color: color-mix(in srgb, var(--danger) 6%, #17171a);
+  color: var(--danger);
+  text-align: center;
+  font-size: var(--fs-small);
+  line-height: 1.55;
+  cursor: default;
+}
+.ref__bild--offen strong { font-size: var(--fs-body); font-weight: 600; }
+
 .ref__bild:focus-visible {
   outline: 2px solid var(--signal);
   outline-offset: 3px;
