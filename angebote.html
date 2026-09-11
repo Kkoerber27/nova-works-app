@@ -908,7 +908,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-11.2";
+var APP_VERSION="2026-09-11.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -3674,7 +3674,14 @@ function schichtGridPrint(d,only){
     return '<th style="background:'+c+';color:#fff">'+esc(dowLabel(day.datum))+'<div style="font-weight:400;font-size:8px;opacity:.85">'+PHASE_LABEL[day.phase||"aufbau"]+'</div></th>';
   }).join("")+'</tr>';
   var anyTel=days.some(function(dd){return dd.showTel;}), anyMail=days.some(function(dd){return dd.showMail;});
-  var body=people.map(function(x){ var p=x.p;
+  var vs=d.venues||[], hasVen=!!vs.length, nCols=1+days.length;
+  var venueLegend=hasVen?('<div class="vleg">'+vs.map(function(v){ return '<span class="vchip"><span class="vdot" style="background:'+(v.color||"#888")+'"></span><b>'+esc(venueLabel(v))+'</b>'+(v.adresse?(' <span>'+esc(v.adresse)+'</span>'):'')+'</span>'; }).join("")+'</div>'):'';
+  if(hasVen){
+    var order=vs.map(function(v){ return String(v.id); }).concat(["_"]), grouped=[];
+    order.forEach(function(k){ var v=k==="_"?null:venueById(d,k); var list=people.filter(function(x){ var sv=venueById(d,x.p.venueId); return (sv?String(sv.id):"_")===k; }); if(list.length) grouped.push({v:v,list:list}); });
+    people=[]; grouped.forEach(function(g){ people.push({header:g.v||{name:"Ohne Venue",color:"#9a9a9a",_none:true},n:g.list.length}); g.list.forEach(function(x){ people.push(x); }); });
+  }
+  var body=people.map(function(x){ if(x.header){ var hv=x.header; return '<tr class="vrow"><td colspan="'+nCols+'" style="background:'+(hv.color||"#888")+'"><b>'+esc(hv._none?"Ohne Venue":venueLabel(hv))+'</b>'+(hv.adresse?(' · '+esc(hv.adresse)):'')+' · '+x.n+' Person'+(x.n===1?'':'en')+'</td></tr>'; } var p=x.p;
     var an=parseDM(p.anreiseDatum||""), ab=parseDM(p.abreiseDatum||"");
     var an2=parseDM(p.anreiseDatum2||""), ab2=parseDM(p.abreiseDatum2||"");
     var cells=days.map(function(day){
@@ -3684,8 +3691,9 @@ function schichtGridPrint(d,only){
       var isAn=(an&&_dt&&an.getTime()===_dt.getTime())||(an2&&_dt&&an2.getTime()===_dt.getTime());
       var isAb=(ab&&_dt&&ab.getTime()===_dt.getTime())||(ab2&&_dt&&ab2.getTime()===_dt.getTime());
       var t=(sh.von||sh.bis)?(esc(sh.von||"")+" – "+esc(sh.bis||"")):"";
-      var vv=((d.venues||[]).length>1)?venueFor(d,p,dk):null;
-      return '<td>'+(isAn?'<div class="anb">Anreise</div>':'')+(isAb?'<div class="anb" style="background:#4d6c80">Abreise</div>':'')+(vv?('<div class="anb" style="background:'+(vv.color||"#888")+'">'+esc(venueLabel(vv))+'</div>'):'')+t+(sh.notiz?('<div class="nt">'+esc(sh.notiz)+'</div>'):'')+'</td>';
+      var vv=hasVen?venueFor(d,p,dk):null, sv=hasVen?venueById(d,p.venueId):null;
+      var showV=vv&&(!sv||String(vv.id)!==String(sv.id));
+      return '<td>'+(isAn?'<div class="anb">Anreise</div>':'')+(isAb?'<div class="anb" style="background:#4d6c80">Abreise</div>':'')+(showV?('<div class="anb" style="background:'+(vv.color||"#888")+'">'+esc(venueLabel(vv))+'</div>'):'')+t+(sh.notiz?('<div class="nt">'+esc(sh.notiz)+'</div>'):'')+'</td>';
     }).join("");
     return '<tr><td style="text-align:left"><b>'+esc(p.name||"")+'</b> <span class="gtag" style="background:'+x.gc+'">'+esc(x.g)+'</span>'+(anyTel&&p.tel?('<div class="nt">📞 '+esc(p.tel)+'</div>'):'')+(anyMail&&p.email?('<div class="nt">✉ '+esc(p.email)+'</div>'):'')+(p.anreiseDatum?('<div class="nt">Anreise: '+esc(p.anreiseDatum)+'</div>'):'')+(p.abreiseDatum?('<div class="nt">Abreise: '+esc(p.abreiseDatum)+'</div>'):'')+((p.anreiseDatum2||p.abreiseDatum2)?('<div class="nt">2. Reise: '+esc(p.anreiseDatum2||"?")+' – '+esc(p.abreiseDatum2||"?")+'</div>'):'')+'</td>'+cells+'</tr>';
   }).join("");
@@ -3697,8 +3705,10 @@ function schichtGridPrint(d,only){
     '.gtag{display:inline-block;color:#fff;border-radius:3px;padding:0 5px;font-size:8px;font-weight:700}'+
     '.anb{display:inline-block;background:#8a6d3b;color:#fff;border-radius:3px;padding:0 5px;font-size:8px;font-weight:700;margin-bottom:2px}'+
     '.nt{font-size:8px;color:#777;margin-top:1px}'+
+    '.vleg{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 8px;font-size:9.5px}.vchip{display:inline-flex;align-items:center;gap:5px}.vchip span{color:#777;font-size:8.5px}.vdot{display:inline-block;width:9px;height:9px;border-radius:50%}'+
+    'tr.vrow td{text-align:left;color:#fff;font-size:10px;padding:5px 8px;border:1px solid #ddd}'+
     'tr{page-break-inside:avoid}';
-  printDoc("Schichtplan Übersicht "+(f.veranstaltung||""), printHead(f,"Schichtplan – Übersicht")+'<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>', extra);
+  printDoc("Schichtplan Übersicht "+(f.veranstaltung||""), printHead(f,"Schichtplan – Übersicht")+venueLegend+'<table><thead>'+head+'</thead><tbody>'+body+'</tbody></table>', extra);
 }
 function bauzeitPrint(d){ var f=d.fields||{};
   var byday={}, order=[]; (d.bauzeit||[]).forEach(function(b){ var k=b.datum||"–"; if(!byday[k]){byday[k]=[];order.push(k);} byday[k].push(b); });
