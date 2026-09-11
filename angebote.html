@@ -166,6 +166,11 @@
   #proj-banner span{writing-mode:vertical-rl;font-size:32px;font-weight:700;letter-spacing:.12em;
     color:var(--gold);white-space:nowrap;text-transform:uppercase;opacity:.9}
   body.pbann main{padding-left:94px}
+  /* Disposition: breiter als die übrige Projektseite (Schichtplan, Hotels, Crew Sheet brauchen Platz) */
+  #pd-dispo-card{width:min(1620px,calc(100vw - 60px));position:relative;left:50%;transform:translateX(-50%)}
+  body.pbann #pd-dispo-card{width:min(1620px,calc(100vw - 66px - 44px));transform:translateX(calc(-50% + 33px))}
+  @media(max-width:1260px){#pd-dispo-card{width:auto;left:auto;transform:none}body.pbann #pd-dispo-card{width:auto;transform:none}}
+  #pd-dispo-card .lines td,#pd-dispo-card .lines th{padding:8px 8px}
   @media(max-width:900px){#proj-banner{display:none !important}body.pbann main{padding-left:14px}}
 
   /* ===== Responsive: iPad / iPhone ===== */
@@ -335,7 +340,7 @@
       <div class="panel-pad" id="pd-zusaetze"></div>
     </div>
 
-    <div class="card" style="margin-bottom:22px">
+    <div class="card" id="pd-dispo-card" style="margin-bottom:22px">
       <div class="page-head" style="padding:16px 18px 0;margin-bottom:0">
         <div class="section-title" style="margin:0">Disposition</div>
         <div class="toolbar">
@@ -903,7 +908,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-11.1";
+var APP_VERSION="2026-09-11.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -2790,18 +2795,18 @@ function dispoSchichten(d){
     if(hasVen) html+='<tr><td colspan="'+nCols+'" style="background:'+(b.v?(b.v.color||"#888"):"#9a9a9a")+';color:#fff;font-weight:700;padding:6px 10px">'+(b.v?(esc(venueLabel(b.v))+(b.v.adresse?(' <span style="font-weight:400;opacity:.9;font-size:11px">· '+esc(b.v.adresse)+'</span>'):'')):'Ohne Venue')+' <span style="font-weight:400;opacity:.85;font-size:11px">· '+b.rows.length+' Person'+(b.rows.length===1?'':'en')+'</span></td></tr>';
     b.rows.forEach(function(x){ var p=x.p,i=x.i,gr=x.gr,sh=x.sh;
     var stamm=venueById(d,p.venueId);
-    var venSel=hasVen?('<td><select class="sh-venue" title="Venue nur an diesem Tag ändern" style="max-width:130px;font-size:12px;border:1px solid var(--line);border-radius:5px;padding:2px"><option value="">'+(stamm?('Stamm: '+esc(venueLabel(stamm))):'– keine –')+'</option>'+(d.venues||[]).map(function(v){ return '<option value="'+esc(v.id)+'"'+(String(sh.venue||"")===String(v.id)?' selected':'')+'>'+esc(venueLabel(v))+'</option>'; }).join("")+'</select></td>'):'';
+    var venSel=hasVen?('<td><select class="sh-venue" title="Venue nur an diesem Tag ändern" style="max-width:118px;font-size:12px;border:1px solid var(--line);border-radius:5px;padding:2px"><option value="">'+(stamm?('Stamm: '+esc(venueLabel(stamm))):'– keine –')+'</option>'+(d.venues||[]).map(function(v){ return '<option value="'+esc(v.id)+'"'+(String(sh.venue||"")===String(v.id)?' selected':'')+'>'+esc(venueLabel(v))+'</option>'; }).join("")+'</select></td>'):'';
     html+='<tr data-i="'+i+'"><td style="text-align:center"><input type="checkbox" class="sh-sel" title="Für Zeit-Übernahme markieren"></td>'+
       '<td><span style="display:inline-block;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;background:'+gr.gc+'">'+esc(gr.g)+'</span></td>'+
       '<td>'+esc(p.name||"")+'</td>'+venSel+
       (day.showTel?('<td class="muted" style="font-size:12px;white-space:nowrap">'+esc(p.tel||"—")+'</td>'):'')+
       (day.showMail?('<td class="muted" style="font-size:12px">'+esc(p.email||"—")+'</td>'):'')+
-      '<td><input class="sh-anreise" value="'+esc(p.anreiseDatum||"")+'" placeholder="📅 wählen" readonly style="width:96px;cursor:pointer;background:#fff">'+(p.trip2?('<input class="sh-anreise2" value="'+esc(p.anreiseDatum2||"")+'" placeholder="📅 2. Anreise" readonly style="width:96px;cursor:pointer;background:#fff8e1;margin-top:3px;display:block" title="2. Anreise (z. B. zum Abbau)">'):'')+'</td>'+
-      '<td><input class="sh-abreise" value="'+esc(p.abreiseDatum||"")+'" placeholder="📅 wählen" readonly style="width:96px;cursor:pointer;background:#fff">'+(p.trip2?('<input class="sh-abreise2" value="'+esc(p.abreiseDatum2||"")+'" placeholder="📅 2. Abreise" readonly style="width:96px;cursor:pointer;background:#fff8e1;margin-top:3px;display:block" title="2. Abreise">'):'')+' <button class="btn sm sh-trip2" title="Zweite An-/Abreise ein-/ausblenden (z. B. nur Auf- &amp; Abbau, dazwischen weg)" style="padding:2px 6px;font-size:11px'+(p.trip2?';background:#8a6d3b;border-color:#8a6d3b;color:#fff':'')+'">⇄2</button></td>'+
-      '<td><input class="sh-von" value="'+esc(sh.von||"")+'" placeholder="08:00" style="width:70px"></td>'+
-      '<td><input class="sh-bis" value="'+esc(sh.bis||"")+'" placeholder="18:00" style="width:70px"></td>'+
-      '<td><input class="sh-notiz" value="'+esc(sh.notiz||"")+'"></td>'+
-      '<td class="right nowrap"><button class="btn sm sh-copy" title="Zeit'+(hasVen?' und Venue':'')+' dieser Person auf alle markierten übernehmen">⧉ auf markierte</button> <button class="btn sm danger sh-del" title="Nur an diesem Tag aus der Liste nehmen">×</button></td></tr>';
+      '<td><input class="sh-anreise" value="'+esc(p.anreiseDatum||"")+'" placeholder="📅 wählen" readonly style="width:92px;cursor:pointer;background:#fff">'+(p.trip2?('<input class="sh-anreise2" value="'+esc(p.anreiseDatum2||"")+'" placeholder="📅 2. Anreise" readonly style="width:96px;cursor:pointer;background:#fff8e1;margin-top:3px;display:block" title="2. Anreise (z. B. zum Abbau)">'):'')+'</td>'+
+      '<td class="nowrap"><input class="sh-abreise" value="'+esc(p.abreiseDatum||"")+'" placeholder="📅 wählen" readonly style="width:92px;cursor:pointer;background:#fff">'+(p.trip2?('<input class="sh-abreise2" value="'+esc(p.abreiseDatum2||"")+'" placeholder="📅 2. Abreise" readonly style="width:96px;cursor:pointer;background:#fff8e1;margin-top:3px;display:block" title="2. Abreise">'):'')+' <button class="btn sm sh-trip2" title="Zweite An-/Abreise ein-/ausblenden (z. B. nur Auf- &amp; Abbau, dazwischen weg)" style="padding:2px 6px;font-size:11px'+(p.trip2?';background:#8a6d3b;border-color:#8a6d3b;color:#fff':'')+'">⇄2</button></td>'+
+      '<td><input class="sh-von" value="'+esc(sh.von||"")+'" placeholder="08:00" style="width:62px"></td>'+
+      '<td><input class="sh-bis" value="'+esc(sh.bis||"")+'" placeholder="18:00" style="width:62px"></td>'+
+      '<td><input class="sh-notiz" value="'+esc(sh.notiz||"")+'" style="min-width:120px;width:100%"></td>'+
+      '<td class="right nowrap"><button class="btn sm sh-copy" title="Zeit'+(hasVen?' und Venue':'')+' dieser Person auf alle markierten übernehmen">⧉</button> <button class="btn sm danger sh-del" title="Nur an diesem Tag aus der Liste nehmen">×</button></td></tr>';
   });});
   html+='</tbody></table></div>';
   if(hidden.length) html+='<div class="muted" style="padding-top:6px;font-size:12px">An diesem Tag entfernt: '+hidden.map(function(x){ return '<button class="btn sm sch-unhide" data-i="'+x.i+'" title="Wieder aufnehmen">'+esc(x.p.name||"?")+' ↩</button>'; }).join(" ")+'</div>';
