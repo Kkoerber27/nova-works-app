@@ -17,3 +17,7 @@ Weitere Dateien: `scripts/` (Mac-/NAS-Skripte, Scheinwerfer-Protokoll, Rechnungs
 ## Arbeitsweise (Wunsch des Inhabers)
 
 Änderungen werden direkt auf `main` committet und gepusht, ohne Pull Request und ohne Vorschau. Netlify baut `main` automatisch und stellt es live (Crewplanung auf `nova-works-data`, Angebots-Tool auf `nova-works-angebote`). Vor dem Push immer prüfen: `node --check` für die Inline-Skripte und ein Headless-Test der geänderten Ansicht. Geht trotzdem etwas schief, den Commit sofort mit `git revert` zurücknehmen.
+
+## Kalkulations-Assistent
+
+Im Angebots-Editor (`angebote.html`, Block `/* ===== KALKULATIONS-ASSISTENT`): Projektprofil (`project.profil`), Erfahrungswerte aus vergangenen Projekten (Angebots-EK, Ist-Kosten aus Rechnungen, Margen, Crew-Tage) und Empfehlungen für das aktuelle Angebot laufen komplett im Browser. Die optionale KI-Einschätzung ruft die Edge Function `supabase/functions/kalk-advisor` auf (Anthropic-SDK, Secret `ANTHROPIC_API_KEY`); Deployment siehe `supabase/functions/README.md`.

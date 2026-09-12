@@ -504,6 +504,7 @@
     </div>
 
     <div class="ctx" id="ed-ctx"></div>
+    <div class="card panel-pad" id="ka-card" style="margin-bottom:22px"></div>
 
     <div class="editor-grid">
       <div>
@@ -908,7 +909,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-11.3";
+var APP_VERSION="2026-09-12.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1201,6 +1202,7 @@ function renderProjectSummary(){
 /* ---------- offers ---------- */
 function newOffer(){
   pullProject();
+  if(curProject&&!(curProject.profil&&curProject.profil.typ)&&!newOffer._skip){ openProfilDialog(curProject,function(){ newOffer._skip=true; try{ newOffer(); } finally { newOffer._skip=false; } }); return; }
   const p=curProject;
   const n=p.offers.length+1;
   const cust=DB.customers.find(c=>c.id===p.kunde);
@@ -1252,6 +1254,7 @@ function openOffer(id){
   renderTourCard();
   showView("editor");
   document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"));
+  if(typeof renderKalkAssistent==="function") renderKalkAssistent();
 }
 function pullOffer(){
   const o=curOffer; if(!o) return;
@@ -1264,7 +1267,7 @@ function pullOffer(){
   .forEach(id=>document.getElementById(id).addEventListener("input",()=>{ pullOffer(); if(id==="m-mwst") renderSummary(); }));
 
 document.getElementById("ed-back").onclick=()=>{ pullOffer(); save(); renderProjectDetail(); showView("projekt"); };
-document.getElementById("ed-save").onclick=()=>{ pullOffer(); save(); toast("Gespeichert"); };
+document.getElementById("ed-save").onclick=()=>{ pullOffer(); save(); toast("Gespeichert"); if(typeof renderKalkAssistent==="function") renderKalkAssistent(); };
 document.getElementById("ed-pdf").onclick=()=>{ openPdfOptions(); };
 document.getElementById("ed-lexinv").onclick=()=>{ pullOffer(); save(); lexInvOpen(curProject,curOffer); };
 document.getElementById("ed-supplier").onclick=openSupplierSelect;
@@ -4721,6 +4724,232 @@ function bdayApply(){
   if(typeof renderCrewList==="function"){ try{ renderCrewList(); }catch(e){} }
   if(typeof renderCustomers==="function"){ try{ renderCustomers(); }catch(e){} }
   toast("🎂 "+n+" Geburtstag"+(n===1?"":"e")+" übernommen ("+nc+" Crew, "+nk+" Adressen)");
+}
+/* =========================================================================
+   KALKULATIONS-ASSISTENT (KI-Unterstützung bei der Angebotserstellung)
+   1. Projektprofil (project.profil = {typ, rolle, gewerke[]}) – Abfrage beim
+      ersten Angebot, änderbar im Panel.
+   2. Erfahrungswerte aus vergangenen Projekten: Angebots-EK je Kategorie,
+      Ist-Kosten aus zugeordneten Eingangsrechnungen, Erlöse, Tage, Crew-Tage,
+      Ort. Vergleichbarkeit über Profil, Ort und Größe.
+   3. Empfehlungen für das aktuelle Angebot (Personal, Transport, Anmiete,
+      Marge, Crew-Tagessatz) plus optionale KI-Einschätzung (Edge Function
+      „kalk-advisor“, siehe supabase/functions/kalk-advisor).
+   ========================================================================= */
+var KA_TYPEN=[["festival","Festival / Open Air"],["corporate","Corporate / Industrie-Event"],["konzert","Konzert / Tour"],["messe","Messe / Ausstellung"],["tv","TV / Show-Produktion"],["sonstiges","Sonstiges"]];
+var KA_ROLLEN=[["haupt","Hauptdienstleister"],["sub","Sub-Dienstleister"]];
+var KA_GEWERKE=[["licht","Licht"],["ton","Ton"],["led","LED / Video"],["rigging","Rigging"],["buehne","Bühne / Traversen"],["strom","Strom"],["sonstiges","Sonstiges"]];
+var KA_CATS=[["personal","Personal"],["transport","Transport"],["miete","Anmiete / Material"]];
+function kaLabel(list,k){ for(var i=0;i<list.length;i++){ if(list[i][0]===k) return list[i][1]; } return k||""; }
+function kaProfil(p){ if(!p.profil) p.profil={typ:"",rolle:"haupt",gewerke:[]}; if(!p.profil.gewerke) p.profil.gewerke=[]; return p.profil; }
+function kaProfilText(p){ var f=(p&&p.profil)||{}; var parts=[]; if(f.typ) parts.push(kaLabel(KA_TYPEN,f.typ)); if(f.rolle==="sub") parts.push("Sub-Dienstleister"); if((f.gewerke||[]).length) parts.push(f.gewerke.map(function(g){return kaLabel(KA_GEWERKE,g);}).join(", ")); return parts.join(" · "); }
+function kaMedian(arr){ var a=arr.filter(function(x){ return typeof x==="number"&&isFinite(x); }).sort(function(x,y){return x-y;}); if(!a.length) return null; var m=Math.floor(a.length/2); return a.length%2?a[m]:(a[m-1]+a[m])/2; }
+function kaRound(v,step){ step=step||50; return Math.round(v/step)*step; }
+function kaPct(v){ return v==null?"–":(Math.round(v*1000)/10).toLocaleString("de-DE",{minimumFractionDigits:1,maximumFractionDigits:1})+" %"; }
+function kaCity(p){ var f=(p.dispo&&p.dispo.fields)||{}; var s=String(f.location||"").trim(); if(!s) return ""; var m=/\d{5}\s+([A-Za-zÄÖÜäöüß .-]+)/.exec(s); if(m) return m[1].trim(); var parts=s.split(/[,·]/).map(function(x){return x.trim();}).filter(Boolean); return parts[parts.length-1]||s; }
+/* Einsatztage eines Projekts: Jobs (von/bis), sonst Eckdaten (Aufbau…Abbau) */
+function kaDays(p){
+  var set={}, add=function(iso){ if(iso) set[iso]=1; };
+  (p.offers||[]).forEach(function(o){ if(o.status==="abgelehnt") return; (o.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") return; var v=fcIsoDate(j.von), b=fcIsoDate(j.bis); if(!v&&!b) return; if(!b) b=v; if(!v) v=b; var d=new Date(v+"T12:00:00"), e=new Date(b+"T12:00:00"), n=0; while(d<=e&&n<200){ add(isoLocal(d)); d.setDate(d.getDate()+1); n++; } }); });
+  if(!Object.keys(set).length&&p.dispo&&p.dispo.fields){ var f=p.dispo.fields; ["aufbau","probe","show","datum","abbau","zeitraum"].forEach(function(k){ (typeof expandDays==="function"?expandDays(f[k]):[]).forEach(function(de){ add(fcIsoDate(de)); }); }); }
+  return Object.keys(set).length;
+}
+/* Ist-Kosten je Kategorie aus zugeordneten Eingangsrechnungen (inkl. Hilfsprojekte, jede Rechnung einmal) */
+function kaIst(p){
+  var out={personal:0,transport:0,miete:0,sonstiges:0,offen:0,sum:0,n:0}, seen={};
+  var kids=(DB.projects||[]).filter(function(x){ return x!==p&&x.parentNr&&awNorm(x.parentNr)===awNorm(p.nummer); });
+  [p].concat(kids).forEach(function(x){
+    var k=pKosten(x), posKat={}; (k.positionen||[]).forEach(function(pos){ posKat[pos.id]=pos.kat||"sonstiges"; });
+    projInvoicesFor(x).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; var v=invNet(r); out.sum+=v; out.n++;
+      var st=k.rech[r.id], kat=(st&&st.posId)?posKat[st.posId]:null;
+      if(kat==="personal") out.personal+=v; else if(kat==="transport") out.transport+=v; else if(kat==="miete"||kat==="einkauf") out.miete+=v; else if(kat) out.sonstiges+=v; else out.offen+=v; });
+  });
+  return out;
+}
+function kaCrew(p){
+  var pers=((p.dispo&&p.dispo.personnel)||[]).filter(function(x){ return x.status==="bestaetigt"; });
+  var days=0; pers.forEach(function(x){ Object.keys(x.shifts||{}).forEach(function(dk){ var s=x.shifts[dk]; if(s&&!s.aus&&(s.von||s.bis)) days++; }); });
+  return {n:pers.length,days:days};
+}
+/* Datensatz eines vergangenen Projekts */
+function kaRecord(p){
+  if(!p||!p.nummer||p.parentNr||p.ampel==="abgesagt") return null;
+  var vk=(p.ampel==="bestaetigt")?projectVolume(p):projectOfferNet(p);
+  var ek={personal:0,transport:0,miete:0}; kostenOffers(p).forEach(function(o){ var t=fcOfferSplit(o); ek.personal+=t.personal; ek.transport+=t.transport; ek.miete+=t.miete; });
+  ek.sum=ek.personal+ek.transport+ek.miete;
+  var ist=kaIst(p), erl=0;
+  [p].concat((DB.projects||[]).filter(function(x){ return x!==p&&x.parentNr&&awNorm(x.parentNr)===awNorm(p.nummer); })).forEach(function(x){ erl+=pAusgang(x).reduce(function(s,a){ return s+(Number(a.amount)||0); },0); });
+  if(!(vk>0)&&!(ist.sum>0)) return null;
+  var base=erl>0?erl:vk, crew=kaCrew(p), days=kaDays(p), f=kaProfil(p);
+  if(crew.n&&!crew.days&&days) crew.days=crew.n*days;
+  return {p:p,nr:p.nummer,name:p.name||"",typ:f.typ||"",rolle:f.rolle||"haupt",gewerke:f.gewerke||[],city:kaCity(p),days:days,vk:vk,erl:erl,base:base,ek:ek,ist:ist,hasIst:ist.sum>0,
+    margePlan:(vk>0&&ek.sum>0)?(vk-ek.sum)/vk:null, margeIst:(base>0&&ist.sum>0)?(base-ist.sum)/base:null, crewN:crew.n, crewDays:crew.days, bestaetigt:p.ampel==="bestaetigt"};
+}
+function kaScore(rec,cur){
+  var f=kaProfil(cur.p), s=0;
+  if(f.typ&&rec.typ===f.typ) s+=3;
+  if(f.rolle&&rec.rolle===f.rolle) s+=1;
+  (f.gewerke||[]).forEach(function(g){ if(rec.gewerke.indexOf(g)>=0) s+=1; });
+  if(cur.city&&rec.city&&rec.city.toLowerCase()===cur.city.toLowerCase()) s+=1;
+  if(cur.vk>0&&rec.vk>0){ var r=rec.vk/cur.vk; if(r>0.5&&r<2) s+=1; }
+  if(rec.hasIst) s+=1;
+  return s;
+}
+/* Analyse: aktuelles Angebot vs. Erfahrungswerte */
+function kaAnalyse(project,offer){
+  var t=calcTotals(offer), ek=fcOfferSplit(offer); ek.sum=ek.personal+ek.transport+ek.miete;
+  var cur={p:project,vk:t.netto,ek:ek,city:kaCity(project),days:kaDays(project)};
+  var f=kaProfil(project);
+  var all=(DB.projects||[]).filter(function(x){ return x.id!==project.id; }).map(kaRecord).filter(Boolean);
+  all.forEach(function(r){ r.score=kaScore(r,cur); });
+  var refs=all.filter(function(r){ return (!f.typ||r.typ===f.typ)&&r.hasIst; });
+  var basis="Gleicher Typ, mit Ist-Kosten";
+  if(refs.length<3){ refs=all.filter(function(r){ return r.hasIst; }); basis="Alle Projekte mit Ist-Kosten"; }
+  if(refs.length<3){ refs=all.slice(); basis="Alle Projekte (überwiegend Planwerte)"; }
+  refs.sort(function(a,b){ return b.score-a.score||(b.vk-a.vk); });
+  var B={n:refs.length,nIst:refs.filter(function(r){return r.hasIst;}).length,basis:basis,cats:{}};
+  KA_CATS.forEach(function(c){ var k=c[0];
+    var planShare=kaMedian(refs.map(function(r){ return (r.vk>0&&r.ek[k]>0)?r.ek[k]/r.vk:null; }));
+    var istShare=kaMedian(refs.map(function(r){ return (r.base>0&&r.ist[k]>0)?r.ist[k]/r.base:null; }));
+    var drifts=refs.map(function(r){ return (r.ek[k]>0&&r.ist[k]>0)?(r.ist[k]/r.ek[k]-1):null; }).filter(function(x){return x!=null;});
+    var over=drifts.filter(function(x){return x>0.05;}).length;
+    B.cats[k]={planShare:planShare,istShare:istShare,drift:kaMedian(drifts),nDrift:drifts.length,over:over};
+  });
+  B.margePlan=kaMedian(refs.map(function(r){return r.margePlan;}));
+  B.margeIst=kaMedian(refs.map(function(r){return r.margeIst;}));
+  B.crewRateIst=kaMedian(refs.map(function(r){ return (r.crewDays>0&&r.ist.personal>0)?r.ist.personal/r.crewDays:null; }));
+  B.crewRatePlan=kaMedian(refs.map(function(r){ return (r.crewDays>0&&r.ek.personal>0)?r.ek.personal/r.crewDays:null; }));
+  B.transportPerDay=kaMedian(refs.map(function(r){ return (r.days>0&&r.ist.transport>0)?r.ist.transport/r.days:null; }));
+  B.offenShare=kaMedian(refs.map(function(r){ return (r.base>0&&r.ist.sum>0)?(r.ist.sonstiges+r.ist.offen)/r.base:null; }));
+  /* Empfehlungen je Kategorie */
+  var recs=[], tips=[];
+  KA_CATS.forEach(function(c){ var k=c[0], b=B.cats[k], have=ek[k], share=cur.vk>0?have/cur.vk:null, exp=null, why="", empf=null;
+    if(b.istShare!=null&&cur.vk>0){ exp=cur.vk*b.istShare; }
+    if(exp!=null&&have<exp*0.85){ empf=kaRound(exp,50); why="Erfahrung: Ist-Kosten "+kaPct(b.istShare)+" vom Netto"; tips.push("⚠ "+c[1]+" im Angebot "+eur(have)+" ("+kaPct(share)+" vom Netto) – vergleichbare Projekte lagen bei "+kaPct(b.istShare)+" Ist, also etwa "+eur(exp)+". Empfehlung: EK auf ca. "+eur(empf)+" anheben."); }
+    else if(b.drift!=null&&b.drift>0.05&&have>0){ empf=kaRound(have*(1+b.drift),50); why="Plan→Ist im Schnitt +"+kaPct(b.drift); tips.push("↗ "+c[1]+": In "+b.over+" von "+b.nDrift+" Projekten lag das Ist über dem Plan, im Median +"+kaPct(b.drift)+". Puffer einplanen: "+eur(have)+" → ca. "+eur(empf)+"."); }
+    else if(exp!=null&&have>exp*1.25){ why="über Erfahrung ("+kaPct(b.istShare)+")"; tips.push("ℹ "+c[1]+" liegt mit "+kaPct(share)+" deutlich über dem Erfahrungswert von "+kaPct(b.istShare)+" – entweder bewusst großzügig oder Sparpotenzial."); }
+    else if(exp!=null&&have>0){ why="passt zur Erfahrung"; }
+    recs.push({k:k,label:c[1],have:have,share:share,planShare:b.planShare,istShare:b.istShare,drift:b.drift,nDrift:b.nDrift,over:b.over,exp:exp,empf:empf,why:why});
+  });
+  /* Marge */
+  var margePlanCur=(cur.vk>0&&ek.sum>0)?(cur.vk-ek.sum)/cur.vk:null;
+  if(margePlanCur!=null&&B.margeIst!=null){
+    var gap=B.margePlan!=null?(B.margePlan-B.margeIst):null;
+    if(gap!=null&&gap>0.03) tips.push("📉 Realisierte Marge lag im Median bei "+kaPct(B.margeIst)+", geplant waren "+kaPct(B.margePlan)+". Deine geplante Marge von "+kaPct(margePlanCur)+" wird sich erfahrungsgemäß um rund "+kaPct(gap)+" Punkte verringern → rechne mit ca. "+kaPct(margePlanCur-gap)+".");
+    else tips.push("✅ Geplante Marge "+kaPct(margePlanCur)+" – vergleichbare Projekte erreichten im Median "+kaPct(B.margeIst)+" Ist-Marge.");
+  }
+  /* Crew-Tagessatz */
+  var crewPd=0, crewEk=0; (offer.crew||[]).forEach(function(cl){ var pd=(Number(cl.personen)||0)*(Number(cl.tage)||0); crewPd+=pd; crewEk+=pd*(Number(cl.ek)||0); });
+  var crewRateCur=crewPd>0?crewEk/crewPd:null;
+  if(crewRateCur!=null&&B.crewRateIst!=null&&crewRateCur<B.crewRateIst*0.9) tips.push("👷 Crew-EK je Personentag im Angebot "+eur(crewRateCur)+", in vergleichbaren Projekten tatsächlich "+eur(B.crewRateIst)+" (inkl. Spesen, Überstunden, Zusatztage). Tagessätze prüfen.");
+  if(B.offenShare!=null&&B.offenShare>0.05) tips.push("📎 Etwa "+kaPct(B.offenShare)+" der Ist-Kosten waren Sonstiges oder nicht zugeordnet – solche Nebenkosten (Verbrauch, Spesen, Kleinmaterial) kommen fast immer dazu.");
+  if(cur.days&&B.transportPerDay!=null) tips.push("🚚 Transport-Erfahrung: ca. "+eur(B.transportPerDay)+" je Einsatztag; bei "+cur.days+" Tagen wären das rund "+eur(B.transportPerDay*cur.days)+".");
+  if(!f.typ) tips.unshift("Profil des Projekts fehlt (Typ, Gewerke) – mit Profil werden nur vergleichbare Projekte herangezogen.");
+  return {cur:cur,B:B,refs:refs,recs:recs,tips:tips,margePlanCur:margePlanCur,crewRateCur:crewRateCur,crewPd:crewPd,ekSum:ek.sum};
+}
+/* ---- Profil-Dialog ---- */
+function openProfilDialog(project,cb){
+  var bg=document.getElementById("kaprof-bg");
+  if(!bg){
+    bg=document.createElement("div"); bg.className="modal-bg"; bg.id="kaprof-bg";
+    bg.innerHTML='<div class="modal sm"><div class="modal-head"><h3>Um was für eine Veranstaltung geht es?</h3><button class="x" data-close="kaprof-bg">×</button></div><div class="modal-body" id="kaprof-body"></div>'+
+      '<div class="modal-foot"><button class="btn" id="kaprof-skip" type="button">Überspringen</button><span style="flex:1"></span><button class="btn primary" id="kaprof-ok" type="button">Speichern</button></div></div>';
+    document.body.appendChild(bg);
+    bg.onclick=function(e){ if(e.target===bg) closeModal("kaprof-bg"); };
+    bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("kaprof-bg"); }; });
+  }
+  var f=kaProfil(project);
+  var chip=function(name,k,l,on,type){ return '<label style="display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:16px;padding:4px 10px;cursor:pointer;font-size:12.5px;margin:2px 4px 2px 0"><input type="'+type+'" name="'+name+'" value="'+k+'"'+(on?' checked':'')+' style="width:14px;height:14px">'+l+'</label>'; };
+  document.getElementById("kaprof-body").innerHTML=
+    '<div class="muted" style="font-size:12.5px;margin-bottom:10px">Der Kalkulations-Assistent zieht damit nur vergleichbare Projekte für Erfahrungswerte heran. Änderbar jederzeit im Angebot unter „Profil“.</div>'+
+    '<div class="field"><label>Art der Veranstaltung</label><div>'+KA_TYPEN.map(function(t){ return chip("kaprof-typ",t[0],t[1],f.typ===t[0],"radio"); }).join("")+'</div></div>'+
+    '<div class="field"><label>Unsere Rolle</label><div>'+KA_ROLLEN.map(function(t){ return chip("kaprof-rolle",t[0],t[1],(f.rolle||"haupt")===t[0],"radio"); }).join("")+'</div></div>'+
+    '<div class="field"><label>Gewerke</label><div>'+KA_GEWERKE.map(function(t){ return chip("kaprof-gw",t[0],t[1],(f.gewerke||[]).indexOf(t[0])>=0,"checkbox"); }).join("")+'</div></div>';
+  document.getElementById("kaprof-skip").onclick=function(){ closeModal("kaprof-bg"); if(cb) cb(false); };
+  document.getElementById("kaprof-ok").onclick=function(){
+    var typ=(bg.querySelector('input[name="kaprof-typ"]:checked')||{}).value||"", rolle=(bg.querySelector('input[name="kaprof-rolle"]:checked')||{}).value||"haupt";
+    var gw=[].map.call(bg.querySelectorAll('input[name="kaprof-gw"]:checked'),function(x){return x.value;});
+    project.profil={typ:typ,rolle:rolle,gewerke:gw}; save(); closeModal("kaprof-bg"); if(cb) cb(true);
+  };
+  openModal("kaprof-bg");
+}
+/* ---- Panel im Angebots-Editor ---- */
+var kaOpen=(function(){ try{ return localStorage.getItem("ka_open")!=="0"; }catch(e){ return true; } })();
+function renderKalkAssistent(){
+  var el=document.getElementById("ka-card"); if(!el||typeof curProject==="undefined"||!curProject||!curOffer) return;
+  if(typeof RESTRICTED!=="undefined"&&RESTRICTED){ el.style.display="none"; return; }
+  el.style.display="";
+  var p=curProject, o=curOffer, prof=kaProfilText(p);
+  var head='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div class="section-title" style="margin:0">🧠 Kalkulations-Assistent</div>'+
+    '<span class="muted" style="font-size:12px">'+(prof?esc(prof):'<span style="color:#c0392b">Profil fehlt</span>')+'</span><span style="flex:1"></span>'+
+    '<button class="btn sm" id="ka-profil">Profil</button><button class="btn sm" id="ka-refresh" title="Erfahrungswerte mit dem aktuellen Angebot neu berechnen">↻ Aktualisieren</button>'+
+    '<button class="btn sm" id="ka-ai" title="Einschätzung durch die KI auf Basis der Erfahrungswerte (Edge Function kalk-advisor)">✨ KI-Einschätzung</button>'+
+    '<button class="btn ghost sm" id="ka-toggle">'+(kaOpen?'▾ einklappen':'▸ aufklappen')+'</button></div>';
+  if(!kaOpen){ el.innerHTML=head; kaWire(); return; }
+  var A=kaAnalyse(p,o), B=A.B;
+  var h=head+'<div class="muted" style="font-size:12px;margin:8px 0 10px">Basis: '+B.n+' Projekt'+(B.n===1?'':'e')+' ('+B.nIst+' mit Ist-Kosten) · '+esc(B.basis)+' · Angebot netto '+eur(A.cur.vk)+', EK gesamt '+eur(A.ekSum)+(A.cur.days?(' · '+A.cur.days+' Einsatztag'+(A.cur.days===1?'':'e')):'')+'</div>';
+  if(!A.cur.vk){ h+='<div class="muted">Noch keine Positionen im Angebot – Empfehlungen erscheinen, sobald Netto und Einkauf vorhanden sind.</div>'; el.innerHTML=h; kaWire(); return; }
+  h+='<div style="overflow-x:auto"><table class="lines" style="font-size:12.5px"><thead><tr><th>Kategorie</th><th class="right">EK im Angebot</th><th class="right" title="Anteil des EK am Angebots-Netto">Anteil</th><th class="right" title="Median des geplanten EK-Anteils in vergleichbaren Projekten">Erfahrung Plan</th><th class="right" title="Median des tatsächlichen Kostenanteils (Rechnungen) in vergleichbaren Projekten">Erfahrung Ist</th><th class="right" title="Median der Abweichung Ist zu Plan">Plan → Ist</th><th class="right">Empfehlung EK</th><th>Begründung</th></tr></thead><tbody>'+
+    A.recs.map(function(r){ var warn=r.empf!=null&&r.empf>r.have;
+      return '<tr'+(warn?' style="background:#fff8e6"':'')+'><td><b>'+r.label+'</b></td><td class="right nowrap">'+eur(r.have)+'</td><td class="right nowrap">'+kaPct(r.share)+'</td><td class="right nowrap muted">'+kaPct(r.planShare)+'</td><td class="right nowrap">'+kaPct(r.istShare)+'</td><td class="right nowrap" style="color:'+(r.drift>0.05?'#c0392b':(r.drift!=null&&r.drift<-0.05?'#2d7a4f':'inherit'))+'">'+(r.drift!=null?((r.drift>0?'+':'')+kaPct(r.drift)+' <span class="muted">('+r.nDrift+')</span>'):'–')+'</td><td class="right nowrap" style="font-weight:700'+(warn?';color:#b4632e':'')+'">'+(r.empf!=null?eur(r.empf):'<span class="muted">wie geplant</span>')+'</td><td class="muted" style="font-size:11.5px">'+esc(r.why)+'</td></tr>'; }).join("")+
+    '</tbody></table></div>';
+  var tile=function(l,v,sub){ return '<div style="background:var(--gold-bg);border-radius:10px;padding:8px 14px;min-width:150px;flex:1"><div class="muted" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.04em">'+l+'</div><div style="font-size:15px;font-weight:700;margin-top:2px">'+v+'</div>'+(sub?('<div class="muted" style="font-size:11px">'+sub+'</div>'):'')+'</div>'; };
+  h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0">'+
+    tile("Marge geplant",kaPct(A.margePlanCur),"Erfahrung: Plan "+kaPct(B.margePlan)+" · Ist "+kaPct(B.margeIst))+
+    tile("Crew-EK je Personentag",A.crewRateCur!=null?eur(A.crewRateCur):"–",(A.crewPd?(A.crewPd+" Personentage · "):"")+"Erfahrung Ist "+(B.crewRateIst!=null?eur(B.crewRateIst):"–"))+
+    tile("Transport je Einsatztag",(A.cur.days&&A.cur.ek.transport)?eur(A.cur.ek.transport/A.cur.days):"–","Erfahrung Ist "+(B.transportPerDay!=null?eur(B.transportPerDay):"–"))+
+    tile("Nebenkosten / offen",kaPct(B.offenShare),"Anteil Sonstiges + nicht zugeordnet")+
+    '</div>';
+  h+='<div style="font-weight:700;font-size:13px;margin:6px 0 4px">Hinweise</div><ul style="margin:0 0 10px;padding-left:18px;font-size:12.5px;line-height:1.55">'+(A.tips.length?A.tips.map(function(t){ return '<li>'+esc(t)+'</li>'; }).join(""):'<li class="muted">Keine Auffälligkeiten.</li>')+'</ul>';
+  var top=A.refs.slice(0,8);
+  if(top.length){
+    h+='<div style="font-weight:700;font-size:13px;margin:6px 0 4px">Vergleichbare Projekte</div><div style="overflow-x:auto"><table class="lines" style="font-size:12px"><thead><tr><th>Projekt</th><th>Profil</th><th>Ort</th><th class="right">Tage</th><th class="right">Netto</th><th class="right">EK Plan</th><th class="right">Ist</th><th class="right">Marge Plan</th><th class="right">Marge Ist</th><th class="right" title="Ist-Anteile Personal / Transport / Anmiete">P / T / M (Ist)</th></tr></thead><tbody>'+
+      top.map(function(r){ return '<tr class="ka-ref" data-pid="'+esc(r.p.id)+'" style="cursor:pointer"><td><b>'+esc(r.nr)+'</b> '+esc(r.name)+(r.bestaetigt?'':' <span class="muted">(offen)</span>')+'</td><td class="muted">'+esc(kaProfilText(r.p)||"–")+'</td><td>'+esc(r.city||"–")+'</td><td class="right">'+(r.days||"–")+'</td><td class="right nowrap">'+eur(r.vk)+'</td><td class="right nowrap">'+(r.ek.sum?eur(r.ek.sum):"–")+'</td><td class="right nowrap">'+(r.ist.sum?eur(r.ist.sum):"–")+'</td><td class="right nowrap">'+kaPct(r.margePlan)+'</td><td class="right nowrap" style="color:'+(r.margeIst==null?'inherit':(r.margeIst>=0?'#2d7a4f':'#c0392b'))+'">'+kaPct(r.margeIst)+'</td><td class="right nowrap muted">'+(r.hasIst?(kaPct(r.ist.personal/r.base)+' / '+kaPct(r.ist.transport/r.base)+' / '+kaPct(r.ist.miete/r.base)):'–')+'</td></tr>'; }).join("")+
+      '</tbody></table></div>';
+  }
+  h+='<div id="ka-ai-box" style="margin-top:12px;display:none;background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;white-space:pre-wrap"></div>';
+  h+='<div class="muted" style="font-size:11px;margin-top:10px">Erfahrung Plan = Angebots-EK vergleichbarer Projekte · Erfahrung Ist = zugeordnete Eingangsrechnungen · Anteile jeweils vom Netto (bei abgerechneten Projekten von den Erlösen) · Mediane, keine Mittelwerte · Empfehlung = Netto × Erfahrungs-Ist-Anteil, oder Angebots-EK plus üblicher Plan→Ist-Puffer.</div>';
+  el.innerHTML=h; kaWire();
+}
+function kaWire(){
+  var el=document.getElementById("ka-card"); if(!el) return;
+  var b;
+  if((b=document.getElementById("ka-profil"))) b.onclick=function(){ openProfilDialog(curProject,function(){ renderKalkAssistent(); }); };
+  if((b=document.getElementById("ka-refresh"))) b.onclick=function(){ if(typeof pullOffer==="function") pullOffer(); renderKalkAssistent(); toast("Erfahrungswerte aktualisiert"); };
+  if((b=document.getElementById("ka-toggle"))) b.onclick=function(){ kaOpen=!kaOpen; try{ localStorage.setItem("ka_open",kaOpen?"1":"0"); }catch(e){} renderKalkAssistent(); };
+  if((b=document.getElementById("ka-ai"))) b.onclick=function(){ kaAiAdvice(); };
+  el.querySelectorAll(".ka-ref").forEach(function(tr){ tr.onclick=function(){ if(typeof pullOffer==="function") pullOffer(); save(); openProject(tr.dataset.pid); }; });
+}
+/* Kompakte Daten für die KI */
+function kaPayload(A){
+  var p=A.cur.p, f=kaProfil(p);
+  return {
+    projekt:{nummer:p.nummer,name:p.name,typ:kaLabel(KA_TYPEN,f.typ)||"",rolle:kaLabel(KA_ROLLEN,f.rolle||"haupt"),gewerke:(f.gewerke||[]).map(function(g){return kaLabel(KA_GEWERKE,g);}),ort:A.cur.city,einsatztage:A.cur.days,
+      eckdaten:(function(){ var d=(p.dispo&&p.dispo.fields)||{}; return {location:d.location||"",aufbau:d.aufbau||"",probe:d.probe||"",show:d.show||d.datum||"",abbau:d.abbau||"",zeitraum:d.zeitraum||"",inhalte:d.inhalte||""}; })()},
+    angebot:{netto:Math.round(A.cur.vk),ek:{personal:Math.round(A.cur.ek.personal),transport:Math.round(A.cur.ek.transport),anmiete:Math.round(A.cur.ek.miete)},marge_plan:A.margePlanCur,crew_personentage:A.crewPd,crew_ek_je_personentag:A.crewRateCur,
+      crew:(curOffer.crew||[]).map(function(c){ return {funktion:c.funktion,personen:c.personen,tage:c.tage,ek:c.ek,vk:c.satz}; }),
+      transport:(curOffer.transport||[]).map(function(t){ return {typ:transportLabel(t.typ),anzahl:t.anz,ek:t.ek,vk:t.preis}; }),
+      gruppen:(curOffer.jobs||[]).reduce(function(acc,j){ (j.groups||[]).forEach(function(g){ acc.push({name:g.name,kat:g.kat,vk:Math.round(groupVK(g)),ek:Math.round(groupEK(g))}); }); return acc; },[])},
+    erfahrung:{basis:A.B.basis,n:A.B.n,n_ist:A.B.nIst,kategorien:A.B.cats,marge_plan_median:A.B.margePlan,marge_ist_median:A.B.margeIst,crew_ek_je_personentag_ist:A.B.crewRateIst,transport_je_tag_ist:A.B.transportPerDay,nebenkosten_anteil:A.B.offenShare,
+      projekte:A.refs.slice(0,12).map(function(r){ return {nr:r.nr,name:r.name,typ:kaLabel(KA_TYPEN,r.typ),gewerke:r.gewerke,ort:r.city,tage:r.days,netto:Math.round(r.vk),erloes:Math.round(r.erl),ek_plan:{personal:Math.round(r.ek.personal),transport:Math.round(r.ek.transport),anmiete:Math.round(r.ek.miete)},ist:{personal:Math.round(r.ist.personal),transport:Math.round(r.ist.transport),anmiete:Math.round(r.ist.miete),sonstiges:Math.round(r.ist.sonstiges+r.ist.offen),summe:Math.round(r.ist.sum)},marge_plan:r.margePlan,marge_ist:r.margeIst,crew:r.crewN,crew_tage:r.crewDays}; })},
+    hinweise_app:A.tips
+  };
+}
+async function kaAiAdvice(){
+  var box=document.getElementById("ka-ai-box"); if(!box){ kaOpen=true; renderKalkAssistent(); box=document.getElementById("ka-ai-box"); }
+  if(!box) return;
+  if(typeof SB==="undefined"||!SB){ toast("KI-Einschätzung nur in der Cloud-Version"); return; }
+  if(typeof pullOffer==="function") pullOffer();
+  var A=kaAnalyse(curProject,curOffer);
+  box.style.display=""; box.textContent="✨ KI-Einschätzung wird erstellt …";
+  try{
+    var sess=await SB.auth.getSession(); if(!sess.data||!sess.data.session) throw new Error("nicht angemeldet");
+    var res=await fetch(SB_URL+"/functions/v1/kalk-advisor",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+sess.data.session.access_token,"apikey":SB_KEY},body:JSON.stringify(kaPayload(A))});
+    if(res.status===404) throw new Error("Die Edge Function „kalk-advisor“ ist noch nicht eingerichtet (Anleitung: supabase/functions/README.md im Repo).");
+    var out=await res.json(); if(!res.ok||out.error) throw new Error(out.error||("HTTP "+res.status));
+    box.textContent="✨ KI-Einschätzung\n\n"+(out.text||"(keine Antwort)");
+    curOffer.kiEinschaetzung={ts:Date.now(),text:out.text||""}; save();
+  }catch(e){ box.textContent="KI-Einschätzung nicht möglich: "+(e&&e.message||e)+"\n\nDie Erfahrungswerte oben funktionieren unabhängig davon."; }
 }
 function renderOverhead(){
   var el=document.getElementById("oh-body"); if(!el) return;
