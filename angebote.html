@@ -909,7 +909,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-12.2";
+var APP_VERSION="2026-09-12.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1782,13 +1782,16 @@ function renderCrew(){
   var ct=document.getElementById("crew-total"); if(ct) ct.textContent=eur(crewTotal(curOffer));
   renderCrewStats();
 }
+function crewIsReise(c){ return typeof kaIsReise==="function"&&kaIsReise(c); }
 function crewStatsCalc(o){
-  var pers=0,ets=0,vk=0,ek=0;
+  var pers=0,ets=0,vk=0,ek=0,rVk=0,rEk=0,rN=0;
   ((o&&o.crew)||[]).forEach(function(c){
-    var p=Number(c.personen)||0, t=Number(c.tage)||0;
-    pers+=p; ets+=p*t; vk+=crewLineTotal(c); ek+=p*t*(Number(c.ek)||0);
+    var p=Number(c.personen)||0, t=Number(c.tage)||0, lvk=crewLineTotal(c), lek=p*t*(Number(c.ek)||0);
+    vk+=lvk; ek+=lek;
+    if(crewIsReise(c)){ rN++; rVk+=lvk; rEk+=lek; return; }
+    pers+=p; ets+=p*t;
   });
-  return {pers:pers,ets:ets,vk:vk,ek:ek,marge:(vk>0?(vk-ek)/vk*100:null)};
+  return {pers:pers,ets:ets,vk:vk,ek:ek,reiseVk:rVk,reiseEk:rEk,reiseN:rN,marge:(vk>0?(vk-ek)/vk*100:null)};
 }
 function renderCrewStats(){
   var st=document.getElementById("crew-stats"); if(!st) return;
@@ -1801,6 +1804,7 @@ function renderCrewStats(){
   st.innerHTML='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px dashed var(--line)">'+
     pill("Techniker gesamt",s.pers)+
     pill("Einsatztage (ETs)",s.ets)+
+    (s.reiseN?pill("Reisekosten",eur(s.reiseVk)+' <span class="muted" style="font-weight:400;font-size:11px">(EK '+eur(s.reiseEk)+')</span>'):'')+
     pill("Summe VK",eur(s.vk))+
     pill("Summe EK",eur(s.ek))+
     pill("Marge",(s.marge==null?"–":(Math.round(s.marge)+" %")),mcol)+
@@ -1808,7 +1812,7 @@ function renderCrewStats(){
 }
 function crewListePDF(){
   if(typeof curOffer==="undefined"||!curOffer){ toast("Kein Angebot geöffnet"); return; }
-  var crew=(curOffer.crew||[]).filter(function(c){ return String(c.funktion||"").trim()||Number(c.personen)>0; });
+  var crew=(curOffer.crew||[]).filter(function(c){ return (String(c.funktion||"").trim()||Number(c.personen)>0)&&!crewIsReise(c); });
   if(!crew.length){ toast("Keine Crew-Kalkulation vorhanden"); return; }
   var jobName=function(id){ if(!id) return "ganzes Angebot"; var j=(curOffer.jobs||[]).find(function(x){return x.id===id;}); return j?(((j.nummer?j.nummer+" ":"")+(j.name||"Job")).trim()):"–"; };
   var pers=0, ets=0;
@@ -2471,7 +2475,7 @@ function gewerkForFunktion(f){
 function transferCalcToPlan(){
   if(!curOffer||!curProject){ return; }
   if(typeof pullOffer==="function") pullOffer();
-  var lines=(curOffer.crew||[]).filter(function(c){return (c.funktion||"").trim() || (Number(c.personen)||0)>0;});
+  var lines=(curOffer.crew||[]).filter(function(c){return ((c.funktion||"").trim() || (Number(c.personen)||0)>0)&&!crewIsReise(c);});
   if(!lines.length){ toast("Crew-Kalkulation ist leer"); return; }
   var totalSlots=lines.reduce(function(s,c){return s+Math.max(1,Number(c.personen)||1);},0);
   if(!confirm("Aus der Crew-Kalkulation "+lines.length+" Position(en) mit insgesamt "+totalSlots+" Personen ins Crew Sheet (Disposition) dieses Projekts übernehmen?\n\nEs werden leere Slots je Funktion angelegt – Namen, Telefon & E-Mail trägst du danach im Crew Sheet ein. Vorhandene Disposition bleibt erhalten.")) return;
@@ -3382,8 +3386,8 @@ function crewKalkPDF(){
   var crew=(curOffer.crew||[]).filter(function(c){ return String(c.funktion||"").trim()||crewLineTotal(c)>0; });
   if(!crew.length){ toast("Keine Crew-Kalkulation vorhanden"); return; }
   var jobName=function(id){ if(!id) return "ganzes Angebot"; var j=(curOffer.jobs||[]).find(function(x){return x.id===id;}); return j?(((j.nummer?j.nummer+" ":"")+(j.name||"Job")).trim()):"–"; };
-  var sum=0, pers=0;
-  var rows=crew.map(function(c){ var s=crewLineTotal(c); sum+=s; pers+=(Number(c.personen)||0);
+  var sum=0, pers=0, reise=0;
+  var rows=crew.map(function(c){ var s=crewLineTotal(c); sum+=s; if(crewIsReise(c)) reise+=s; else pers+=(Number(c.personen)||0);
     return '<tr><td><b>'+esc(c.funktion||"")+'</b>'+(c.note?('<div style="font-size:9px;color:#777">'+esc(c.note)+'</div>'):'')+'</td>'+
       '<td>'+esc(jobName(c.jobId))+'</td>'+
       '<td class="r">'+(Number(c.personen)||0)+'</td>'+
@@ -3398,7 +3402,7 @@ function crewKalkPDF(){
   var head='<div class="phead">'+((typeof logoDataUrl!=="undefined"&&logoDataUrl)?('<img src="'+logoDataUrl+'">'):'<div style="font-size:16px;font-weight:700;letter-spacing:.14em">NOVA WORKS</div>')+
     '<div class="ptitle"><div class="t">Crew-Kalkulation</div><div class="s">'+esc(sub)+'</div></div></div>';
   var tbl='<table><thead><tr><th>Funktion</th><th>Job</th><th style="text-align:right">Personen</th><th style="text-align:right">Tage</th><th style="text-align:right">Tagessatz €</th><th style="text-align:right">Spesen/Tag €</th><th style="text-align:right">Summe</th></tr></thead><tbody>'+rows+
-    '<tr style="border-top:2px solid #3d3d3d"><td colspan="2" style="font-weight:700;padding-top:6px">Gesamt Crew · '+pers+' Personen</td><td colspan="4"></td><td class="r" style="font-weight:700;padding-top:6px">'+eur(sum)+'</td></tr></tbody></table>';
+    '<tr style="border-top:2px solid #3d3d3d"><td colspan="2" style="font-weight:700;padding-top:6px">Gesamt Crew · '+pers+' Personen'+(reise?('<div style="font-weight:400;font-size:9.5px;color:#777">davon Reisekosten '+eur(reise)+' (keine Personen)</div>'):'')+'</td><td colspan="4"></td><td class="r" style="font-weight:700;padding-top:6px">'+eur(sum)+'</td></tr></tbody></table>';
   printDoc("Crew-Kalkulation "+pnr, head+tbl, "@page{size:A4;margin:11mm}.r{text-align:right;white-space:nowrap}");
 }
 function printDoc(title,inner,extra){
