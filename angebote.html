@@ -909,7 +909,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-12.1";
+var APP_VERSION="2026-09-12.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4766,6 +4766,10 @@ function kaIst(p){
   });
   return out;
 }
+/* Crew-Zeilen, die keine Personen sind (Reisekosten, Spesen, Hotel …) – zählen als Reise-/Nebenkosten der Techniker */
+var KA_REISE_RE=/reise|travel|fahrt|anreise|abreise|flug|bahn|hotel|übernacht|uebernacht|spesen|verpflegung|catering|km\b|kilometer|mietwagen|tank|benzin|diesel|maut/i;
+var KA_PERSON_RE=/techniker|technician|operator|helfer|hand\b|stagehand|rigger|fahrer|driver|meister|leiter|crew\s*chief|assistent|kran|elektriker|bühnen|buehnen|tontech|lichttech|videotech|ledtech/i;
+function kaIsReise(c){ var f=String((c&&c.funktion)||""); return KA_REISE_RE.test(f)&&!KA_PERSON_RE.test(f); }
 function kaCrew(p){
   var pers=((p.dispo&&p.dispo.personnel)||[]).filter(function(x){ return x.status==="bestaetigt"; });
   var days=0; pers.forEach(function(x){ Object.keys(x.shifts||{}).forEach(function(dk){ var s=x.shifts[dk]; if(s&&!s.aus&&(s.von||s.bis)) days++; }); });
@@ -4782,8 +4786,10 @@ function kaRecord(p){
   if(!(vk>0)&&!(ist.sum>0)) return null;
   var base=erl>0?erl:vk, crew=kaCrew(p), days=kaDays(p), f=kaProfil(p);
   if(crew.n&&!crew.days&&days) crew.days=crew.n*days;
+  var reise=0, offPd=0; kostenOffers(p).forEach(function(o){ var abg={}; (o.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abg[j.id]=1; }); (o.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; if(kaIsReise(c)) reise+=crewLineEK(c); else offPd+=(Number(c.personen)||0)*(Number(c.tage)||0); }); });
+  ek.reise=reise;
   return {p:p,nr:p.nummer,name:p.name||"",typ:f.typ||"",rolle:f.rolle||"haupt",gewerke:f.gewerke||[],city:kaCity(p),days:days,vk:vk,erl:erl,base:base,ek:ek,ist:ist,hasIst:ist.sum>0,
-    margePlan:(vk>0&&ek.sum>0)?(vk-ek.sum)/vk:null, margeIst:(base>0&&ist.sum>0)?(base-ist.sum)/base:null, crewN:crew.n, crewDays:crew.days, bestaetigt:p.ampel==="bestaetigt"};
+    margePlan:(vk>0&&ek.sum>0)?(vk-ek.sum)/vk:null, margeIst:(base>0&&ist.sum>0)?(base-ist.sum)/base:null, crewN:crew.n, crewDays:crew.days, offerPd:offPd, reise:reise, bestaetigt:p.ampel==="bestaetigt"};
 }
 function kaScore(rec,cur){
   var f=kaProfil(cur.p), s=0;
@@ -4819,6 +4825,7 @@ function kaAnalyse(project,offer){
   B.margeIst=kaMedian(refs.map(function(r){return r.margeIst;}));
   B.crewRateIst=kaMedian(refs.map(function(r){ return (r.crewDays>0&&r.ist.personal>0)?r.ist.personal/r.crewDays:null; }));
   B.crewRatePlan=kaMedian(refs.map(function(r){ return (r.crewDays>0&&r.ek.personal>0)?r.ek.personal/r.crewDays:null; }));
+  B.reisePdIst=kaMedian(refs.map(function(r){ return (r.offerPd>0&&r.reise>0)?r.reise/r.offerPd:null; }));
   B.transportPerDay=kaMedian(refs.map(function(r){ return (r.days>0&&r.ist.transport>0)?r.ist.transport/r.days:null; }));
   B.offenShare=kaMedian(refs.map(function(r){ return (r.base>0&&r.ist.sum>0)?(r.ist.sonstiges+r.ist.offen)/r.base:null; }));
   /* Empfehlungen je Kategorie */
@@ -4839,13 +4846,18 @@ function kaAnalyse(project,offer){
     else tips.push("✅ Geplante Marge "+kaPct(margePlanCur)+" – vergleichbare Projekte erreichten im Median "+kaPct(B.margeIst)+" Ist-Marge.");
   }
   /* Crew-Tagessatz */
-  var crewPd=0, crewEk=0; (offer.crew||[]).forEach(function(cl){ var pd=(Number(cl.personen)||0)*(Number(cl.tage)||0); crewPd+=pd; crewEk+=pd*(Number(cl.ek)||0); });
-  var crewRateCur=crewPd>0?crewEk/crewPd:null;
+  var crewPd=0, crewEk=0, reiseEk=0, reiseVk=0, reiseN=0, abgJ={}; (offer.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abgJ[j.id]=1; });
+  (offer.crew||[]).forEach(function(cl){ if(cl.jobId&&abgJ[cl.jobId]) return;
+    if(kaIsReise(cl)){ reiseN++; reiseEk+=crewLineEK(cl); reiseVk+=crewLineTotal(cl); return; }
+    var pd=(Number(cl.personen)||0)*(Number(cl.tage)||0); crewPd+=pd; crewEk+=pd*(Number(cl.ek)||0); });
+  var crewRateCur=crewPd>0?crewEk/crewPd:null, reisePd=crewPd>0?reiseEk/crewPd:null;
   if(crewRateCur!=null&&B.crewRateIst!=null&&crewRateCur<B.crewRateIst*0.9) tips.push("👷 Crew-EK je Personentag im Angebot "+eur(crewRateCur)+", in vergleichbaren Projekten tatsächlich "+eur(B.crewRateIst)+" (inkl. Spesen, Überstunden, Zusatztage). Tagessätze prüfen.");
+  if(reiseN){ tips.push("🧳 Reisekosten der Crew: "+eur(reiseEk)+" EK"+(reiseVk?(" / "+eur(reiseVk)+" VK"):"")+" in "+reiseN+" Zeile"+(reiseN===1?"":"n")+(reisePd!=null?(" – das sind "+eur(reisePd)+" je Personentag"):"")+". Nicht als Crew-Mitglieder gezählt, sondern als Reise-/Nebenkosten der Techniker."); }
+  else if(crewPd>0&&B.reisePdIst!=null&&B.reisePdIst>0) tips.push("🧳 Keine Reisekosten für die Crew im Angebot – vergleichbare Angebote hatten im Median "+eur(B.reisePdIst)+" je Personentag (Fahrt, Hotel, Spesen).");
   if(B.offenShare!=null&&B.offenShare>0.05) tips.push("📎 Etwa "+kaPct(B.offenShare)+" der Ist-Kosten waren Sonstiges oder nicht zugeordnet – solche Nebenkosten (Verbrauch, Spesen, Kleinmaterial) kommen fast immer dazu.");
   if(cur.days&&B.transportPerDay!=null) tips.push("🚚 Transport-Erfahrung: ca. "+eur(B.transportPerDay)+" je Einsatztag; bei "+cur.days+" Tagen wären das rund "+eur(B.transportPerDay*cur.days)+".");
   if(!f.typ) tips.unshift("Profil des Projekts fehlt (Typ, Gewerke) – mit Profil werden nur vergleichbare Projekte herangezogen.");
-  return {cur:cur,B:B,refs:refs,recs:recs,tips:tips,margePlanCur:margePlanCur,crewRateCur:crewRateCur,crewPd:crewPd,ekSum:ek.sum};
+  return {cur:cur,B:B,refs:refs,recs:recs,tips:tips,margePlanCur:margePlanCur,crewRateCur:crewRateCur,crewPd:crewPd,crewEk:crewEk,reiseEk:reiseEk,reiseVk:reiseVk,reiseN:reiseN,reisePd:reisePd,ekSum:ek.sum};
 }
 /* ---- Profil-Dialog ---- */
 function openProfilDialog(project,cb){
@@ -4897,6 +4909,7 @@ function renderKalkAssistent(){
   h+='<div style="display:flex;gap:10px;flex-wrap:wrap;margin:12px 0">'+
     tile("Marge geplant",kaPct(A.margePlanCur),"Erfahrung: Plan "+kaPct(B.margePlan)+" · Ist "+kaPct(B.margeIst))+
     tile("Crew-EK je Personentag",A.crewRateCur!=null?eur(A.crewRateCur):"–",(A.crewPd?(A.crewPd+" Personentage · "):"")+"Erfahrung Ist "+(B.crewRateIst!=null?eur(B.crewRateIst):"–"))+
+    tile("Reisekosten Crew",A.reiseN?eur(A.reiseEk):"–",(A.reiseN?(A.reiseN+" Zeile"+(A.reiseN===1?"":"n")+(A.reisePd!=null?(" · "+eur(A.reisePd)+" je Personentag"):"")):"keine Reisekosten-Zeile")+(B.reisePdIst!=null?(" · Erfahrung "+eur(B.reisePdIst)+"/PT"):""))+
     tile("Transport je Einsatztag",(A.cur.days&&A.cur.ek.transport)?eur(A.cur.ek.transport/A.cur.days):"–","Erfahrung Ist "+(B.transportPerDay!=null?eur(B.transportPerDay):"–"))+
     tile("Nebenkosten / offen",kaPct(B.offenShare),"Anteil Sonstiges + nicht zugeordnet")+
     '</div>';
@@ -4908,7 +4921,7 @@ function renderKalkAssistent(){
       '</tbody></table></div>';
   }
   h+='<div id="ka-ai-box" style="margin-top:12px;display:none;background:#fff;border:1px solid var(--line);border-left:4px solid var(--gold);border-radius:8px;padding:12px 14px;font-size:13px;line-height:1.55;white-space:pre-wrap"></div>';
-  h+='<div class="muted" style="font-size:11px;margin-top:10px">Erfahrung Plan = Angebots-EK vergleichbarer Projekte · Erfahrung Ist = zugeordnete Eingangsrechnungen · Anteile jeweils vom Netto (bei abgerechneten Projekten von den Erlösen) · Mediane, keine Mittelwerte · Empfehlung = Netto × Erfahrungs-Ist-Anteil, oder Angebots-EK plus üblicher Plan→Ist-Puffer.</div>';
+  h+='<div class="muted" style="font-size:11px;margin-top:10px">Erfahrung Plan = Angebots-EK vergleichbarer Projekte · Erfahrung Ist = zugeordnete Eingangsrechnungen · Anteile jeweils vom Netto (bei abgerechneten Projekten von den Erlösen) · Mediane, keine Mittelwerte · Empfehlung = Netto × Erfahrungs-Ist-Anteil, oder Angebots-EK plus üblicher Plan→Ist-Puffer · Crew-Zeilen wie „Reisekosten“, „Hotel“ oder „Spesen“ zählen als Reise-/Nebenkosten der Techniker, nicht als Personentage.</div>';
   el.innerHTML=h; kaWire();
 }
 function kaWire(){
@@ -4927,10 +4940,12 @@ function kaPayload(A){
     projekt:{nummer:p.nummer,name:p.name,typ:kaLabel(KA_TYPEN,f.typ)||"",rolle:kaLabel(KA_ROLLEN,f.rolle||"haupt"),gewerke:(f.gewerke||[]).map(function(g){return kaLabel(KA_GEWERKE,g);}),ort:A.cur.city,einsatztage:A.cur.days,
       eckdaten:(function(){ var d=(p.dispo&&p.dispo.fields)||{}; return {location:d.location||"",aufbau:d.aufbau||"",probe:d.probe||"",show:d.show||d.datum||"",abbau:d.abbau||"",zeitraum:d.zeitraum||"",inhalte:d.inhalte||""}; })()},
     angebot:{netto:Math.round(A.cur.vk),ek:{personal:Math.round(A.cur.ek.personal),transport:Math.round(A.cur.ek.transport),anmiete:Math.round(A.cur.ek.miete)},marge_plan:A.margePlanCur,crew_personentage:A.crewPd,crew_ek_je_personentag:A.crewRateCur,
-      crew:(curOffer.crew||[]).map(function(c){ return {funktion:c.funktion,personen:c.personen,tage:c.tage,ek:c.ek,vk:c.satz}; }),
+      crew:(curOffer.crew||[]).filter(function(c){ return !kaIsReise(c); }).map(function(c){ return {funktion:c.funktion,personen:c.personen,tage:c.tage,ek:c.ek,vk:c.satz}; }),
+      reisekosten:(curOffer.crew||[]).filter(kaIsReise).map(function(c){ return {bezeichnung:c.funktion,anzahl:c.personen,tage:c.tage,ek:c.ek,vk:c.satz,ek_gesamt:Math.round(crewLineEK(c))}; }),
+      reisekosten_ek_gesamt:Math.round(A.reiseEk),reisekosten_je_personentag:A.reisePd,
       transport:(curOffer.transport||[]).map(function(t){ return {typ:transportLabel(t.typ),anzahl:t.anz,ek:t.ek,vk:t.preis}; }),
       gruppen:(curOffer.jobs||[]).reduce(function(acc,j){ (j.groups||[]).forEach(function(g){ acc.push({name:g.name,kat:g.kat,vk:Math.round(groupVK(g)),ek:Math.round(groupEK(g))}); }); return acc; },[])},
-    erfahrung:{basis:A.B.basis,n:A.B.n,n_ist:A.B.nIst,kategorien:A.B.cats,marge_plan_median:A.B.margePlan,marge_ist_median:A.B.margeIst,crew_ek_je_personentag_ist:A.B.crewRateIst,transport_je_tag_ist:A.B.transportPerDay,nebenkosten_anteil:A.B.offenShare,
+    erfahrung:{basis:A.B.basis,n:A.B.n,n_ist:A.B.nIst,kategorien:A.B.cats,marge_plan_median:A.B.margePlan,marge_ist_median:A.B.margeIst,crew_ek_je_personentag_ist:A.B.crewRateIst,reisekosten_je_personentag_median:A.B.reisePdIst,transport_je_tag_ist:A.B.transportPerDay,nebenkosten_anteil:A.B.offenShare,
       projekte:A.refs.slice(0,12).map(function(r){ return {nr:r.nr,name:r.name,typ:kaLabel(KA_TYPEN,r.typ),gewerke:r.gewerke,ort:r.city,tage:r.days,netto:Math.round(r.vk),erloes:Math.round(r.erl),ek_plan:{personal:Math.round(r.ek.personal),transport:Math.round(r.ek.transport),anmiete:Math.round(r.ek.miete)},ist:{personal:Math.round(r.ist.personal),transport:Math.round(r.ist.transport),anmiete:Math.round(r.ist.miete),sonstiges:Math.round(r.ist.sonstiges+r.ist.offen),summe:Math.round(r.ist.sum)},marge_plan:r.margePlan,marge_ist:r.margeIst,crew:r.crewN,crew_tage:r.crewDays}; })},
     hinweise_app:A.tips
   };
