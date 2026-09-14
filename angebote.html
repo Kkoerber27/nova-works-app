@@ -385,6 +385,7 @@
     <div class="page-head">
       <div><h1>Adressen</h1><div class="sub" id="adr-count"></div></div>
       <div class="toolbar">
+        <button class="btn" id="btn-adr-vcf" title="Alle Adressen als Visitenkarten (.vcf) teilen – per AirDrop aufs iPhone oder als Datei">📇 Kontakte exportieren</button>
         <button class="btn" id="btn-import-adr">⤓ Importieren</button>
         <input type="file" id="adr-file" accept=".json,application/json" multiple style="display:none">
         <button class="btn primary" id="btn-new-cust">+ Neuer Kunde</button>
@@ -410,6 +411,7 @@
       <div><h1>Crew</h1><div class="sub" id="cm-count"></div></div>
       <div class="toolbar">
         <button class="btn" id="btn-bday" title="Geburtstagsliste einfügen (Facebook, Kalender, Kontakte) und mit Crew und Adressen abgleichen">🎂 Geburtstage abgleichen</button>
+        <button class="btn" id="btn-crew-vcf" title="Alle (bzw. die gefilterten) Mitarbeiter als Visitenkarten (.vcf) teilen – per AirDrop aufs iPhone oder als Datei">📇 Kontakte exportieren</button>
         <button class="btn" id="btn-crew-import">⤓ Crewplanung importieren</button>
         <input type="file" id="crew-import-file" accept=".json,application/json" style="display:none">
         <button class="btn primary" id="btn-new-member">+ Neuer Mitarbeiter</button>
@@ -663,6 +665,7 @@
     </div>
     <div class="modal-foot">
       <button class="btn danger" id="c-delete" style="margin-right:auto">Löschen</button>
+      <button class="btn" id="c-vcf" title="Als Visitenkarte (.vcf) teilen – AirDrop aufs iPhone oder Datei">📇 Visitenkarte</button>
       <button class="btn" data-close="cust-bg">Abbrechen</button>
       <button class="btn primary" id="c-save">Speichern</button>
     </div>
@@ -774,7 +777,7 @@
       <div class="field"><label>Bundesland</label><input id="cm-bundesland"></div>
     </div>
   </div>
-  <div class="modal-foot"><button class="btn danger" id="cm-delete" style="margin-right:auto">Löschen</button><button class="btn" data-close="cm-bg">Abbrechen</button><button class="btn primary" id="cm-save">Speichern</button></div>
+  <div class="modal-foot"><button class="btn danger" id="cm-delete" style="margin-right:auto">Löschen</button><button class="btn" id="cm-vcf" title="Als Visitenkarte (.vcf) teilen – AirDrop aufs iPhone oder Datei">📇 Visitenkarte</button><button class="btn" data-close="cm-bg">Abbrechen</button><button class="btn primary" id="cm-save">Speichern</button></div>
 </div></div>
 
 <div class="toast" id="toast"></div>
@@ -909,7 +912,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-12.3";
+var APP_VERSION="2026-09-14.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1296,6 +1299,8 @@ document.getElementById("btn-new-member").onclick=function(){openCrewMember(null
 document.getElementById("cm-save").onclick=saveCrewMember;
 document.getElementById("cm-addfunk").onclick=function(){ var c=document.getElementById("cm-funks"); var vals=[].map.call(c.querySelectorAll(".cm-fk"),function(x){return x.value;}); vals.push(""); renderMemberFunks(vals); };
 document.getElementById("cm-delete").onclick=deleteCrewMember;
+document.getElementById("cm-vcf").onclick=function(){ if(!editingMember) return; var m=editingMember, nm=(document.getElementById("cm-name").value||"").trim(); if(nm&&!m.name) m=Object.assign({},m,{name:nm}); vcShareCrew(m); };
+document.getElementById("btn-crew-vcf").onclick=function(){ vcShareCrewAll(vcCrewFiltered()); };
 document.getElementById("pd-add-assign").onclick=addAssignment;
 document.getElementById("btn-crew-import").onclick=function(){document.getElementById("crew-import-file").click();};
 var bdBtn=document.getElementById("btn-bday"); if(bdBtn) bdBtn.onclick=openBdayImport;
@@ -2405,9 +2410,10 @@ function renderCrewList(){
   var __q=(((typeof document!=="undefined"&&document.getElementById("crew-search"))||{}).value||"").trim().toLowerCase();
   var list=__q?__all.filter(function(m){ return (((m.name||"")+" "+(memberFunks(m).join(" "))+" "+(m.funktion||"")+" "+(m.ort||"")+" "+(m.plz||"")+" "+(m.notiz||"")).toLowerCase().indexOf(__q)>=0); }):__all;
   var cc=document.getElementById("cm-count"); if(cc) cc.textContent=__q?(list.length+" von "+__all.length+" Mitarbeitern"):(__all.length+" Mitarbeiter");
-  tb.innerHTML=list.map(function(m){return '<tr class="row-click" data-id="'+m.id+'"><td><strong>'+esc(m.name)+'</strong>'+(m.ort?'<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>':'')+'</td><td>'+esc(memberFunks(m).join(", "))+((m.dokumente&&m.dokumente.length)?('<div style="margin-top:2px">'+memberDocChips(m,true)+'</div>'):'')+'</td><td>'+esc(m.typ||"")+'</td><td class="nowrap">'+(m.geburtstag?(esc(crewGebDE(m.geburtstag))+' <span class="muted">· '+crewAge(m.geburtstag)+'</span>'+(String(m.geburtstag).slice(5,10)===(function(){var n=new Date();return ("0"+(n.getMonth()+1)).slice(-2)+"-"+("0"+n.getDate()).slice(-2);})()?" 🎂":"")):'<span class="muted">—</span>')+'</td><td class="right nowrap">'+(m.satz?eur(m.satz):"—")+'</td><td class="muted">'+esc(m.tel||"")+'</td></tr>';}).join("")
+  tb.innerHTML=list.map(function(m){return '<tr class="row-click" data-id="'+m.id+'"><td><strong>'+esc(m.name)+'</strong>'+(m.ort?'<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>':'')+'</td><td>'+esc(memberFunks(m).join(", "))+((m.dokumente&&m.dokumente.length)?('<div style="margin-top:2px">'+memberDocChips(m,true)+'</div>'):'')+'</td><td>'+esc(m.typ||"")+'</td><td class="nowrap">'+(m.geburtstag?(esc(crewGebDE(m.geburtstag))+(crewAge(m.geburtstag)!=null?(' <span class="muted">· '+crewAge(m.geburtstag)+'</span>'):'')+(String(m.geburtstag).slice(5,10)===(function(){var n=new Date();return ("0"+(n.getMonth()+1)).slice(-2)+"-"+("0"+n.getDate()).slice(-2);})()?" 🎂":"")):'<span class="muted">—</span>')+'</td><td class="right nowrap">'+(m.satz?eur(m.satz):"—")+'</td><td class="muted nowrap">'+esc(m.tel||"")+' <button class="btn sm ghost cm-vcf-row" data-id="'+m.id+'" title="Visitenkarte teilen (AirDrop / .vcf)" style="padding:2px 6px;margin-left:4px">📇</button></td></tr>';}).join("")
     || '<tr><td colspan="6" class="muted" style="text-align:center;padding:16px">Noch keine Mitarbeiter.</td></tr>';
   tb.querySelectorAll("tr[data-id]").forEach(function(tr){ tr.onclick=function(){ openCrewMember(tr.dataset.id); }; });
+  tb.querySelectorAll(".cm-vcf-row").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===b.dataset.id;}); if(m) vcShareCrew(m); }; });
 }
 function addToPool(pr){
   if(!pr||!pr.name) return; if(!DB.crew) DB.crew=[];
@@ -4729,6 +4735,85 @@ function bdayApply(){
   if(typeof renderCustomers==="function"){ try{ renderCustomers(); }catch(e){} }
   toast("🎂 "+n+" Geburtstag"+(n===1?"":"e")+" übernommen ("+nc+" Crew, "+nk+" Adressen)");
 }
+/* =========================================================================
+   VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
+   iPhone/Mac exportieren. Teilen-Dialog (AirDrop, Nachrichten, Mail) über
+   die Web-Share-API, sonst Download der .vcf-Datei. Mehrere Kontakte in
+   einer Datei → iOS bietet „Alle Kontakte hinzufügen“ an.
+   ========================================================================= */
+function vcEsc(v){ return String(v==null?"":v).replace(/\\/g,"\\\\").replace(/\r?\n/g,"\\n").replace(/,/g,"\\,").replace(/;/g,"\\;"); }
+function vcLine(name,val){ return val?(name+":"+val+"\r\n"):""; }
+/* Geburtstag: ohne Jahr (1900) → Apple-Platzhalterjahr 1604 */
+function vcBday(g){ var m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(g||"")); if(!m) return ""; return ((+m[1]>1900)?m[1]:"1604")+"-"+m[2]+"-"+m[3]; }
+function vcSplitName(full){ var p=String(full||"").trim().split(/\s+/).filter(Boolean); if(!p.length) return {vn:"",nn:""}; if(p.length===1) return {vn:"",nn:p[0]}; return {vn:p.slice(0,-1).join(" "),nn:p[p.length-1]}; }
+function vcTel(t){ return String(t||"").trim(); }
+function vcCard(o){
+  var s="BEGIN:VCARD\r\nVERSION:3.0\r\n";
+  s+="N:"+vcEsc(o.nn)+";"+vcEsc(o.vn)+";;;\r\n";
+  s+="FN:"+vcEsc(o.fn||((o.vn||"")+" "+(o.nn||"")).trim()||o.org)+"\r\n";
+  s+=vcLine("ORG",o.org?vcEsc(o.org)+(o.org2?";"+vcEsc(o.org2):""):"");
+  s+=vcLine("TITLE",vcEsc(o.title));
+  (o.tels||[]).forEach(function(t){ if(t.v) s+="TEL;TYPE="+t.type+":"+vcEsc(t.v)+"\r\n"; });
+  (o.mails||[]).forEach(function(m){ if(m) s+="EMAIL;TYPE=INTERNET,WORK:"+vcEsc(m)+"\r\n"; });
+  if(o.strasse||o.plz||o.ort||o.land) s+="ADR;TYPE=WORK:;;"+vcEsc(o.strasse)+";"+vcEsc(o.ort)+";"+vcEsc(o.bundesland)+";"+vcEsc(o.plz)+";"+vcEsc(o.land)+"\r\n";
+  s+=vcLine("BDAY",vcBday(o.bday));
+  s+=vcLine("URL",o.url?vcEsc(/^https?:/i.test(o.url)?o.url:("https://"+o.url)):"");
+  s+=vcLine("NOTE",vcEsc(o.note));
+  s+="REV:"+new Date().toISOString().replace(/\.\d+Z$/,"Z")+"\r\n";
+  s+="END:VCARD\r\n";
+  return s;
+}
+function vcCrew(m){
+  var n=vcSplitName(m.name), funks=(typeof memberFunks==="function"?memberFunks(m):[]).filter(Boolean);
+  if(!funks.length&&m.funktion) funks=[m.funktion];
+  var note=[funks.length?("Funktion: "+funks.join(", ")):"", m.typ?("Typ: "+m.typ):"", "Nova Works Crew"].filter(Boolean).join("\n");
+  return vcCard({vn:n.vn,nn:n.nn,org:m.firma||"",title:funks[0]||"",tels:[{type:"CELL,VOICE",v:vcTel(m.tel)}],mails:[m.email],strasse:m.strasse,plz:m.plz,ort:m.ort,bundesland:m.bundesland,land:m.land,bday:m.geburtstag,note:note});
+}
+function vcCust(c){
+  var vn=(c.vorname||"").trim(), nn=(c.nachname||"").trim();
+  if(!vn&&!nn&&c.ap){ var sp=vcSplitName(c.ap); vn=sp.vn; nn=sp.nn; }
+  var fn=((vn+" "+nn).trim())||c.firma;
+  var note=[c.zahlung?("Zahlung: "+c.zahlung):"", c.ustid?("USt-ID: "+c.ustid):"", "Nova Works Kunde"].filter(Boolean).join("\n");
+  return vcCard({vn:vn,nn:nn,fn:fn,org:c.firma||"",org2:c.zusatz||"",tels:[{type:"WORK,VOICE",v:vcTel(c.tel)}],mails:[c.email],strasse:c.strasse,plz:c.plz,ort:c.ort,land:c.land,bday:c.geburtstag,url:c.web,note:note});
+}
+function vcFileName(base){ return (String(base||"Kontakt").replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/Ä/g,"Ae").replace(/Ö/g,"Oe").replace(/Ü/g,"Ue").replace(/ß/g,"ss").replace(/[\\\/:*?"<>|]+/g,"-").replace(/\s+/g,"_").slice(0,60)||"Kontakt")+".vcf"; }
+/* Teilen (AirDrop & Co.) – muss direkt aus dem Klick heraus aufgerufen werden; sonst Download */
+function vcShare(text,filename,title){
+  var blob=new Blob([text],{type:"text/vcard;charset=utf-8"}), file=null;
+  try{ file=new File([blob],filename,{type:"text/vcard"}); }catch(e){}
+  if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+    navigator.share({files:[file],title:title||filename}).then(function(){ toast("Kontakt geteilt"); }).catch(function(e){ if(e&&e.name==="AbortError") return; vcDownload(blob,filename); });
+    return;
+  }
+  vcDownload(blob,filename);
+}
+function vcDownload(blob,filename){
+  var url=URL.createObjectURL(blob), a=document.createElement("a"); a.href=url; a.download=filename; document.body.appendChild(a); a.click();
+  setTimeout(function(){ try{ document.body.removeChild(a); }catch(e){} URL.revokeObjectURL(url); },1500);
+  toast("Visitenkarte gespeichert: "+filename+(navigator.share?"":" – auf dem iPhone öffnen, um sie in die Kontakte zu übernehmen"));
+}
+function vcShareCrew(m){ if(!m||!m.name){ toast("Name fehlt"); return; } vcShare(vcCrew(m),vcFileName(m.name),m.name); }
+function vcShareCust(c){ if(!c||!c.firma){ toast("Firma fehlt"); return; } vcShare(vcCust(c),vcFileName(c.ap||c.firma),c.firma); }
+function vcShareCrewAll(list){
+  list=(list||[]).filter(function(m){ return m&&m.name; });
+  if(!list.length){ toast("Keine Mitarbeiter zum Exportieren"); return; }
+  if(list.length===1) return vcShareCrew(list[0]);
+  vcShare(list.map(vcCrew).join(""),vcFileName("Nova_Works_Crew_"+list.length+"_Kontakte"),"Nova Works Crew ("+list.length+" Kontakte)");
+}
+function vcShareCustAll(list){
+  list=(list||[]).filter(function(c){ return c&&c.firma; });
+  if(!list.length){ toast("Keine Adressen zum Exportieren"); return; }
+  if(list.length===1) return vcShareCust(list[0]);
+  vcShare(list.map(vcCust).join(""),vcFileName("Nova_Works_Adressen_"+list.length+"_Kontakte"),"Nova Works Adressen ("+list.length+" Kontakte)");
+}
+/* Aktuell gefilterte Crew-Liste (Suchfeld) */
+function vcCrewFiltered(){
+  var all=(DB.crew||[]).slice().sort(function(a,b){return (a.name||"").localeCompare(b.name||"","de");});
+  var q=((document.getElementById("crew-search")||{}).value||"").trim().toLowerCase();
+  if(!q) return all;
+  return all.filter(function(m){ return (((m.name||"")+" "+((typeof memberFunks==="function"?memberFunks(m):[]).join(" "))+" "+(m.funktion||"")+" "+(m.ort||"")+" "+(m.plz||"")+" "+(m.notiz||"")).toLowerCase().indexOf(q)>=0); });
+}
+
 /* =========================================================================
    KALKULATIONS-ASSISTENT (KI-Unterstützung bei der Angebotserstellung)
    1. Projektprofil (project.profil = {typ, rolle, gewerke[]}) – Abfrage beim
@@ -7166,8 +7251,9 @@ function renderCustomers(){
     <td>${esc([c.plz,c.ort].filter(Boolean).join(" "))}</td>
     <td>${esc(c.ap||"")}${c.geburtstag?` <span class="muted" style="font-size:11px">🎂 ${esc(crewGebDE(c.geburtstag))}</span>`:""}</td>
     <td class="muted">${esc(c.email||"")}</td>
-    <td class="right"><button class="btn sm">Bearbeiten</button></td></tr>`).join("");
+    <td class="right nowrap"><button class="btn sm ghost adr-vcf-row" data-id="${c.id}" title="Visitenkarte teilen (AirDrop / .vcf)">📇</button> <button class="btn sm">Bearbeiten</button></td></tr>`).join("");
   rows.querySelectorAll("tr").forEach(tr=>tr.onclick=()=>openCust(tr.dataset.id));
+  rows.querySelectorAll(".adr-vcf-row").forEach(b=>b.onclick=e=>{ e.stopPropagation(); const c=DB.customers.find(x=>x.id===b.dataset.id); if(c) vcShareCust(c); });
 }
 document.getElementById("btn-new-cust").onclick=()=>openCust(null,"page");
 
@@ -7306,6 +7392,8 @@ function enrichCustomers(){
 }
 
 document.getElementById("btn-import-adr").onclick=()=>document.getElementById("adr-file").click();
+document.getElementById("c-vcf").onclick=()=>{ if(!editingCust) return; var c=Object.assign({},editingCust,{firma:(document.getElementById("c-firma").value||"").trim()||editingCust.firma}); vcShareCust(c); };
+document.getElementById("btn-adr-vcf").onclick=()=>vcShareCustAll(DB.customers||[]);
 document.getElementById("adr-file").onchange=e=>{
   const files=[...e.target.files]; if(!files.length) return;
   let total=0, done=0;
