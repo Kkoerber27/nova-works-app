@@ -577,6 +577,11 @@
       <div class="card panel-pad summary">
         <div class="section-title">Summen</div>
         <div id="s-jobs"></div>
+        <div id="s-pausch" style="margin-bottom:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;background:#fbfaf7">
+          <div style="font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-bottom:6px">Pauschalpreis (netto)</div>
+          <div style="display:flex;gap:6px"><input id="s-pausch-val" type="number" step="0.01" min="0" placeholder="z. B. 25000" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:6px 8px;font-size:13px"><button class="btn sm primary" id="s-pausch-go" title="Betrag nach Erfahrungswerten auf Personal, Transport und Anmiete verteilen">Verteilen</button></div>
+          <div id="s-pausch-info" style="font-size:11px;margin-top:6px;line-height:1.45"></div>
+        </div>
         <div class="sumrow"><span class="lbl kat-miete">Mietmaterial</span><span id="s-miete">0,00 €</span></div>
         <div class="sumrow"><span class="lbl kat-personal">Personal</span><span id="s-personal">0,00 €</span></div>
         <div class="sumrow"><span class="lbl kat-transport">Transport</span><span id="s-transport">0,00 €</span></div>
@@ -912,7 +917,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-14.1";
+var APP_VERSION="2026-09-14.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1272,6 +1277,8 @@ function pullOffer(){
 document.getElementById("ed-back").onclick=()=>{ pullOffer(); save(); renderProjectDetail(); showView("projekt"); };
 document.getElementById("ed-save").onclick=()=>{ pullOffer(); save(); toast("Gespeichert"); if(typeof renderKalkAssistent==="function") renderKalkAssistent(); };
 document.getElementById("ed-pdf").onclick=()=>{ openPdfOptions(); };
+document.getElementById("s-pausch-go").onclick=()=>{ pauschaleGo(); };
+document.getElementById("s-pausch-val").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); pauschaleGo(); } });
 document.getElementById("ed-lexinv").onclick=()=>{ pullOffer(); save(); lexInvOpen(curProject,curOffer); };
 document.getElementById("ed-supplier").onclick=openSupplierSelect;
 document.getElementById("ed-rider").onclick=riderPDF;
@@ -4974,6 +4981,81 @@ function openProfilDialog(project,cb){
   };
   openModal("kaprof-bg");
 }
+/* ---- Pauschalpreis: Netto-Betrag nach Erfahrungswerten auf Personal / Transport / Anmiete verteilen ---- */
+function kaVkShares(project,offer){
+  var A=kaAnalyse(project,offer), sh={personal:[],transport:[],miete:[]};
+  A.refs.forEach(function(r){ var s={personal:0,transport:0,miete:0}, n=0;
+    kostenOffers(r.p).forEach(function(o){ var t=calcTotals(o); s.personal+=t.personal; s.transport+=t.transport; s.miete+=t.miete; n+=t.netto; });
+    if(n>0){ ["personal","transport","miete"].forEach(function(k){ sh[k].push(s[k]/n); }); } });
+  var out={personal:kaMedian(sh.personal),transport:kaMedian(sh.transport),miete:kaMedian(sh.miete)};
+  var ok=["personal","transport","miete"].some(function(k){ return out[k]!=null; });
+  return {shares:ok?out:null,n:sh.personal.length,basis:A.B.basis};
+}
+var PAUSCH_LABEL={personal:"Personal",transport:"Transport",miete:"Anmiete"};
+function pauschaleVerteilen(project,offer,betrag){
+  betrag=Math.round((Number(betrag)||0)*100)/100; if(!(betrag>0)){ toast("Pauschalpreis (netto) eingeben"); return false; }
+  var abg={}; (offer.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abg[j.id]=1; });
+  var car={personal:[],transport:[],miete:[]};
+  (offer.jobs||[]).forEach(function(j){ if(abg[j.id]) return; (j.groups||[]).forEach(function(g){ var k=g.kat==="personal"?"personal":(g.kat==="transport"?"transport":"miete"); car[k].push({t:"g",o:g,vk:groupVK(g)}); }); });
+  (offer.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; var pd=(Number(c.personen)||0)*(Number(c.tage)||0); if(pd>0) car.personal.push({t:"c",o:c,vk:crewLineTotal(c),pd:pd}); });
+  (offer.transport||[]).forEach(function(t){ if(t.jobId&&abg[t.jobId]) return; var n=Number(t.anz)||0; if(n>0) car.transport.push({t:"t",o:t,vk:transportLineTotal(t),n:n}); });
+  var cats=["personal","transport","miete"].filter(function(k){ return car[k].length; });
+  if(!cats.length){ toast("Keine Positionen im Angebot – erst Gruppen, Crew oder Transport anlegen"); return false; }
+  var E=kaVkShares(project,offer), sh={}, quelle="", cur=calcTotals(offer), ek=calcEKTotals(offer);
+  cats.forEach(function(k){ sh[k]=(E.shares&&E.shares[k]!=null)?E.shares[k]:null; });
+  if(cats.every(function(k){ return sh[k]!=null; })) quelle="Erfahrung aus "+E.n+" Projekt"+(E.n===1?"":"en")+" ("+E.basis+")";
+  else if(cur.netto>0){ cats.forEach(function(k){ sh[k]=cur[k]/cur.netto; }); quelle="bisherige Verteilung im Angebot (keine Erfahrungswerte)"; }
+  else if(ek.ek>0){ cats.forEach(function(k){ sh[k]=ek[k]/ek.ek; }); quelle="EK-Verteilung im Angebot (keine Erfahrungswerte)"; }
+  else { cats.forEach(function(k){ sh[k]=1/cats.length; }); quelle="gleichmäßig (keine Erfahrungswerte)"; }
+  var sum=cats.reduce(function(s,k){ return s+(sh[k]||0); },0);
+  if(!(sum>0)){ cats.forEach(function(k){ sh[k]=1/cats.length; }); sum=1; }
+  cats.forEach(function(k){ sh[k]=sh[k]/sum; });
+  var fixGroup=null, fixMax=-1;
+  cats.forEach(function(k){
+    var target=betrag*sh[k], list=car[k], tot=list.reduce(function(s,x){ return s+x.vk; },0);
+    list.forEach(function(x){
+      var amt=tot>0?target*x.vk/tot:target/list.length;
+      if(x.t==="g"){ x.o.preis=Math.round(amt*100)/100; if(x.o.preis>fixMax){ fixMax=x.o.preis; fixGroup=x.o; } }
+      else if(x.t==="c"){ var per=amt/x.pd, sp=Number(x.o.spesen)||0, satz=Number(x.o.satz)||0;
+        if(satz+sp>0&&sp>0){ var f=per/(satz+sp); x.o.satz=Math.round(satz*f*100)/100; x.o.spesen=Math.round(sp*f*100)/100; }
+        else { x.o.satz=Math.round(per*100)/100; x.o.spesen=0; } }
+      else { x.o.preis=Math.round(amt/x.n*100)/100; }
+    });
+  });
+  if(fixGroup){ var diff=betrag-calcTotals(offer).netto; if(Math.abs(diff)>0.004) fixGroup.preis=Math.round((fixGroup.preis+diff)*100)/100; }
+  offer.pauschale=betrag; offer.pauschaleInfo={shares:sh,quelle:quelle,ts:Date.now()};
+  offer.pdfOpts=Object.assign({},offer.pdfOpts||{},{lineSums:false,groupSums:false,total:"plain"});
+  return true;
+}
+function pauschaleAufheben(offer){
+  offer.pauschale=null; offer.pauschaleInfo=null;
+  offer.pdfOpts=Object.assign({},offer.pdfOpts||{},{lineSums:true,groupSums:true,total:"sub"});
+}
+function renderPauschale(){
+  var pv=document.getElementById("s-pausch-val"), pi=document.getElementById("s-pausch-info"); if(!pv||!pi||!curOffer) return;
+  var o=curOffer, P=o.pauschaleInfo;
+  if(document.activeElement!==pv) pv.value=(o.pauschale>0)?o.pauschale:"";
+  if(o.pauschale>0&&P){
+    var t=calcTotals(o), parts=Object.keys(P.shares||{}).map(function(k){ return PAUSCH_LABEL[k]+" "+Math.round(P.shares[k]*100)+" %"; });
+    pi.innerHTML='<b>Pauschale aktiv</b> – verteilt: '+esc(parts.join(" · "))+'<br><span class="muted">Basis: '+esc(P.quelle||"")+'. Das PDF zeigt nur den Gesamtpreis.</span>'+
+      (Math.abs(t.netto-o.pauschale)>0.5?'<br><span style="color:#b4632e">⚠ Netto ('+eur(t.netto)+') weicht von der Pauschale ab – Positionen wurden geändert, ggf. erneut verteilen.</span>':'')+
+      '<br><a href="#" id="s-pausch-x" style="color:var(--ink-soft)">Pauschale aufheben (Preise bleiben)</a>';
+    var x=document.getElementById("s-pausch-x"); if(x) x.onclick=function(e){ e.preventDefault(); pauschaleAufheben(o); save(); renderSummary(); toast("Pauschale aufgehoben – PDF zeigt wieder Gruppenpreise"); };
+  } else {
+    pi.innerHTML='<span class="muted">Betrag eingeben und „Verteilen“: Der Preis wird nach den Erfahrungswerten des Kalkulations-Assistenten auf Personal, Transport und Anmiete verteilt (innerhalb einer Sparte im Verhältnis der bisherigen Preise). Im PDF steht dann nur der Gesamtpreis.</span>';
+  }
+}
+function pauschaleGo(){
+  if(!curOffer||!curProject) return;
+  if(typeof pullOffer==="function") pullOffer();
+  var v=parseFloat(document.getElementById("s-pausch-val").value)||0;
+  if(!(v>0)){ toast("Pauschalpreis (netto) eingeben"); return; }
+  if(!confirm("Alle Gruppen-, Crew- und Transportpreise dieses Angebots werden so angepasst, dass das Netto "+eur(v)+" ergibt. Die bisherigen Preise werden überschrieben. Fortfahren?")) return;
+  if(!pauschaleVerteilen(curProject,curOffer,v)) return;
+  renderJobs(); renderCrew(); renderTransport(); renderSummary(); save();
+  if(typeof renderKalkAssistent==="function") renderKalkAssistent();
+  toast("Pauschale "+eur(v)+" verteilt");
+}
 /* ---- Panel im Angebots-Editor ---- */
 var kaOpen=(function(){ try{ return localStorage.getItem("ka_open")!=="0"; }catch(e){ return true; } })();
 function renderKalkAssistent(){
@@ -7114,6 +7196,7 @@ function renderSummary(){
   var _marge=t.netto-ekt.ek, _me=document.getElementById("s-marge");
   if(_me){ _me.textContent=eur(_marge)+(t.netto>0?" ("+Math.round(_marge/t.netto*100)+" %)":""); _me.style.color=_marge<0?"#c0392b":"#2d7a4f"; _me.style.fontWeight="600"; }
   (curOffer.jobs||[]).forEach(function(j){ (j.groups||[]).forEach(function(g){ var sp=document.querySelector('.gtot[data-g="'+g.id+'"]'); if(sp) sp.textContent=eur(groupVK(g)); }); });
+  if(typeof renderPauschale==="function") renderPauschale();
   renderLogistics();
 }
 
@@ -7497,7 +7580,7 @@ function offerHTML(o){
   const t=calcTotals(o);
   const EN=((o.pdfOpts||{}).lang==="en");
   const salut=esc(EN?salutationForEN(c):salutationFor(c));
-  const O=o.pdfOpts||{}, optLine=O.lineSums!==false, optGroup=O.groupSums!==false, optTotal=O.total||"sub";
+  const O=o.pdfOpts||{}, pausch=(O.total==="plain")&&Number(o.pauschale)>0, optLine=O.lineSums!==false&&!pausch, optGroup=O.groupSums!==false&&!pausch, optTotal=O.total||"sub";
   const logo=logoDataUrl||LOGO_FALLBACK;
 
   const footFix=offerPdfFootFix();
@@ -7514,7 +7597,7 @@ function offerHTML(o){
   const jobLines = jobLinesArr.join("");
 
   const sublinesHtml=`<div class="subline"><span>Summe Mietmaterial:</span><span>${eur(t.miete)}</span></div><div class="subline"><span>Summe Personal:</span><span>${eur(t.personal)}</span></div><div class="subline"><span>Summe Transport:</span><span>${eur(t.transport)}</span></div>`;
-  const totalsHtml=`<table class="totals"><tr class="net"><td>Nettosumme:</td><td class="r">${eur(t.netto)}</td></tr><tr><td>MwSt ${fmtPct(o.mwst)} %:</td><td class="r">${eur(t.mwst)}</td></tr><tr class="gross"><td>Bruttosumme:</td><td class="r">${eur(t.brutto)}</td></tr></table>`;
+  const totalsHtml=`<table class="totals"><tr class="net"><td>${pausch?(EN?'Lump sum (net)':'Pauschalpreis (netto)'):'Nettosumme'}:</td><td class="r">${eur(t.netto)}</td></tr><tr><td>MwSt ${fmtPct(o.mwst)} %:</td><td class="r">${eur(t.mwst)}</td></tr><tr class="gross"><td>Bruttosumme:</td><td class="r">${eur(t.brutto)}</td></tr></table>`;
   const priceSummary=(optTotal==="sub"?(jobLines+sublinesHtml):"")+(optTotal!=="none"?totalsHtml:"");
   const cover=`<div class="cover">
     <div class="sender">${COMPANY.name} - ${COMPANY.strasse} - ${COMPANY.plz} - ${COMPANY.ort}</div>
@@ -7543,11 +7626,11 @@ function offerHTML(o){
   o.jobs.forEach(j=>{
     let n=0, rows="";
     var jobHasAlt=(j.groups||[]).some(function(g){return (g.lines||[]).some(function(l){return l.alt&&((Number(l.anz)||0)*lvk(l))>0;});});
-    var jobLine=optLine||(j.groups||[]).some(function(g){return g.showDetail;})||jobHasAlt;
-    var jobUnit=optLine&&(j.groups||[]).some(function(g){return !g.showDetail;});
+    var jobLine=(optLine||(j.groups||[]).some(function(g){return g.showDetail;})||jobHasAlt)&&!pausch;
+    var jobUnit=optLine&&(j.groups||[]).some(function(g){return !g.showDetail;})&&!pausch;
     var nCols=3+(jobUnit?1:0)+(jobLine?1:0);
     j.groups.forEach(g=>{
-      var gtot=groupVK(g); var gLine=optLine||g.showDetail, gUnit=optLine&&!g.showDetail, gSum=optGroup||g.showDetail;
+      var gtot=groupVK(g); var gLine=(optLine||g.showDetail)&&!pausch, gUnit=optLine&&!g.showDetail&&!pausch, gSum=(optGroup||g.showDetail)&&!pausch;
       rows+=`<tr class="grp-row"><td colspan="${nCols}">${esc(g.name)}</td></tr>`;
       let lastWg=null;
       g.lines.forEach(ln=>{
@@ -7707,6 +7790,7 @@ function openPdfOptions(){
   box.innerHTML=
     '<div style="font-weight:700;font-size:15px;margin-bottom:4px">PDF-Optionen</div>'+
     '<div style="font-size:12px;color:#888;margin-bottom:16px">Welche Preise sollen im Angebot angezeigt werden?</div>'+
+    (Number(o.pauschale)>0?'<div style="font-size:12px;color:#b4632e;margin:-8px 0 14px">Pauschale aktiv ('+eur(o.pauschale)+'): Bei „Nur eine Gesamtsumme“ werden keine Gruppen- und Einzelpreise gedruckt.</div>':'')+
     '<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:11px;cursor:pointer;font-size:13px"><input type="checkbox" id="po-line"'+(O.lineSums!==false?' checked':'')+' style="margin-top:2px"><span>Einzelpositions-Summen<br><span style="color:#999;font-size:11px">Einzelpreis & Summe je Zeile</span></span></label>'+
     '<label style="display:flex;align-items:flex-start;gap:8px;margin-bottom:16px;cursor:pointer;font-size:13px"><input type="checkbox" id="po-group"'+(O.groupSums!==false?' checked':'')+' style="margin-top:2px"><span>Gruppenpreise<br><span style="color:#999;font-size:11px">Summe je Positionsgruppe</span></span></label>'+
     '<div style="font-weight:600;font-size:13px;margin-bottom:8px;border-top:1px solid #eee;padding-top:12px">Sprache</div>'+
