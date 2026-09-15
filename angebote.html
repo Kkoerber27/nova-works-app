@@ -917,7 +917,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-14.2";
+var APP_VERSION="2026-09-15.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -8243,7 +8243,7 @@ function supplierPDF(entries){
         gls.forEach(function(ln){
           if(ln.wg&&ln.wg!==lastWg){ offerRows+='<tr class="wg-row"><td></td><td colspan="5">'+esc(ln.wg)+'</td></tr>'; lastWg=ln.wg; }
           n++;
-          offerRows+='<tr><td class="pn">'+n+'</td><td class="an">'+(ln.anz||"")+'</td><td>'+esc(ln.bez||"").replace(/\n/g,"<br>")+(ln.nr?(' <span style="color:#aaa">('+esc(ln.nr)+')</span>'):"")+'</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>';
+          offerRows+='<tr><td class="pn">'+n+'</td><td class="an">'+(ln.anz||"")+'</td><td>'+esc(ln.bez||"").replace(/\n/g,"<br>")+(ln.nr?(' <span style="color:#aaa">('+esc(ln.nr)+')</span>'):"")+((ln.note||"").trim()?('<div class="lnote">'+esc(ln.note).replace(/\n/g,"<br>")+'</div>'):"")+'</td><td class="fill"></td><td class="fill"></td><td class="fill"></td></tr>';
         });
       });
     });
@@ -8289,7 +8289,7 @@ function supplierPDF(entries){
     'table.pos th{text-align:left;font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:#999;border-bottom:1px solid #bbb;padding:5px 6px}'+
     'table.pos th:nth-child(1){width:34px}table.pos th:nth-child(2){width:48px}table.pos th:nth-child(4){width:60px}table.pos th:nth-child(5){width:70px}table.pos th:nth-child(6){width:120px}'+
     'table.pos td{padding:5px 6px;vertical-align:top;border-bottom:.5px solid #f1efeb}'+
-    'td.pn{color:#999}td.an{font-weight:600}td.fill{border-bottom:.5px solid #cfcabf}'+
+    'td.pn{color:#999}td.an{font-weight:600}td.fill{border-bottom:.5px solid #cfcabf}.lnote{color:#888;font-size:8.5px;margin-top:1px;font-style:italic}'+
     'tr.off-row td{background:#1c1c1c;color:#fff;font-weight:700;font-size:12px;padding:8px 8px;border-left:5px solid #b8973f}'+
     'tr.job-row td{background:linear-gradient(90deg,#5a5750,#8d8980);color:#fff;font-weight:700;font-size:11px;padding:7px 8px}'+
     'tr.grp-row td{background:#efece6;font-weight:700;font-size:11px;padding:7px 6px;border-top:1px solid #ddd8cf}'+
