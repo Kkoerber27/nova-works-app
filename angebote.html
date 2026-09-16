@@ -917,7 +917,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-16.3";
+var APP_VERSION="2026-09-16.4";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4043,6 +4043,17 @@ function ohFixForMonth(mk){
 /* Messe-Planung: Fixkosten-Einträge (einmalig, Sparte Messe) je Messe */
 function ohMessePlanList(id){ return ohFixList().filter(function(f){ return f.sparte==="messe"&&f.messeId===id; }); }
 function ohMessePlan(id){ return ohMessePlanList(id).reduce(function(s,f){ return s+(Number(f.betrag)||0); },0); }
+function messeSyncLabels(){ (DB.overheadFix||[]).forEach(function(f){ if(f.messeId){ var m=messeById(f.messeId); if(m) f.label=messeLabel(m); } }); }
+/* Messe aus einem anderen Jahr für einen Monat einplanen? → optional Kopie mit neuem Jahr anlegen */
+function messeForYear(messeId,monat){
+  var m=messeById(messeId); if(!m) return null;
+  var y=String(monat||"").slice(0,4); if(!y||!m.jahr||m.jahr===y) return m;
+  var ex=messeList().find(function(x){ return x.name===m.name&&x.jahr===y; }); if(ex) return ex;
+  if(confirm("„"+messeLabel(m)+"“ ist für "+m.jahr+" angelegt, der Monat liegt aber in "+y+".\n\nOK = neue Messe „"+m.name+" "+y+"“ anlegen und einplanen\nAbbrechen = die bestehende Messe "+m.jahr+" verwenden")){
+    var n={id:uid(),name:m.name,jahr:y,ort:m.ort||"",von:"",bis:"",notiz:""}; messeList().push(n); save(); return n;
+  }
+  return m;
+}
 function ohMessePlanAdd(messeId,monat,betrag){
   var m=(typeof messeById==="function")?messeById(messeId):null; if(!m) return null;
   var f={id:uid(),label:messeLabel(m),sparte:"messe",art:"einmalig",messeId:m.id,betrag:Number(betrag)||0,von:monat||"",bis:""};
@@ -4204,8 +4215,8 @@ function fcOnceItems(mk){
   var out=[];
   (DB.overheadFix||[]).forEach(function(f){
     if(f.art!=="einmalig"||!ohFixApplies(f,mk)) return;
-    var plan=Number(f.betrag)||0, ist=(f.sparte==="messe"&&f.messeId)?messeIstMonth(f.messeId,mk):0;
-    out.push({f:f,label:f.label||sparteLabel(f.sparte),plan:plan,ist:ist,use:ist>0?ist:plan,isIst:ist>0});
+    var plan=Number(f.betrag)||0, mm=(f.sparte==="messe"&&f.messeId&&typeof messeById==="function")?messeById(f.messeId):null, ist=mm?messeIstMonth(mm.id,mk):0;
+    out.push({f:f,label:mm?messeLabel(mm):(f.label||sparteLabel(f.sparte)),plan:plan,ist:ist,use:ist>0?ist:plan,isIst:ist>0});
   });
   return out;
 }
@@ -4226,7 +4237,8 @@ function fcMessenHtml(months,cur){
     var plan=Number(f.betrag)||0, ist=m?messeIstMonth(m.id,f.von):0, use=ist>0?ist:plan, past=f.von<=cur;
     sumPlan+=plan; sumIst+=ist; sumUse+=use;
     var st=ist>0?badge("IST",'#2d7a4f'):(past?badge("PLAN · offen",'#8a8a8a'):badge("PLAN "+f.von.slice(0,4),'#b8860b'));
-    rows.push({mk:f.von,html:'<tr data-fi="'+i+'"><td><b>'+esc(m?m.name:(f.label||"Einmalig"))+'</b>'+(m&&m.jahr?(' <span class="muted">'+esc(m.jahr)+'</span>'):'')+(m&&m.ort?('<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>'):'')+(m?'':('<div class="muted" style="font-size:11px">'+esc(sparteLabel(f.sparte))+'</div>'))+'</td>'+
+    var nameCell=m?('<div style="display:flex;gap:4px;align-items:center"><input class="fcm-name" data-mid="'+esc(m.id)+'" value="'+esc(m.name||"")+'" title="Name der Messe – änderbar" style="width:170px;font-weight:700;padding:4px 6px;border:1px solid var(--line);border-radius:6px"><input class="fcm-jahr" data-mid="'+esc(m.id)+'" value="'+esc(m.jahr||"")+'" placeholder="Jahr" title="Jahr der Messe – änderbar" style="width:58px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"></div>'+(m.ort?('<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>'):'')):('<input class="fcm-label" value="'+esc(f.label||"")+'" placeholder="Bezeichnung" style="width:200px;font-weight:700;padding:4px 6px;border:1px solid var(--line);border-radius:6px"><div class="muted" style="font-size:11px">'+esc(sparteLabel(f.sparte))+'</div>');
+    rows.push({mk:f.von,html:'<tr data-fi="'+i+'"><td>'+nameCell+'</td>'+
       '<td>'+st+'</td>'+
       '<td><input type="month" class="fcm-von" value="'+esc(f.von)+'" style="padding:4px 6px;border:1px solid var(--line);border-radius:6px"></td>'+
       '<td class="right"><input type="number" step="0.01" class="fcm-betrag" value="'+plan+'" style="width:110px;text-align:right;padding:4px 6px;border:1px solid var(--line);border-radius:6px"></td>'+
@@ -4249,7 +4261,7 @@ function fcMessenHtml(months,cur){
   }
   var messen=(typeof messeSorted==="function")?messeSorted():[];
   var h='<div class="section-title" style="margin-top:28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">Messen &amp; einmalige Kosten <span class="muted" style="font-weight:400;font-size:12px;text-transform:none;letter-spacing:0">('+rows.length+' geplant im Zeitraum · zählen in der Spalte Fixkosten)</span></div>'+
-    '<div class="muted" style="font-size:12px;margin-bottom:8px">'+badge("IST",'#2d7a4f')+' = Rechnungen der Messe liegen vor, der Ist-Betrag zählt im Forecast &nbsp; '+badge("PLAN "+(y+1),'#b8860b')+' = geplanter Betrag für die Zukunft &nbsp; '+badge("PLAN · offen",'#8a8a8a')+' = Monat schon erreicht, noch keine Rechnung. Monat und Planbetrag sind hier direkt änderbar; dieselben Einträge stehen im Overhead unter Fixkosten.</div>';
+    '<div class="muted" style="font-size:12px;margin-bottom:8px">'+badge("IST",'#2d7a4f')+' = Rechnungen der Messe liegen vor, der Ist-Betrag zählt im Forecast &nbsp; '+badge("PLAN "+(y+1),'#b8860b')+' = geplanter Betrag für die Zukunft &nbsp; '+badge("PLAN · offen",'#8a8a8a')+' = Monat schon erreicht, noch keine Rechnung. Name, Jahr, Monat und Planbetrag sind hier direkt änderbar; dieselben Einträge stehen im Overhead unter Fixkosten. Für ein neues Jahr am besten eine eigene Messe anlegen (z. B. „Prolight + Sound 2027“), damit die Kosten je Jahr getrennt bleiben.</div>';
   if(rows.length||extra.length){
     h+='<div style="overflow-x:auto"><table class="lines"><thead><tr><th>Messe / Kosten</th><th>Status</th><th>Monat</th><th class="right">Plan €</th><th class="right">Ist € (Rechnungen)</th><th class="right" title="Ist, sonst Plan">Zählt im Forecast</th><th></th></tr></thead><tbody>'+rows.join("")+extra.join("")+
       (rows.length?('<tr style="border-top:2px solid #b9b2a2;font-weight:700;background:#faf8f3"><td colspan="3">Summe geplante Einträge</td><td class="right nowrap">'+eur(sumPlan)+'</td><td class="right nowrap" style="color:#2d7a4f">'+eur(sumIst)+'</td><td class="right nowrap">'+eur(sumUse)+'</td><td></td></tr>'):'')+'</tbody></table></div>';
@@ -4265,6 +4277,10 @@ function fcMessenHtml(months,cur){
 function fcMessenWire(el){
   el.querySelectorAll("tr[data-fi]").forEach(function(tr){
     var f=(DB.overheadFix||[])[+tr.dataset.fi]; if(!f) return;
+    var nm=tr.querySelector(".fcm-name"), jh=tr.querySelector(".fcm-jahr"), lb=tr.querySelector(".fcm-label");
+    var upd=function(){ var m=messeById(nm.dataset.mid); if(!m) return; var n=nm.value.trim(), j=jh.value.trim(); if(n===m.name&&j===(m.jahr||"")) return; if(!n){ nm.value=m.name; return; } m.name=n; m.jahr=j; messeSyncLabels(); save(); renderForecast(); };
+    if(nm){ nm.onblur=upd; jh.onblur=upd; nm.onkeydown=jh.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); this.blur(); } }; }
+    if(lb){ lb.onblur=function(){ if(lb.value.trim()!==(f.label||"")){ f.label=lb.value.trim(); save(); renderForecast(); } }; lb.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); this.blur(); } }; }
     tr.querySelector(".fcm-von").onchange=function(){ f.von=this.value; save(); renderForecast(); };
     tr.querySelector(".fcm-betrag").onblur=function(){ var v=parseFloat(this.value)||0; if(v!==(Number(f.betrag)||0)){ f.betrag=v; save(); renderForecast(); } };
     tr.querySelector(".fcm-betrag").onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); this.blur(); } };
@@ -4279,6 +4295,7 @@ function fcMessenWire(el){
     if(mid==="__neu"||!mid){ var m=addMesse(nm.value,jh.value); if(!m){ toast("Name der Messe fehlt"); return; } mid=m.id; }
     var mon=document.getElementById("fcm-monat").value, bet=parseFloat(document.getElementById("fcm-betrag").value)||0;
     if(!mon){ toast("Monat wählen"); return; }
+    var mm=messeForYear(mid,mon); if(mm) mid=mm.id;
     var f=ohMessePlanAdd(mid,mon,bet); if(!f){ toast("Messe nicht gefunden"); return; }
     toast("Eingeplant: "+f.label+" · "+fcMonthLabel(mon)+" · "+eur(bet)); renderForecast();
   };
@@ -5326,7 +5343,7 @@ function renderOverhead(){
   if(messen.length){
     h+='<table class="lines"><thead><tr><th>Messe</th><th>Geplant im</th><th class="right">Plan €</th><th class="right">Ist € (Rechnungen)</th><th class="right">Differenz</th></tr></thead><tbody>'+
       messen.map(function(m){ var pl=ohMessePlanList(m.id), plan=ohMessePlan(m.id), ist=messeSum(m.id), diff=ist-plan;
-        return '<tr><td><b>'+esc(m.name||"")+'</b>'+(m.jahr?(' <span class="muted">'+esc(m.jahr)+'</span>'):'')+(m.ort?('<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>'):'')+'</td>'+
+        return '<tr><td><div style="display:flex;gap:4px;align-items:center"><input class="ohm-name" data-mid="'+esc(m.id)+'" value="'+esc(m.name||"")+'" title="Name – änderbar" style="width:170px;font-weight:700"><input class="ohm-jahr" data-mid="'+esc(m.id)+'" value="'+esc(m.jahr||"")+'" placeholder="Jahr" title="Jahr – änderbar" style="width:58px"><input class="ohm-ort" data-mid="'+esc(m.id)+'" value="'+esc(m.ort||"")+'" placeholder="Ort" title="Ort – änderbar" style="width:110px"></div></td>'+
           '<td class="nowrap">'+(pl.length?pl.map(function(f){ return ohMonthLbl(f.von||"")||"–"; }).join(", "):'<span class="muted">nicht geplant</span>')+'</td>'+
           '<td class="right nowrap">'+(plan?eur(plan):'<span class="muted">–</span>')+'</td><td class="right nowrap">'+(ist?eur(ist):'<span class="muted">–</span>')+'</td>'+
           '<td class="right nowrap" style="color:'+((plan&&ist)?(diff>0?'#c0392b':'#2d7a4f'):'inherit')+'">'+((plan&&ist)?((diff>0?'+':'')+eur(diff)):'–')+'</td></tr>'; }).join("")+'</tbody></table>';
@@ -5356,6 +5373,10 @@ function renderOverhead(){
   el.innerHTML=h;
   el.querySelectorAll(".oh-mk").forEach(function(th){ th.onclick=function(){ window._ohMk=(window._ohMk===th.dataset.mk?null:th.dataset.mk); ohMonthDetail(); }; });
   ohMonthDetail();
+  el.querySelectorAll(".ohm-name,.ohm-jahr,.ohm-ort").forEach(function(inp){
+    inp.onblur=function(){ var m=messeById(inp.dataset.mid); if(!m) return; var k=inp.classList.contains("ohm-name")?"name":(inp.classList.contains("ohm-jahr")?"jahr":"ort"); var v=inp.value.trim(); if(k==="name"&&!v){ inp.value=m.name; return; } if(v===(m[k]||"")) return; m[k]=v; messeSyncLabels(); save(); renderOverhead(); };
+    inp.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); inp.blur(); } };
+  });
   var ms=document.getElementById("oh-messe-sel"), mn=document.getElementById("oh-messe-name"), mj=document.getElementById("oh-messe-jahr");
   if(ms) ms.onchange=function(){ var neu=ms.value==="__neu"; mn.style.display=neu?"inline-block":"none"; mj.style.display=neu?"inline-block":"none"; if(neu) mn.focus(); };
   var ma=document.getElementById("oh-messe-add");
@@ -5364,6 +5385,7 @@ function renderOverhead(){
     if(mid==="__neu"||!mid){ var m=addMesse(mn.value,mj.value); if(!m){ toast("Name der Messe fehlt"); return; } mid=m.id; }
     var bet=parseFloat(document.getElementById("oh-messe-betrag").value)||0, mon=document.getElementById("oh-messe-monat").value;
     if(!mon){ toast("Monat wählen"); return; }
+    var mm=messeForYear(mid,mon); if(mm) mid=mm.id;
     var f=ohMessePlanAdd(mid,mon,bet); if(!f){ toast("Messe nicht gefunden"); return; }
     toast("Messe eingeplant: "+f.label+" · "+ohMonthLbl(mon)+" · "+eur(bet)); renderOverhead();
   };
@@ -5488,7 +5510,7 @@ function reShowMessen(){
   }
   el.innerHTML=h;
   el.querySelector("#messe-new-add").onclick=function(){ var m=addMesse(el.querySelector("#messe-new-name").value,el.querySelector("#messe-new-jahr").value,el.querySelector("#messe-new-ort").value); if(!m){ toast("Name der Messe fehlt"); return; } toast("Messe angelegt: "+messeLabel(m)); reShowMessen(); };
-  el.querySelectorAll(".messe-edit").forEach(function(b){ b.onclick=function(){ var m=messeById(b.dataset.mid); if(!m) return; var n=prompt("Name der Messe",m.name||""); if(n===null) return; var j=prompt("Jahr",m.jahr||""); if(j===null) return; var o=prompt("Ort",m.ort||""); if(o===null) return; var z=prompt("Notiz (optional)",m.notiz||""); if(z===null) return; m.name=n.trim()||m.name; m.jahr=j.trim(); m.ort=o.trim(); m.notiz=z.trim(); save(); reShowMessen(); }; });
+  el.querySelectorAll(".messe-edit").forEach(function(b){ b.onclick=function(){ var m=messeById(b.dataset.mid); if(!m) return; var n=prompt("Name der Messe",m.name||""); if(n===null) return; var j=prompt("Jahr",m.jahr||""); if(j===null) return; var o=prompt("Ort",m.ort||""); if(o===null) return; var z=prompt("Notiz (optional)",m.notiz||""); if(z===null) return; m.name=n.trim()||m.name; m.jahr=j.trim(); m.ort=o.trim(); m.notiz=z.trim(); if(typeof messeSyncLabels==="function") messeSyncLabels(); save(); reShowMessen(); }; });
   el.querySelectorAll(".messe-del").forEach(function(b){ b.onclick=function(){ var m=messeById(b.dataset.mid); if(!m) return; if(!confirm("Messe „"+messeLabel(m)+"“ löschen? Die Rechnungen bleiben in der Sparte Messe, verlieren aber die Zuordnung.")) return; deleteMesse(m.id); reShowMessen(); messeRefreshAll(); }; });
   el.querySelectorAll(".messe-sel").forEach(function(sel){ sel.onchange=function(){ var id=decodeURIComponent(sel.dataset.id), inv=reList().find(function(x){ return x.id===id; }); if(!inv) return; setInvoiceMesse(inv,sel.value); toast(sel.value?("→ "+messeLabel(messeById(sel.value))):"Messe-Zuordnung entfernt"); reShowMessen(); messeRefreshAll(); }; });
   reWireAssign(el);
