@@ -917,7 +917,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-16.1";
+var APP_VERSION="2026-09-16.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4030,12 +4030,23 @@ function handleInvoicePdfImport(fileList){
 function ohFixList(){ if(!DB.overheadFix) DB.overheadFix=[]; return DB.overheadFix; }
 function ohMonthKey(r){ var s=String(r.invoiceDate||r.received||""); var m=/^(\d{4})-(\d{2})/.exec(s); return m?(m[1]+"-"+m[2]):""; }
 function ohMonthLbl(k){ var m=/^(\d{4})-(\d{2})$/.exec(k); if(!m) return k; var M=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"]; return M[+m[2]-1]+" "+m[1].slice(2); }
+function ohFixApplies(f,mk){
+  if(!f||!f.von) return false;
+  if(f.art==="einmalig") return f.von===mk;
+  if(mk<f.von) return false;
+  if(f.bis&&mk>f.bis) return false;
+  return true;
+}
 function ohFixForMonth(mk){
-  return ohFixList().reduce(function(s,f){
-    if(!f.von||mk<f.von) return s;
-    if(f.bis&&mk>f.bis) return s;
-    return s+(Number(f.betrag)||0);
-  },0);
+  return ohFixList().reduce(function(s,f){ return ohFixApplies(f,mk)?(s+(Number(f.betrag)||0)):s; },0);
+}
+/* Messe-Planung: Fixkosten-Einträge (einmalig, Sparte Messe) je Messe */
+function ohMessePlanList(id){ return ohFixList().filter(function(f){ return f.sparte==="messe"&&f.messeId===id; }); }
+function ohMessePlan(id){ return ohMessePlanList(id).reduce(function(s,f){ return s+(Number(f.betrag)||0); },0); }
+function ohMessePlanAdd(messeId,monat,betrag){
+  var m=(typeof messeById==="function")?messeById(messeId):null; if(!m) return null;
+  var f={id:uid(),label:messeLabel(m),sparte:"messe",art:"einmalig",messeId:m.id,betrag:Number(betrag)||0,von:monat||"",bis:""};
+  ohFixList().push(f); save(); return f;
 }
 async function ohfixseedApply(){
   if(typeof SB==="undefined"||!SB) return;
@@ -4186,7 +4197,7 @@ function fcCostSplit(p){
 }
 function fcSoll(p){ var s=fcCostSplit(p); return s.personal+s.transport+s.miete; }
 function fcFix(mk){
-  return (DB.overheadFix||[]).reduce(function(s,f){ if(!f.von||mk<f.von) return s; if(f.bis&&mk>f.bis) return s; return s+(Number(f.betrag)||0); },0);
+  return (DB.overheadFix||[]).reduce(function(s,f){ return ohFixApplies(f,mk)?(s+(Number(f.betrag)||0)):s; },0);
 }
 function fcMonths(){
   var now=new Date(), y=now.getFullYear(), m=now.getMonth()+1, out=[], i;
@@ -4395,7 +4406,7 @@ function renderForecast(){
     '<td class="right nowrap">'+eur(T.personal)+'</td><td class="right nowrap">'+eur(T.transport)+'</td><td class="right nowrap">'+eur(T.miete)+'</td>'+
     '<td class="right nowrap" style="color:'+(marge>=0?'#2d7a4f':'#c0392b')+'">'+eur(marge)+'</td>'+col(T.fix)+'<td class="right nowrap" style="color:'+(erg>=0?'#2d7a4f':'#c0392b')+'">'+eur(erg)+'</td></tr>'+
     '</tbody></table></div>'+
-    '<div class="muted" style="font-size:11px;margin-top:10px">Bestätigt / fest = Projektsumme bestätigter Projekte und feste Planeinträge · Offen = Angebots-Netto der Projekte „Auf Anfrage“ und offene Planeinträge · Forecast = Bestätigt + Offen × Wahrscheinlichkeit · Abgerechnet = Ausgangsrechnungen nach Rechnungsdatum · Personal / Transport / Anmiete = geplante Kosten (Kalkulations-Soll, sonst Angebots-EK; Anmiete enthält Miete, Einkauf und Sonstiges), gewichtet · Fixkosten = Plan aus dem Overhead · Projekte werden nach ihrem Leistungszeitraum (Jobs „von/bis“ im Angebot) tageweise auf die Monate verteilt, Planeinträge zählen ganz in ihrem Monat; Hilfsprojekte zählen beim Hauptprojekt.</div>';
+    '<div class="muted" style="font-size:11px;margin-top:10px">Bestätigt / fest = Projektsumme bestätigter Projekte und feste Planeinträge · Offen = Angebots-Netto der Projekte „Auf Anfrage“ und offene Planeinträge · Forecast = Bestätigt + Offen × Wahrscheinlichkeit · Abgerechnet = Ausgangsrechnungen nach Rechnungsdatum · Personal / Transport / Anmiete = geplante Kosten (Kalkulations-Soll, sonst Angebots-EK; Anmiete enthält Miete, Einkauf und Sonstiges), gewichtet · Fixkosten = Plan aus dem Overhead (monatliche Fixkosten und einmalig geplante Kosten wie Messen) · Projekte werden nach ihrem Leistungszeitraum (Jobs „von/bis“ im Angebot) tageweise auf die Monate verteilt, Planeinträge zählen ganz in ihrem Monat; Hilfsprojekte zählen beim Hauptprojekt.</div>';
   /* Planung */
   var openProjs=(DB.projects||[]).filter(function(p){ return p&&p.nummer&&!p.parentNr&&p.ampel!=="abgesagt"&&!D.taken[p.id]; }).sort(function(a,b){ return String(b.nummer).localeCompare(String(a.nummer)); });
   h+='<div class="section-title" style="margin-top:28px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">Planung <span class="muted" style="font-weight:400;font-size:12px;text-transform:none;letter-spacing:0">('+D.plan.length+' Einträge · frei bearbeitbar)</span><span style="flex:1"></span>'+
@@ -4504,7 +4515,7 @@ function fcPDF(){
       '</tbody></table>';
   }
   if(D.noDate.length) inner+='<div style="font-size:8px;color:'+NW_MG+';margin-top:6px">Nicht enthalten, weil ohne Termin: '+D.noDate.map(function(r){ return esc(r.p.nummer||r.p.name||""); }).join(", ")+'</div>';
-  inner+='<div style="font-size:8px;color:'+NW_MG+';margin-top:14px;line-height:1.5">Bestätigt / fest = Projektsumme bestätigter Projekte und feste Planeinträge · Offen = Angebots-Netto der Projekte „Auf Anfrage“ und offene Planeinträge · Forecast = Bestätigt + Offen × Wahrscheinlichkeit · Abgerechnet = Ausgangsrechnungen nach Rechnungsdatum · Personal / Transport / Anmiete = geplante Kosten (Kalkulations-Soll, sonst Angebots-EK), gewichtet · Fixkosten = Plan aus dem Overhead · Projekte werden nach ihrem Leistungszeitraum tageweise auf die Monate verteilt, Planeinträge zählen ganz in ihrem Monat.</div>';
+  inner+='<div style="font-size:8px;color:'+NW_MG+';margin-top:14px;line-height:1.5">Bestätigt / fest = Projektsumme bestätigter Projekte und feste Planeinträge · Offen = Angebots-Netto der Projekte „Auf Anfrage“ und offene Planeinträge · Forecast = Bestätigt + Offen × Wahrscheinlichkeit · Abgerechnet = Ausgangsrechnungen nach Rechnungsdatum · Personal / Transport / Anmiete = geplante Kosten (Kalkulations-Soll, sonst Angebots-EK), gewichtet · Fixkosten = Plan aus dem Overhead (monatliche Fixkosten und einmalig geplante Kosten wie Messen) · Projekte werden nach ihrem Leistungszeitraum tageweise auf die Monate verteilt, Planeinträge zählen ganz in ihrem Monat.</div>';
   inner+='<div style="position:fixed;bottom:0;left:0;right:0;border-top:1px solid '+NW_HL+';padding-top:4px;font-size:7.5px;letter-spacing:.14em;text-transform:uppercase;color:'+NW_MG+'">Nova Works · systems creating moments</div>';
   var extra='@page{size:A4 landscape;margin:12mm 14mm 16mm}body{color:'+NW_CH+';font-size:9px}'+
     'th{background:none!important;color:'+NW_MG+'!important;font-size:7.5px;letter-spacing:.12em;font-weight:500;border-bottom:1px solid '+NW_HL+';padding:5px}'+
@@ -4566,7 +4577,7 @@ function fcPPT(){
     var kost=T.personal+T.transport+T.miete;
     kpiBox(s3,0.6,"Marge",eur(T.marge),(T.wc+T.wo)>0?vglPctF(T.marge/(T.wc+T.wo)*100)+" vom Umsatz":null,mc(T.marge));
     kpiBox(s3,3.65,"Kosten geplant",eur(kost),"Personal · Transport · Anmiete");
-    kpiBox(s3,6.7,"Fixkosten",eur(T.fix),"Plan aus Overhead");
+    kpiBox(s3,6.7,"Fixkosten",eur(T.fix),"Plan aus Overhead inkl. Messen");
     kpiBox(s3,9.75,"Ergebnis",eur(T.erg),"Marge − Fixkosten",mc(T.erg));
     s3.addChart(pptx.ChartType.bar,[
         {name:"Marge",labels:labs,values:months.map(function(mk){ var x=M[mk]; return Math.round((x.wc+x.wo)-x.soll); })},
@@ -5157,20 +5168,23 @@ function renderOverhead(){
     cell[key]=(cell[key]||0)+invNet(r); cnt[key]=(cnt[key]||0)+1;
     monTot[mk]=(monTot[mk]||0)+invNet(r);
   });
+  var mcell={}; gen.forEach(function(r){ var mk=ohMonthKey(r); if(!mk||r.generalCat!=="messe") return; var mid=(typeof messeMap==="function")?messeMap()[r.id]:""; if(mid) mcell[mk+"|"+mid]=(mcell[mk+"|"+mid]||0)+invNet(r); });
+  var fixSuppressed=function(f,mk){   // Ist-Rechnung vorhanden → Plan aussetzen (bei Messen je Messe)
+    if(f.sparte==="messe"&&f.messeId) return !!mcell[mk+"|"+f.messeId];
+    return !!cell[mk+"|"+(f.sparte||"betriebskosten")];
+  };
   var fixPlan=function(mk){
     return ohFixList().reduce(function(s,f){
-      if(!f.von||mk<f.von) return s;
-      if(f.bis&&mk>f.bis) return s;
-      if(cell[mk+"|"+(f.sparte||"betriebskosten")]) return s;   // Ist-Rechnung vorhanden → Plan aussetzen
+      if(!ohFixApplies(f,mk)) return s;
+      if(fixSuppressed(f,mk)) return s;
       return s+(Number(f.betrag)||0);
     },0);
   };
   var fixPlanSp=function(mk,slug){
     return ohFixList().reduce(function(s,f){
       if((f.sparte||"betriebskosten")!==slug) return s;
-      if(!f.von||mk<f.von) return s;
-      if(f.bis&&mk>f.bis) return s;
-      if(cell[mk+"|"+slug]) return s;
+      if(!ohFixApplies(f,mk)) return s;
+      if(fixSuppressed(f,mk)) return s;
       return s+(Number(f.betrag)||0);
     },0);
   };
@@ -5181,7 +5195,7 @@ function renderOverhead(){
   var h='<div class="kpis" style="margin-bottom:16px">'+
     '<div class="card panel-pad"><div class="muted" style="font-size:11px">AKTUELLER MONAT ('+ohMonthLbl(curMk)+')</div><div style="font-size:20px;font-weight:700">'+eur(monTot[curMk]||0)+'</div></div>'+
     '<div class="card panel-pad"><div class="muted" style="font-size:11px">Ø LETZTE '+last6.length+' MONATE</div><div style="font-size:20px;font-weight:700">'+eur(avg6)+'</div></div>'+
-    '<div class="card panel-pad"><div class="muted" style="font-size:11px">FIXKOSTEN / MONAT (PLAN)</div><div style="font-size:20px;font-weight:700">'+eur(ohFixForMonth(curMk))+'</div></div>'+
+    '<div class="card panel-pad"><div class="muted" style="font-size:11px">FIXKOSTEN / MONAT (PLAN, LAUFEND)</div><div style="font-size:20px;font-weight:700">'+eur(ohFixList().reduce(function(s,f){ return (f.art!=="einmalig"&&ohFixApplies(f,curMk))?(s+(Number(f.betrag)||0)):s; },0))+'</div>'+(function(){ var e=ohFixList().reduce(function(s,f){ return (f.art==="einmalig"&&ohFixApplies(f,curMk))?(s+(Number(f.betrag)||0)):s; },0); return e?('<div class="muted" style="font-size:11px">+ einmalig geplant '+eur(e)+'</div>'):''; })()+'</div>'+
     '<div class="card panel-pad"><div class="muted" style="font-size:11px">OVERHEAD-RECHNUNGEN GESAMT</div><div style="font-size:20px;font-weight:700">'+gen.length+'</div></div>'+
   '</div>';
   // Monats-Matrix
@@ -5218,31 +5232,65 @@ function renderOverhead(){
       gaps.map(function(g){ var spl=(SPARTEN.filter(function(x){return x.slug===g.sp;})[0]||{}).label||g.sp; return '<div style="margin:2px 0"><b>'+esc(g.label)+'</b> <span class="muted">('+esc(spl)+')</span>: fehlt '+g.miss.map(ohMonthLbl).join(", ")+'</div>'; }).join("")+
       '</div><div class="muted" style="font-size:11px;margin-top:6px">Absender mit regelm\u00e4\u00dfig monatlichen Rechnungen, bei denen einzelne Monate ohne Beleg sind (der laufende Monat wird nicht gepr\u00fcft).</div></div>';
   }
+  // Messe-Planung (Plan aus Fixkosten „einmalig“ je Messe vs. Ist aus Rechnungen)
+  var messen=(typeof messeSorted==="function")?messeSorted():[];
+  h+='<div class="card panel-pad" style="margin-bottom:16px"><div class="section-title">Messen – Plan &amp; Ist</div>';
+  if(messen.length){
+    h+='<table class="lines"><thead><tr><th>Messe</th><th>Geplant im</th><th class="right">Plan €</th><th class="right">Ist € (Rechnungen)</th><th class="right">Differenz</th></tr></thead><tbody>'+
+      messen.map(function(m){ var pl=ohMessePlanList(m.id), plan=ohMessePlan(m.id), ist=messeSum(m.id), diff=ist-plan;
+        return '<tr><td><b>'+esc(m.name||"")+'</b>'+(m.jahr?(' <span class="muted">'+esc(m.jahr)+'</span>'):'')+(m.ort?('<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>'):'')+'</td>'+
+          '<td class="nowrap">'+(pl.length?pl.map(function(f){ return ohMonthLbl(f.von||"")||"–"; }).join(", "):'<span class="muted">nicht geplant</span>')+'</td>'+
+          '<td class="right nowrap">'+(plan?eur(plan):'<span class="muted">–</span>')+'</td><td class="right nowrap">'+(ist?eur(ist):'<span class="muted">–</span>')+'</td>'+
+          '<td class="right nowrap" style="color:'+((plan&&ist)?(diff>0?'#c0392b':'#2d7a4f'):'inherit')+'">'+((plan&&ist)?((diff>0?'+':'')+eur(diff)):'–')+'</td></tr>'; }).join("")+'</tbody></table>';
+  } else h+='<div class="muted" style="margin-bottom:8px">Noch keine Messen angelegt – unter Rechnungen → Sparte „Messe“ anlegen oder hier direkt:</div>';
+  var nowMk=curMk;
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:10px">'+
+    '<select id="oh-messe-sel" style="min-width:200px">'+messen.map(function(m){ return '<option value="'+esc(m.id)+'">'+esc(messeLabel(m))+'</option>'; }).join("")+'<option value="__neu">+ Neue Messe …</option></select>'+
+    '<input id="oh-messe-name" placeholder="Name der neuen Messe" style="min-width:180px;display:'+(messen.length?'none':'inline-block')+'"><input id="oh-messe-jahr" placeholder="Jahr" style="width:70px;display:'+(messen.length?'none':'inline-block')+'">'+
+    '<input id="oh-messe-monat" type="month" value="'+nowMk+'" title="Monat, in dem die Kosten anfallen"><input id="oh-messe-betrag" type="number" step="0.01" placeholder="Plan € netto" style="width:130px;text-align:right">'+
+    '<button class="btn sm primary" id="oh-messe-add">+ Messe einplanen</button></div>'+
+    '<div class="muted" style="font-size:11px;margin-top:6px">Geplante Messekosten erscheinen als einmaliger Eintrag in den Fixkosten (Sparte Messe) und im Forecast als Kosten des jeweiligen Monats. Liegen für die Messe Ist-Rechnungen im selben Monat vor, zählt im Overhead das Ist.</div></div>';
   // Fixkosten-Verwaltung
-  h+='<div class="card panel-pad"><div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Monatliche Fixkosten (Plan) <button class="btn sm" id="oh-fix-add">+ Fixkosten</button></div>'+
-    '<table class="lines"><thead><tr><th>Bezeichnung</th><th>Sparte</th><th class="right">Betrag/Monat €</th><th>von</th><th>bis (leer = laufend)</th><th></th></tr></thead><tbody>'+
+  h+='<div class="card panel-pad"><div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Fixkosten &amp; geplante Kosten (Plan) <button class="btn sm" id="oh-fix-add">+ Fixkosten</button></div>'+
+    '<table class="lines"><thead><tr><th>Bezeichnung</th><th>Sparte</th><th>Art</th><th class="right">Betrag €</th><th>von / Monat</th><th>bis (leer = laufend)</th><th></th></tr></thead><tbody>'+
     (ohFixList().map(function(f,i){
-      return '<tr data-i="'+i+'"><td><input class="ohf-label" value="'+esc(f.label||"")+'" style="width:100%"></td>'+
+      var einm=f.art==="einmalig";
+      var lbl=(f.sparte==="messe"&&messen.length)?('<select class="ohf-messe" style="width:100%"><option value="">– Messe wählen –</option>'+messen.map(function(m){ return '<option value="'+esc(m.id)+'"'+(f.messeId===m.id?' selected':'')+'>'+esc(messeLabel(m))+'</option>'; }).join("")+'</select>'):('<input class="ohf-label" value="'+esc(f.label||"")+'" style="width:100%">');
+      return '<tr data-i="'+i+'"><td>'+lbl+'</td>'+
         '<td><select class="ohf-sparte">'+SPARTEN.map(function(sp){ return '<option value="'+sp.slug+'"'+(f.sparte===sp.slug?' selected':'')+'>'+esc(sp.label)+'</option>'; }).join("")+'</select></td>'+
+        '<td><select class="ohf-art"><option value="monatlich"'+(einm?'':' selected')+'>monatlich</option><option value="einmalig"'+(einm?' selected':'')+'>einmalig</option></select></td>'+
         '<td class="right"><input class="ohf-betrag" type="number" step="0.01" value="'+(f.betrag!=null?f.betrag:"")+'" style="width:110px;text-align:right"></td>'+
         '<td><input class="ohf-von" type="month" value="'+esc(f.von||"")+'"></td>'+
-        '<td><input class="ohf-bis" type="month" value="'+esc(f.bis||"")+'"></td>'+
+        '<td>'+(einm?'<span class="muted">–</span>':'<input class="ohf-bis" type="month" value="'+esc(f.bis||"")+'">')+'</td>'+
         '<td class="right"><button class="btn sm danger ohf-del">×</button></td></tr>';
-    }).join("")||'<tr><td colspan="6" class="muted" style="text-align:center;padding:14px">Noch keine Fixkosten hinterlegt – z. B. Miete, Versicherungen, Leasing, Software-Abos.</td></tr>')+
+    }).join("")||'<tr><td colspan="7" class="muted" style="text-align:center;padding:14px">Noch keine Fixkosten hinterlegt – z. B. Miete, Versicherungen, Leasing, Software-Abos.</td></tr>')+
     '</tbody></table></div>';
   el.innerHTML=h;
   el.querySelectorAll(".oh-mk").forEach(function(th){ th.onclick=function(){ window._ohMk=(window._ohMk===th.dataset.mk?null:th.dataset.mk); ohMonthDetail(); }; });
   ohMonthDetail();
+  var ms=document.getElementById("oh-messe-sel"), mn=document.getElementById("oh-messe-name"), mj=document.getElementById("oh-messe-jahr");
+  if(ms) ms.onchange=function(){ var neu=ms.value==="__neu"; mn.style.display=neu?"inline-block":"none"; mj.style.display=neu?"inline-block":"none"; if(neu) mn.focus(); };
+  var ma=document.getElementById("oh-messe-add");
+  if(ma) ma.onclick=function(){
+    var mid=ms?ms.value:"__neu";
+    if(mid==="__neu"||!mid){ var m=addMesse(mn.value,mj.value); if(!m){ toast("Name der Messe fehlt"); return; } mid=m.id; }
+    var bet=parseFloat(document.getElementById("oh-messe-betrag").value)||0, mon=document.getElementById("oh-messe-monat").value;
+    if(!mon){ toast("Monat wählen"); return; }
+    var f=ohMessePlanAdd(mid,mon,bet); if(!f){ toast("Messe nicht gefunden"); return; }
+    toast("Messe eingeplant: "+f.label+" · "+ohMonthLbl(mon)+" · "+eur(bet)); renderOverhead();
+  };
   var fa=document.getElementById("oh-fix-add");
   if(fa) fa.onclick=function(){ var now2=new Date(); ohFixList().push({id:uid(),label:"",sparte:"betriebskosten",betrag:0,von:now2.getFullYear()+"-"+("0"+(now2.getMonth()+1)).slice(-2),bis:""}); save(); renderOverhead(); };
   el.querySelectorAll("tr[data-i]").forEach(function(tr){
     var i=+tr.dataset.i, f=ohFixList()[i]; if(!f) return;
     var q=function(s){ return tr.querySelector(s); };
-    q(".ohf-label").oninput=function(){ f.label=this.value; save(); };
-    q(".ohf-sparte").onchange=function(){ f.sparte=this.value; save(); renderOverhead(); };
+    if(q(".ohf-label")) q(".ohf-label").oninput=function(){ f.label=this.value; save(); };
+    if(q(".ohf-messe")) q(".ohf-messe").onchange=function(){ f.messeId=this.value||""; var m=messeById(f.messeId); if(m) f.label=messeLabel(m); save(); renderOverhead(); };
+    q(".ohf-sparte").onchange=function(){ f.sparte=this.value; if(f.sparte!=="messe") f.messeId=""; save(); renderOverhead(); };
+    q(".ohf-art").onchange=function(){ f.art=this.value; if(f.art==="einmalig") f.bis=""; save(); renderOverhead(); };
     q(".ohf-betrag").onblur=function(){ f.betrag=parseFloat(this.value)||0; save(); renderOverhead(); };
     q(".ohf-von").onchange=function(){ f.von=this.value; save(); renderOverhead(); };
-    q(".ohf-bis").onchange=function(){ f.bis=this.value; save(); renderOverhead(); };
+    if(q(".ohf-bis")) q(".ohf-bis").onchange=function(){ f.bis=this.value; save(); renderOverhead(); };
     q(".ohf-del").onclick=function(){ if(confirm('Fixkosten "'+(f.label||"?")+'" löschen?')){ ohFixList().splice(i,1); save(); renderOverhead(); } };
   });
 }
@@ -5335,12 +5383,12 @@ function reShowMessen(){
   var mp=messeMap(), total=all.reduce(function(s,r){ return s+invNet(r); },0);
   var ohne=all.filter(function(r){ return !messeById(mp[r.id]); });
   var h='<div style="font-weight:600;margin:6px 0">Messe – '+all.length+' Rechnungen · '+eur(total)+'</div>';
-  h+='<table class="lines" style="margin-bottom:10px"><thead><tr><th>Messe</th><th>Jahr</th><th>Ort</th><th class="right">Rechnungen</th><th class="right">Kosten netto</th><th></th></tr></thead><tbody>';
-  messeSorted().forEach(function(m){ var inv=messeInvoices(m.id), s=inv.reduce(function(a,r){ return a+invNet(r); },0);
-    h+='<tr><td><b>'+esc(m.name||"")+'</b>'+(m.notiz?('<div class="muted" style="font-size:11px">'+esc(m.notiz)+'</div>'):'')+'</td><td>'+esc(m.jahr||"")+'</td><td>'+esc(m.ort||"")+'</td><td class="right">'+inv.length+'</td><td class="right nowrap"><b>'+eur(s)+'</b></td>'+
+  h+='<table class="lines" style="margin-bottom:10px"><thead><tr><th>Messe</th><th>Jahr</th><th>Ort</th><th class="right">Rechnungen</th><th class="right">Kosten netto</th><th class="right" title="Geplante Kosten aus dem Overhead">Plan</th><th></th></tr></thead><tbody>';
+  messeSorted().forEach(function(m){ var inv=messeInvoices(m.id), s=inv.reduce(function(a,r){ return a+invNet(r); },0), plan=(typeof ohMessePlan==="function")?ohMessePlan(m.id):0;
+    h+='<tr><td><b>'+esc(m.name||"")+'</b>'+(m.notiz?('<div class="muted" style="font-size:11px">'+esc(m.notiz)+'</div>'):'')+'</td><td>'+esc(m.jahr||"")+'</td><td>'+esc(m.ort||"")+'</td><td class="right">'+inv.length+'</td><td class="right nowrap"><b>'+eur(s)+'</b></td><td class="right nowrap muted">'+(plan?eur(plan):'–')+'</td>'+
       '<td class="nowrap"><button class="btn sm ghost messe-edit" data-mid="'+esc(m.id)+'" title="Bearbeiten">✎</button> <button class="btn sm ghost messe-del" data-mid="'+esc(m.id)+'" title="Messe löschen (Rechnungen bleiben in der Sparte)">🗑</button></td></tr>'; });
-  if(ohne.length) h+='<tr><td colspan="3" class="muted">Ohne Messe-Zuordnung</td><td class="right">'+ohne.length+'</td><td class="right nowrap">'+eur(ohne.reduce(function(a,r){ return a+invNet(r); },0))+'</td><td></td></tr>';
-  if(!messeList().length&&!ohne.length) h+='<tr><td colspan="6" class="muted">Noch keine Messe angelegt.</td></tr>';
+  if(ohne.length) h+='<tr><td colspan="3" class="muted">Ohne Messe-Zuordnung</td><td class="right">'+ohne.length+'</td><td class="right nowrap">'+eur(ohne.reduce(function(a,r){ return a+invNet(r); },0))+'</td><td></td><td></td></tr>';
+  if(!messeList().length&&!ohne.length) h+='<tr><td colspan="7" class="muted">Noch keine Messe angelegt.</td></tr>';
   h+='</tbody></table>';
   h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><input id="messe-new-name" placeholder="Neue Messe, z. B. Prolight + Sound" style="flex:2;min-width:180px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><input id="messe-new-jahr" placeholder="Jahr" style="width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><input id="messe-new-ort" placeholder="Ort" style="width:140px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><button class="btn sm primary" id="messe-new-add">+ Messe anlegen</button></div>';
   if(all.length){
