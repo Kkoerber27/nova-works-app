@@ -917,7 +917,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-15.1";
+var APP_VERSION="2026-09-16.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -3818,14 +3818,14 @@ var SPARTEN=[
  {slug:"marketing",label:"Marketing"},{slug:"auto",label:"Auto"},{slug:"auto_strom",label:"Auto Strom"},
  {slug:"reise",label:"Reisekosten"},{slug:"betriebskosten",label:"Betriebskosten"},{slug:"geschaeftsausstattung",label:"Geschäftsausstattung"},
  {slug:"versicherungen",label:"Versicherungen"},{slug:"mobilfunk",label:"Mobilfunk"},{slug:"gehalt",label:"Gehälter & Lohnnebenkosten"},
- {slug:"finanzamt",label:"Finanzamt"},{slug:"allgemein",label:"Allgemein"}
+ {slug:"finanzamt",label:"Finanzamt"},{slug:"messe",label:"Messe"},{slug:"allgemein",label:"Allgemein"}
 ];
 function sparteLabel(slug){ for(var i=0;i<SPARTEN.length;i++){ if(SPARTEN[i].slug===slug) return SPARTEN[i].label; } return slug||""; }
 function invM(x){ var n=Number(x); return isNaN(n)?0:n; }
 function invNet(r){ if(r&&r.amount!=null&&r.amount!=="") return invM(r.amount); var g=invM(r&&r.gross), v=invM(r&&r.vat); return v?(g-v):g; }
 function reList(){ return (DB.rechnungen||[]).concat(DB.rechManual||[]); }
 function reMailBadge(m){ if(!m) return ""; var c=(m.indexOf("accounting")>=0)?"#2d7a4f":"#6b5bd2"; return '<span style="font-size:10px;background:'+c+';color:#fff;border-radius:4px;padding:1px 5px">'+esc(String(m).split("@")[0])+'</span>'; }
-function reTargetLabel(r){ if(r.status==="ausgang") return '<span style="color:#b8860b;font-weight:600">Ausgang'+(r.projektNr?(' '+esc(r.projektNr)):' – kein Projekt erkannt')+'</span>'; if(r.status==="ignoriert") return '<span class="muted">ignoriert</span>'; if(r.assignType==="project"&&r.projektNr) return '<span style="color:#2d7a4f">Projekt '+esc(r.projektNr)+'</span>'; if(r.assignType==="general"&&r.generalCat) return '<span style="color:#6b5bd2">'+esc(sparteLabel(r.generalCat))+'</span>'; return '<span style="color:#c0392b">offen</span>'; }
+function reTargetLabel(r){ if(r.status==="ausgang") return '<span style="color:#b8860b;font-weight:600">Ausgang'+(r.projektNr?(' '+esc(r.projektNr)):' – kein Projekt erkannt')+'</span>'; if(r.status==="ignoriert") return '<span class="muted">ignoriert</span>'; if(r.assignType==="project"&&r.projektNr) return '<span style="color:#2d7a4f">Projekt '+esc(r.projektNr)+'</span>'; if(r.assignType==="general"&&r.generalCat) return '<span style="color:#6b5bd2">'+esc(sparteLabel(r.generalCat))+((r.generalCat==="messe"&&typeof messeOf==="function"&&messeOf(r))?(' · '+esc(messeLabel(messeOf(r)))):'')+'</span>'; return '<span style="color:#c0392b">offen</span>'; }
 var _reDups={};
 function reDupMap(list){
   var map={}, groups={};
@@ -5287,18 +5287,77 @@ function reRenderAll(q){
   _reDups=reDupMap(reList());
   q=String(q||"").toLowerCase();
   var list=reList().filter(function(r){ return r.status!=="ignoriert"; });
-  if(q) list=list.filter(function(r){ return ((r.senderName||"")+" "+(r.senderEmail||"")+" "+(r.subject||"")+" "+(r.projektNr||"")+" "+sparteLabel(r.generalCat)).toLowerCase().indexOf(q)>=0; });
+  if(q) list=list.filter(function(r){ return ((r.senderName||"")+" "+(r.senderEmail||"")+" "+(r.subject||"")+" "+(r.projektNr||"")+" "+sparteLabel(r.generalCat)+" "+messeLabel(messeOf(r))).toLowerCase().indexOf(q)>=0; });
   list.sort(function(a,b){ if((a.status==="neu")!==(b.status==="neu")) return a.status==="neu"?-1:1; return String(b.received||"").localeCompare(String(a.received||"")); });
   el.innerHTML= list.length? reTable(list) : '<div class="muted">Keine Treffer.</div>';
   reWireAssign(el);
 }
 function reShowSparte(slug){
+  if(slug==="messe"){ reShowMessen(); return; }
   var el=document.getElementById("re-sparte-detail"); if(!el) return;
   var list=reList().filter(function(r){return r.status==="zugewiesen"&&r.assignType==="general"&&r.generalCat===slug;});
   var sum=list.reduce(function(s,r){return s+invNet(r);},0);
   el.innerHTML='<div style="font-weight:600;margin:6px 0">'+esc(sparteLabel(slug))+' – '+list.length+' Rechnungen · '+eur(sum)+'</div>'+(list.length?reTable(list):'<div class="muted">Keine Rechnungen in dieser Sparte.</div>');
   reWireAssign(el);
 }
+/* ===== MESSEN (Sparte „Messe“ in den Rechnungen) =====
+   DB.messen = [{id,name,jahr,ort,von,bis,notiz}], Zuordnung Rechnung → Messe in DB.messeZuordnung[invId]
+   (getrennt von rechEdits, damit sie den Server-Abgleich der Rechnungen überlebt). */
+function messeList(){ if(!DB.messen) DB.messen=[]; return DB.messen; }
+function messeMap(){ if(!DB.messeZuordnung) DB.messeZuordnung={}; return DB.messeZuordnung; }
+function messeById(id){ return messeList().find(function(m){ return m.id===id; })||null; }
+function messeOf(r){ return r?messeById(messeMap()[r.id]):null; }
+function messeLabel(m){ return m?((m.name||"Messe")+(m.jahr?(" "+m.jahr):"")):""; }
+function messeSorted(){ return messeList().slice().sort(function(a,b){ return String(b.jahr||"").localeCompare(String(a.jahr||""))||String(a.name||"").localeCompare(String(b.name||""),"de"); }); }
+function messeInvoices(id){ return reList().filter(function(r){ return r.status==="zugewiesen"&&r.assignType==="general"&&r.generalCat==="messe"&&messeMap()[r.id]===id; }); }
+function messeSum(id){ return messeInvoices(id).reduce(function(s,r){ return s+invNet(r); },0); }
+function setInvoiceMesse(inv,id){ var mp=messeMap(); if(id) mp[inv.id]=id; else delete mp[inv.id]; save(); }
+function addMesse(name,jahr,ort){ name=String(name||"").trim(); if(!name) return null; var m={id:uid(),name:name,jahr:String(jahr||"").trim(),ort:String(ort||"").trim(),von:"",bis:"",notiz:""}; messeList().push(m); save(); return m; }
+function deleteMesse(id){ DB.messen=messeList().filter(function(m){ return m.id!==id; }); var mp=messeMap(); Object.keys(mp).forEach(function(k){ if(mp[k]===id) delete mp[k]; }); save(); }
+/* Auswahl im Zuordnen-Dialog */
+function messePickHtml(inv){
+  var cur=messeMap()[inv.id]||"";
+  var h='<div id="re-messe-pick" style="margin-top:8px;padding:10px;border:1px dashed var(--line);border-radius:8px;background:#fbfaf7"><div style="font-weight:600;font-size:12.5px;margin-bottom:6px">Welche Messe?</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+  messeSorted().forEach(function(m){ h+='<button class="btn sm re-messe" data-mid="'+esc(m.id)+'"'+(cur===m.id?' style="background:var(--gold);color:#fff"':'')+'>'+esc(messeLabel(m))+'</button>'; });
+  if(!messeList().length) h+='<span class="muted" style="font-size:12px">Noch keine Messe angelegt.</span>';
+  h+='</div><div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap"><input id="re-messe-new" placeholder="Neue Messe, z. B. Prolight + Sound" style="flex:2;min-width:160px;padding:6px 8px;border:1px solid var(--line);border-radius:6px"><input id="re-messe-jahr" placeholder="Jahr" style="width:70px;padding:6px 8px;border:1px solid var(--line);border-radius:6px"><button class="btn sm" id="re-messe-add">+ Anlegen &amp; zuordnen</button></div></div>';
+  return h;
+}
+function messePickWire(body,inv,done){
+  body.querySelectorAll(".re-messe").forEach(function(b){ b.onclick=function(){ assignInvoiceSparte(inv,"messe"); setInvoiceMesse(inv,b.dataset.mid); done(); }; });
+  var add=body.querySelector("#re-messe-add"); if(add) add.onclick=function(){ var m=addMesse(body.querySelector("#re-messe-new").value,body.querySelector("#re-messe-jahr").value); if(!m){ toast("Name der Messe fehlt"); return; } assignInvoiceSparte(inv,"messe"); setInvoiceMesse(inv,m.id); done(); };
+  var nn=body.querySelector("#re-messe-new"); if(nn){ nn.onkeydown=function(e){ if(e.key==="Enter"){ e.preventDefault(); add.onclick(); } }; nn.focus(); }
+}
+/* Detail der Sparte Messe: Kostenübersicht je Messe + Verwaltung */
+function reShowMessen(){
+  var el=document.getElementById("re-sparte-detail"); if(!el) return;
+  var all=reList().filter(function(r){ return r.status==="zugewiesen"&&r.assignType==="general"&&r.generalCat==="messe"; });
+  var mp=messeMap(), total=all.reduce(function(s,r){ return s+invNet(r); },0);
+  var ohne=all.filter(function(r){ return !messeById(mp[r.id]); });
+  var h='<div style="font-weight:600;margin:6px 0">Messe – '+all.length+' Rechnungen · '+eur(total)+'</div>';
+  h+='<table class="lines" style="margin-bottom:10px"><thead><tr><th>Messe</th><th>Jahr</th><th>Ort</th><th class="right">Rechnungen</th><th class="right">Kosten netto</th><th></th></tr></thead><tbody>';
+  messeSorted().forEach(function(m){ var inv=messeInvoices(m.id), s=inv.reduce(function(a,r){ return a+invNet(r); },0);
+    h+='<tr><td><b>'+esc(m.name||"")+'</b>'+(m.notiz?('<div class="muted" style="font-size:11px">'+esc(m.notiz)+'</div>'):'')+'</td><td>'+esc(m.jahr||"")+'</td><td>'+esc(m.ort||"")+'</td><td class="right">'+inv.length+'</td><td class="right nowrap"><b>'+eur(s)+'</b></td>'+
+      '<td class="nowrap"><button class="btn sm ghost messe-edit" data-mid="'+esc(m.id)+'" title="Bearbeiten">✎</button> <button class="btn sm ghost messe-del" data-mid="'+esc(m.id)+'" title="Messe löschen (Rechnungen bleiben in der Sparte)">🗑</button></td></tr>'; });
+  if(ohne.length) h+='<tr><td colspan="3" class="muted">Ohne Messe-Zuordnung</td><td class="right">'+ohne.length+'</td><td class="right nowrap">'+eur(ohne.reduce(function(a,r){ return a+invNet(r); },0))+'</td><td></td></tr>';
+  if(!messeList().length&&!ohne.length) h+='<tr><td colspan="6" class="muted">Noch keine Messe angelegt.</td></tr>';
+  h+='</tbody></table>';
+  h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><input id="messe-new-name" placeholder="Neue Messe, z. B. Prolight + Sound" style="flex:2;min-width:180px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><input id="messe-new-jahr" placeholder="Jahr" style="width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><input id="messe-new-ort" placeholder="Ort" style="width:140px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><button class="btn sm primary" id="messe-new-add">+ Messe anlegen</button></div>';
+  if(all.length){
+    h+='<div style="font-weight:600;margin:6px 0">Rechnungen der Sparte Messe</div><table class="lines"><thead><tr><th>Absender / Betreff</th><th>Datum</th><th class="right">Netto</th><th>Messe</th><th></th></tr></thead><tbody>'+
+      all.sort(function(a,b){ return String(b.invoiceDate||b.received||"").localeCompare(String(a.invoiceDate||a.received||"")); }).map(function(r){
+        return '<tr><td>'+esc(r.senderName||r.senderEmail||"—")+'<div class="muted" style="font-size:11px">'+esc(String(r.subject||"").slice(0,64))+'</div></td><td class="nowrap">'+esc(String(r.invoiceDate||r.received||"").slice(0,10))+'</td><td class="right nowrap"><b>'+eur(invNet(r))+'</b></td>'+
+          '<td><select class="messe-sel" data-id="'+encodeURIComponent(r.id)+'" style="font-size:12px;padding:3px;border:1px solid var(--line);border-radius:5px"><option value="">– keine –</option>'+messeSorted().map(function(m){ return '<option value="'+esc(m.id)+'"'+(mp[r.id]===m.id?' selected':'')+'>'+esc(messeLabel(m))+'</option>'; }).join("")+'</select></td>'+
+          '<td class="nowrap">'+(r.webLink?('<a href="'+esc(r.webLink)+'" target="_blank" rel="noopener" title="Mail öffnen">✉︎</a> '):'')+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button></td></tr>'; }).join("")+'</tbody></table>';
+  }
+  el.innerHTML=h;
+  el.querySelector("#messe-new-add").onclick=function(){ var m=addMesse(el.querySelector("#messe-new-name").value,el.querySelector("#messe-new-jahr").value,el.querySelector("#messe-new-ort").value); if(!m){ toast("Name der Messe fehlt"); return; } toast("Messe angelegt: "+messeLabel(m)); reShowMessen(); };
+  el.querySelectorAll(".messe-edit").forEach(function(b){ b.onclick=function(){ var m=messeById(b.dataset.mid); if(!m) return; var n=prompt("Name der Messe",m.name||""); if(n===null) return; var j=prompt("Jahr",m.jahr||""); if(j===null) return; var o=prompt("Ort",m.ort||""); if(o===null) return; var z=prompt("Notiz (optional)",m.notiz||""); if(z===null) return; m.name=n.trim()||m.name; m.jahr=j.trim(); m.ort=o.trim(); m.notiz=z.trim(); save(); reShowMessen(); }; });
+  el.querySelectorAll(".messe-del").forEach(function(b){ b.onclick=function(){ var m=messeById(b.dataset.mid); if(!m) return; if(!confirm("Messe „"+messeLabel(m)+"“ löschen? Die Rechnungen bleiben in der Sparte Messe, verlieren aber die Zuordnung.")) return; deleteMesse(m.id); reShowMessen(); messeRefreshAll(); }; });
+  el.querySelectorAll(".messe-sel").forEach(function(sel){ sel.onchange=function(){ var id=decodeURIComponent(sel.dataset.id), inv=reList().find(function(x){ return x.id===id; }); if(!inv) return; setInvoiceMesse(inv,sel.value); toast(sel.value?("→ "+messeLabel(messeById(sel.value))):"Messe-Zuordnung entfernt"); reShowMessen(); messeRefreshAll(); }; });
+  reWireAssign(el);
+}
+function messeRefreshAll(){ var si=document.getElementById("re-search"); if(typeof reRenderAll==="function"&&document.getElementById("re-all")) reRenderAll(si?si.value:""); }
 function awRechEdits(){ if(!DB.rechEdits) DB.rechEdits={}; return DB.rechEdits; }
 function awRecordEdit(inv){ awRechEdits()[inv.id]={status:inv.status,assignType:inv.assignType||"",projektNr:inv.projektNr||"",generalCat:inv.generalCat||""}; save(); }
 function awReconcileRech(){ var ov=DB.rechEdits; if(!ov) return; var byId={}; (DB.rechnungen||[]).forEach(function(r){ byId[r.id]=r; }); Object.keys(ov).forEach(function(iid){ var r=byId[iid], e=ov[iid]; if(!r) return; var same=(r.status===e.status)&&((r.assignType||"")===(e.assignType||""))&&(String(r.projektNr||"")===String(e.projektNr||""))&&((r.generalCat||"")===(e.generalCat||"")); if(same){ delete ov[iid]; } else { r.status=e.status; r.assignType=e.assignType; r.projektNr=e.projektNr; r.generalCat=e.generalCat; } }); }
@@ -5399,7 +5458,10 @@ function openAssignInvoice(inv){
   if(inv._manual) h+=' <button class="btn sm danger" id="re-mandel">🗑 Rechnung löschen</button>';
   h+='<button class="btn sm" data-close="re-assign-bg">Schließen</button></div>';
   body.innerHTML=h;
-  body.querySelectorAll(".re-sp").forEach(function(b){ b.onclick=function(){ assignInvoiceSparte(inv,b.dataset.sp); closeModal("re-assign-bg"); }; });
+  body.querySelectorAll(".re-sp").forEach(function(b){ b.onclick=function(){
+    if(b.dataset.sp==="messe"){ var old=body.querySelector("#re-messe-pick"); if(old) old.remove(); b.parentNode.insertAdjacentHTML("afterend",messePickHtml(inv)); messePickWire(body,inv,function(){ closeModal("re-assign-bg"); }); return; }
+    assignInvoiceSparte(inv,b.dataset.sp); closeModal("re-assign-bg"); }; });
+  if(inv.assignType==="general"&&inv.generalCat==="messe"){ var spb=body.querySelector('.re-sp[data-sp="messe"]'); if(spb) spb.parentNode.insertAdjacentHTML("afterend",messePickHtml(inv)); messePickWire(body,inv,function(){ closeModal("re-assign-bg"); }); }
   var ig=document.getElementById("re-ignore"); if(ig) ig.onclick=function(){ ignoreInvoice(inv,true); closeModal("re-assign-bg"); };
   var ug=document.getElementById("re-unignore"); if(ug) ug.onclick=function(){ ignoreInvoice(inv,false); closeModal("re-assign-bg"); };
   var md=document.getElementById("re-mandel"); if(md) md.onclick=function(){ if(confirm("Manuelle Rechnung wirklich löschen?")){ delManualInvoice(inv.id); closeModal("re-assign-bg"); } };
