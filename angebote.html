@@ -917,7 +917,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-16.4";
+var APP_VERSION="2026-09-17.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -3876,62 +3876,76 @@ function reWireAssign(scope){
   });
 }
 function parseInvoicePdf(lines, fileName){
-  // pdf.js zerlegt manche PDFs in Fragmente ("1. 655,05", "26 4,25", "3 0 .0 5"):
-  // Leerzeichen ZWISCHEN Ziffern/Punkt/Komma entfernen, dann sind Zahlen/Datum wieder ganz.
-  var arr=(lines||[]).map(function(l){ return String(l).replace(/([\d.,])[ \t]+(?=[\d.,])/g,"$1"); });
-  var text=arr.join("\n");
-  function toNum(s){ return parseFloat(String(s).replace(/\./g,"").replace(",",".")); }
-  var amtRe=/\d{1,3}(?:\.\d{3})*,\d{2}|\d+,\d{2}/g;
+  // Zwei Lesarten je Zeile: roh und mit zusammengefügten Zahlfragmenten ("1. 655,05" → "1.655,05");
+  // beide liefern Betragskandidaten, die Plausibilitätsprüfung (Netto + USt = Brutto) entscheidet.
+  var raw=(lines||[]).map(function(l){ return String(l||""); });
+  var joined=raw.map(function(l){ return l.replace(/([\d.,])[ \t]+(?=[\d.,])/g,"$1"); });
+  var arr=raw, text=raw.join("\n");
+  // Datums-/Zeitangaben und Prozentwerte maskieren, damit sie nicht als Betrag gelesen werden
+  function mask(s){ return s.replace(/\b\d{1,2}\.\d{1,2}\.\d{2,4}\b/g," ").replace(/\b\d{4}-\d{2}-\d{2}\b/g," ").replace(/\b\d{1,2}:\d{2}(?::\d{2})?\b/g," ").replace(/\d+(?:[.,]\d+)?\s*%/g," "); }
+  var mAll=mask(text);
+  // Dezimalformat des Dokuments: deutsch (1.234,56) oder englisch (1,234.56 / 267.42)
+  var nComma=(mAll.match(/\d,\d{2}(?!\d)/g)||[]).length, nDot=(mAll.match(/\d\.\d{2}(?!\d)/g)||[]).length;
+  var EN=nDot>nComma;
+  var amtRe=EN?/(?<![\d.,-])(?:\d{1,3}(?:,\d{3})+|\d+)\.\d{2}(?!\d)/g:/(?<![\d.,-])(?:\d{1,3}(?:\.\d{3})+|\d+),\d{2}(?!\d)/g;
+  function toNum(s){ s=String(s); return EN?parseFloat(s.replace(/,/g,"")):parseFloat(s.replace(/\./g,"").replace(",",".")); }
+  function amountsIn(s){ var out=[]; (mask(s).match(amtRe)||[]).forEach(function(m){ var x=toNum(m); if(x>0&&isFinite(x)) out.push(x); }); return out; }
   var uniq=[], seen={};
-  (text.match(amtRe)||[]).forEach(function(m){ var x=toNum(m); if(x>0){ var k=x.toFixed(2); if(!seen[k]){ seen[k]=1; uniq.push(x); } } });
-  function nearAmts(re){ var out=[]; for(var i=0;i<arr.length;i++){ if(re.test((arr[i]||"").toLowerCase())){ var chunk=[arr[i]||"",arr[i+1]||"",arr[i+2]||""].join(" "); var ms=chunk.match(amtRe); if(ms) ms.forEach(function(m){ var x=toNum(m); if(x>0) out.push(x); }); } } return out; }
-  var vatC=nearAmts(/umsatzsteuer|mehrwertsteuer|\bmwst\.?\b|\bust\b|\bmw?st\b/);
-  var bruttoC=nearAmts(/gesamtbetrag|rechnungsbetrag|zu zahlen|zahlbetrag|endbetrag|zu überweisen|gesamtsumme|\bbrutto\b|\btotal\b/);
-  var nettoC=nearAmts(/zwischensumme|nettobetrag|\bnetto\b/);
+  function addU(x){ var k=x.toFixed(2); if(!seen[k]){ seen[k]=1; uniq.push(x); } }
+  raw.forEach(function(l){ amountsIn(l).forEach(addU); });
+  joined.forEach(function(l){ amountsIn(l).forEach(addU); });
+  function nearAmts(re){ var out=[]; [raw,joined].forEach(function(A){ for(var i=0;i<A.length;i++){ if(re.test((A[i]||"").toLowerCase())){ var chunk=[A[i]||"",A[i+1]||"",A[i+2]||""].join(" "); amountsIn(chunk).forEach(function(x){ out.push(x); }); } } }); return out; }
+  var vatC=nearAmts(/umsatzsteuer|mehrwertsteuer|\bmwst\.?|\bust\b|\bmw?st\b|\bvat\b|\btax\b/);
+  var bruttoC=nearAmts(/gesamtbetrag|rechnungsbetrag|zu zahlen|zahlbetrag|endbetrag|zu überweisen|gesamtsumme|\bbrutto\b|\btotal\b|\bgesamt\b|amount due|\bsumme\b/);
+  var nettoC=nearAmts(/zwischensumme|nettobetrag|\bnetto\b|\bnet\b|subtotal/);
   function has(lst,x){ for(var i=0;i<lst.length;i++) if(Math.abs(lst[i]-x)<0.02) return true; return false; }
   function present(x){ for(var i=0;i<uniq.length;i++) if(Math.abs(uniq[i]-x)<0.02) return true; return false; }
-  // Tripel Netto + USt = Brutto, bevorzugt USt ~19/7 % + größte Endsumme (layout-unabhängig)
+  // Tripel Netto + USt = Brutto; bevorzugt USt 19 % / 7 % und Beträge, die bei Schlüsselwörtern stehen
   var netto=null, vat=null, brutto=null, best=null;
   for(var a=0;a<uniq.length;a++){ var ne=uniq[a];
-    for(var b=0;b<uniq.length;b++){ var v=uniq[b]; if(v<=0) continue;
-      var br=ne+v; if(!present(br)||br<=ne) continue;
-      var rate=v/ne, rateOk=(Math.abs(rate-0.19)<0.01||Math.abs(rate-0.07)<0.01);
+    for(var b=0;b<uniq.length;b++){ var v=uniq[b]; if(v<=0||v>=ne) continue;
+      var br=ne+v; if(!present(br)) continue;
+      var rate=v/ne, rateOk=(Math.abs(rate-0.19)<0.006||Math.abs(rate-0.07)<0.006);
       var sc=(rateOk?100:0)+(has(bruttoC,br)?10:0)+(has(nettoC,ne)?5:0)+(has(vatC,v)?5:0)+br*1e-6;
       if(!best||sc>best.sc) best={sc:sc,ne:ne,v:v,br:br};
     }
   }
   if(best && best.sc>=100){ netto=best.ne; vat=best.v; brutto=best.br; }
   else {
+    // Kein USt-Tripel (z. B. Kleinunternehmer, Reverse Charge, Kleinbetrag): Gesamtbetrag bei Schlüsselwort, sonst größter Betrag
     brutto=bruttoC.length?Math.max.apply(null,bruttoC):(uniq.length?Math.max.apply(null,uniq):0);
     var nlt=nettoC.filter(function(x){return x<=brutto;});
     netto=nettoC.length?(nlt.length?Math.max.apply(null,nlt):brutto):null;
-    vat=vatC.length?Math.min.apply(null,vatC):null;
-    if(netto==null && brutto!=null && vat!=null) netto=+(brutto-vat).toFixed(2);
+    vat=vatC.length?Math.min.apply(null,vatC.filter(function(x){return x<brutto;}).concat([Infinity])):null; if(vat===Infinity) vat=null;
+    if(netto==null && brutto!=null && vat!=null && vat<brutto) netto=+(brutto-vat).toFixed(2);
     if(netto==null) netto=brutto;
+    if(vat!=null && Math.abs(netto+vat-brutto)>0.02) vat=null;
   }
-  // Datum: bevorzugt bei "Datum/Rechnungsdatum", sonst Zeitraum-Zeilen überspringen, sonst erstes
-  var DRE=/(\d{1,2})\.(\d{1,2})\.(\d{4})/;
+  // Datum: Rechnungsdatum > Belegdatum > Datum, sonst erstes Datum außerhalb von Zeitraum-Zeilen
+  var DRE=/(\d{1,2})\.(\d{1,2})\.(\d{4})/, DRE2=/(\d{1,2})\.(\d{1,2})\.(\d{2})(?!\d)/, ISO=/(\d{4})-(\d{2})-(\d{2})/;
   function iso(m){ return m[3]+"-"+("0"+m[2]).slice(-2)+"-"+("0"+m[1]).slice(-2); }
-  var datum="", mm;
-  for(var i=0;i<arr.length;i++){ if(/(rechnungsdatum|belegdatum|datum)/i.test(arr[i])){ mm=(arr[i]+" "+(arr[i+1]||"")).match(DRE); if(mm){ datum=iso(mm); break; } } }
-  if(!datum){ for(var i2=0;i2<arr.length;i2++){ if(/(zeitraum|leistung|liefer|\bbis\b|\bund\b|\d{1,2}\.\/\d)/i.test(arr[i2])) continue; mm=arr[i2].match(DRE); if(mm){ datum=iso(mm); break; } } }
-  if(!datum){ mm=text.match(DRE); if(mm) datum=iso(mm); }
-  // Absender: Empfänger (Nova Works) ausschließen – auch mit Fragment-Leerzeichen ("N ova Works")
-  var SUFFIX=/\b(GmbH|mbH|UG|AG|e\.?K\.?|GbR|KG|e\.?V\.?|Ltd|Inh\.)\b/;
-  var LBL=/^(rechnung|invoice|firma|herr|frau|kundennr|ust|steuer|datum|betreff|projekt|leistung|liefer|seite|pos\b|bezeichnung|unit|ort|job|bestell|produktion|mobil|email|tel|www|iban|bic)/i;
-  function isRecipient(l){ var c=String(l).replace(/\s/g,"").toLowerCase(); return c.indexOf("novaworks")>=0||c.indexOf("ambuschbach")>=0||c.indexOf("76275")>=0||c.indexOf("ettlingen")>=0; }
-  function cl(s){ return String(s||"").split(/,|  /)[0].trim(); }
-  var sender="";
-  for(var s1=0;s1<Math.min(arr.length,15);s1++){ var l=arr[s1]||""; if(SUFFIX.test(l)&&!isRecipient(l)&&!LBL.test(l.trim())){ sender=cl(l); break; } }
-  if(!sender){ for(var s2=0;s2<Math.min(arr.length,20);s2++){ var t=(arr[s2]||"").trim(); if(t.length>2&&!isRecipient(t)&&!LBL.test(t)&&!/^[\d\W]/.test(t)){ sender=cl(t); break; } } }
-  // Rechnungsnummer (Wert ggf. Folgezeile), sonst aus Dateiname
+  function findDate(re){ for(var i=0;i<arr.length;i++){ if(re.test(arr[i])){ var chunk=arr[i]+" "+(arr[i+1]||""); var mm=chunk.match(DRE); if(mm) return iso(mm); var mi=chunk.match(ISO); if(mi) return mi[1]+"-"+mi[2]+"-"+mi[3]; var m2=chunk.match(DRE2); if(m2) return iso([m2[0],m2[1],m2[2],"20"+m2[3]]); } } return ""; }
+  var datum=findDate(/rechnungsdatum|invoice date|belegdatum/i)||findDate(/\bdatum\b|\bdate\b/i);
+  if(!datum){ for(var i2=0;i2<arr.length;i2++){ if(/(zeitraum|leistung|liefer|anreise|abreise|\bbis\b|\bund\b|\d{1,2}\.\/\d)/i.test(arr[i2])) continue; var mm=arr[i2].match(DRE); if(mm){ datum=iso(mm); break; } } }
+  if(!datum){ var mt=text.match(DRE); if(mt) datum=iso(mt); }
+  // Absender: Firmierung (GmbH, AG, …) bevorzugt aus dem Kopf, sonst aus der Fußzeile; Empfänger Nova Works ausschließen
+  var SUFFIX=/\b(GmbH\s*&\s*Co\.?\s*KG|GmbH|mbH|UG|AG|e\.?\s?K\.?|GbR|KG|OHG|e\.?\s?V\.?|Ltd\.?|Inc\.?|S\.?A\.?|B\.?V\.?|Inh\.|SE)\b/;
+  var LBL=/^(rechnung|invoice|firma|herr|frau|kundennr|kunden-nr|ust|steuer|datum|betreff|projekt|leistung|liefer|seite|pos\b|bezeichnung|unit|ort|job|bestell|produktion|mobil|e-?mail|tel|fon|fax|www|iban|bic|bank|zahlung|gast|guest|directors?|geschäftsführ|amtsgericht|hrb|sitz)/i;
+  var BANK=/\b(bank|sparkasse|volksbank|iban|bic|swift)\b/i;
+  function isRecipient(l){ var c=String(l).replace(/\s/g,"").toLowerCase(); return c.indexOf("novaworks")>=0||c.indexOf("ambuschbach")>=0||c.indexOf("76275")>=0||c.indexOf("ettlingen")>=0||c.indexOf("koerber")>=0||c.indexOf("körber")>=0; }
+  function cl(s){ s=String(s||"").replace(/^\s*(absender|von|from)\s*:\s*/i,""); var m=SUFFIX.exec(s); if(m){ s=s.slice(0,m.index+m[0].length); } s=s.split(/,|\s{2,}|\s[·|]\s/)[0]; return s.replace(/\s+/g," ").trim().replace(/[\s,;:·|-]+$/,""); }
+  function legalIn(from,to){ for(var i=Math.max(0,from);i<Math.min(arr.length,to);i++){ var l=arr[i]||""; if(SUFFIX.test(l)&&!isRecipient(l)&&!BANK.test(l)&&!LBL.test(l.trim())){ var c=cl(l); if(c.length>3) return c; } } return ""; }
+  var sender=legalIn(0,15)||legalIn(arr.length-15,arr.length)||legalIn(15,arr.length-15);
+  if(!sender){ for(var s2=0;s2<Math.min(arr.length,20);s2++){ var t=(arr[s2]||"").trim(); if(t.length>2&&!isRecipient(t)&&!LBL.test(t)&&!/^[\d\W]/.test(t)&&!BANK.test(t)){ sender=cl(t); break; } } }
+  // Rechnungsnummer (Wert ggf. in der Folgezeile), sonst aus dem Dateinamen
   var rn="";
-  var m=text.match(/(?:rechnungs?\-?\s*nr\.?|rechnung\s+nr\.?|rg\.?\-?\s*nr\.?|invoice\s*(?:no|nr)\.?)[:\s]*\n?\s*([A-Za-z]{0,5}[\-\/]?\d[A-Za-z0-9\-\/]{1,})/i)
-       || text.match(/\brechnung\s+((?:re|rg|r|inv)[\-\s.]?\d[A-Za-z0-9\-\/]*)/i);
-  if(m) rn=m[1].replace(/\s+/g,"");
-  if(!rn && fileName){ var fm=String(fileName).match(/([A-Za-z]{2,}[_\-]?\d{3,}[_\-]?\d*|RE?\d[\w\-\/]*|\d{4,})/i); if(fm) rn=fm[1].replace(/_+$/,"").replace(/_/g,"-"); }
+  var m=text.match(/(?:rechnungs?[\-\s]*(?:nr|no|nummer)\.?|rechnung\s+nr\.?|rg\.?[\-\s]*nr\.?|beleg[\-\s]*(?:nr|nummer)\.?|invoice\s*(?:no|nr|number)\.?|invoice\s*#)\s*[:#]?\s*\n?\s*([A-Za-z]{0,5}[\-\/]?\d[A-Za-z0-9\-\/.]{1,})/i)
+       || text.match(/\brechnung\s+((?:re|rg|r|inv)[\-\s.]?\d[A-Za-z0-9\-\/]*)/i)
+       || text.match(/\brechnung\s+(?:nr\.?\s*)?([A-Za-z]{0,4}[\-\/]?\d{2,}[A-Za-z0-9\-\/]*)(?!\s*von\b)/i);
+  if(m) rn=m[1].replace(/\s+/g,"").replace(/[.:]+$/,"");
+  if(!rn && fileName){ var fm=String(fileName).match(/([A-Za-z]{2,}[_\-]?\d{3,}[_\-]?\d*|RE?\d[\w\-\/]*|\d{4,}(?:[\-_\/]\d+)*)/i); if(fm) rn=fm[1].replace(/_+$/,"").replace(/_/g,"-"); }
   var subject=(rn?("Rechnung "+rn):"Rechnung")+(fileName?(" · "+String(fileName).replace(/\.pdf$/i,"")):"");
-  return { senderName:sender, subject:subject, invoiceDate:datum, netto:(netto!=null?+(+netto).toFixed(2):0), brutto:(brutto!=null?+(+brutto).toFixed(2):null), vat:(vat!=null?+(+vat).toFixed(2):null) };
+  return { senderName:sender, subject:subject, invoiceDate:datum, netto:(netto!=null?+(+netto).toFixed(2):0), brutto:(brutto!=null?+(+brutto).toFixed(2):null), vat:(vat!=null?+(+vat).toFixed(2):null), invoiceNumber:rn };
 }
 function addManualInvoice(o){
   if(!DB.rechManual) DB.rechManual=[];
