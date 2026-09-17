@@ -220,6 +220,25 @@
     input[type=checkbox]{width:18px;height:18px}
     .btn.sm{min-height:32px}
   }
+  /* Plan-Import (Lichtpläne & Tonlisten) */
+  .pi-drop{padding:38px 24px;text-align:center;border:2px dashed var(--line);background:var(--panel);margin-bottom:22px;transition:.15s;cursor:pointer;box-shadow:none}
+  .pi-drop.over,.pi-drop:hover{border-color:var(--gold);background:var(--gold-bg)}
+  .pi-drop-icon{font-size:30px;color:var(--gold);margin-bottom:6px;line-height:1}
+  .pi-seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#fff}
+  .pi-seg button{border:none;background:transparent;padding:7px 12px;font-size:12px;color:var(--ink-soft);letter-spacing:.03em}
+  .pi-seg button.on{background:var(--gold);color:#fff}
+  .pi-file{margin-bottom:22px}
+  .pi-src{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:20px;font-size:12px;background:#fff;cursor:pointer;margin:4px 6px 0 0;user-select:none}
+  .pi-src.off{opacity:.55}
+  .pi-src.dup{border-style:dashed}
+  .pi-tbl td{padding:6px 10px}
+  .pi-tbl input.anz{width:64px;text-align:center;border:1px solid var(--line);border-radius:6px;padding:5px}
+  .pi-tbl input.bez,.pi-tbl input.grp{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:5px 7px}
+  .pi-tbl input.bez:hover,.pi-tbl input.grp:hover{border-color:var(--line)}
+  .pi-tbl input.bez:focus,.pi-tbl input.grp:focus{background:#fff;border-color:var(--gold-soft);outline:none}
+  .pi-tbl tr.off td{opacity:.45}
+  .pi-target{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 18px}
+  @media(max-width:900px){.pi-target{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -229,6 +248,7 @@
   <div class="nav">
     <button data-view="projekte" class="active">Projekte</button>
     <button data-view="material">Material</button>
+    <button data-view="import" title="Lichtpläne &amp; Tonlisten (PDF) einlesen">Import</button>
     <button data-view="adressen">Adressen</button>
     <button data-view="crm">CRM</button>
     <button data-view="crew">Crew</button>
@@ -495,6 +515,7 @@
       <div class="toolbar">
         <button class="btn" id="ed-save">Speichern</button>
         <button class="btn" id="ed-cgs">CGS Import</button>
+        <button class="btn" id="ed-planimport" title="Lichtplan / Tonliste (PDF) per Drag&amp;Drop einlesen – Typen und Stückzahlen werden als Positionen übernommen">⤓ Plan / Liste (PDF)</button>
         <input type="file" id="cgs-file" accept="application/pdf,.pdf" style="display:none">
         <button class="btn" id="ed-liefimp" title="Lieferanten-Angebot (PDF) importieren – Gruppen &amp; EK werden erkannt">⬆ Lieferant</button>
         <input type="file" id="liefimp-file" accept="application/pdf,.pdf" style="display:none">
@@ -601,6 +622,32 @@
         <div id="logi" style="margin-top:18px;border-top:1px solid var(--line);padding-top:16px"></div>
       </div>
     </div>
+  </section>
+  <!-- ============ PLAN-IMPORT (Lichtpläne & Tonlisten per Drag&Drop) ============ -->
+  <section class="view" id="view-import">
+    <div class="page-head">
+      <div><h1>Plan-Import</h1><div class="sub">Lichtpläne und Tonlisten als PDF ablegen – Typen und Stückzahlen werden erkannt und als Positionsgruppen ins Angebot übernommen.</div></div>
+      <div class="toolbar">
+        <span class="muted" style="font-size:12px">Import-Art</span>
+        <div class="pi-seg" id="pi-type"><button data-t="auto" class="on">Automatisch</button><button data-t="licht">Licht / LED</button><button data-t="ton">Ton</button></div>
+      </div>
+    </div>
+    <div class="card pi-drop" id="pi-drop">
+      <div class="pi-drop-icon">⤓</div>
+      <div><b>PDF hier ablegen</b> – Lichtplan, Fixture-Liste oder Ton-Materialbedarf (auch mehrere Dateien auf einmal)</div>
+      <div class="muted" style="font-size:12px;margin-top:8px">oder <button class="btn sm" id="pi-choose">Datei wählen</button></div>
+      <input type="file" id="pi-file" accept="application/pdf,.pdf" multiple style="display:none">
+    </div>
+    <div class="card panel-pad" style="margin-bottom:22px">
+      <div class="section-title">Ziel im Angebots-Tool</div>
+      <div class="pi-target">
+        <div class="field"><label>Projekt</label><select id="pi-proj"></select></div>
+        <div class="field"><label>Angebot</label><select id="pi-offer"></select></div>
+        <div class="field"><label>Job</label><select id="pi-job"></select></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap"><span class="muted" style="font-size:12px" id="pi-target-hint"></span><button class="btn sm" id="pi-open" style="display:none;margin-left:auto">Angebot öffnen →</button></div>
+    </div>
+    <div id="pi-results"></div>
   </section>
 </main>
 
@@ -942,7 +989,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-17.2";
+var APP_VERSION="2026-09-17.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -959,6 +1006,7 @@ function showView(v){
   }
   if(v==="projekte") renderProjects();
   if(v==="material") renderMaterial();
+  if(v==="import"&&typeof renderPlanImport==="function") renderPlanImport();
   if(v==="adressen") renderCustomers();
   if(v==="crm") renderCrm();
   if(v==="crew") renderCrewView();
@@ -8255,6 +8303,515 @@ async function handleSupplierOfferImport(file){
     toast("✓ "+gs.length+" Gruppen, "+nl+" Positionen von "+(fix(d.lieferant)||"Lieferant")+" importiert (EK übernommen)");
   }catch(e){ toast("Lieferanten-Import-Fehler: "+(e&&e.message||e)); }
 }
+/* ===== PLAN-IMPORT (Lichtpläne & Tonlisten als PDF per Drag&Drop → Typen + Stückzahlen → Positionsgruppen im Angebot) =====
+   Ablauf: PDF → pdf.js-Textpositionen → Zeilen/Zellen → Quellen (Tabelle mit Kopfzeile, Legende, "N x"-Muster)
+   → Duplikate zwischen Seiten/Quellen erkennen (mehrseitige Pläne: nichts doppelt zählen)
+   → Zeilen gleicher Bezeichnung zusammenfassen → Katalog-Abgleich → Übernahme in Projekt/Angebot/Job. */
+var PI={ files:[], type:"auto", target:{projId:"",offerId:"",jobId:""}, busy:false };
+
+/* ---------- Normalisierung & Hilfen ---------- */
+function piNorm(s,sep){
+  s=String(s||"").toLowerCase().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss");
+  s=s.replace(/(\d)[.,](\d)/g,"$1k$2");   // 1,5m → 1k5m (bleibt von 15m unterscheidbar)
+  s=s.replace(/[^a-z0-9]+/g,sep||"");
+  return sep?s.trim():s;
+}
+function piTokens(s){ return piNorm(s," ").split(" ").filter(function(t){ return t.length>1||/^\d$/.test(t); }); }
+function piJoin(a,b){ a=String(a||"").trim(); b=String(b||"").trim(); return a&&b?(a+" "+b):(a||b); }
+function piClean(s){ return String(s||"").replace(/\s+/g," ").replace(/^[\s:\-–·•]+|[\s:\-–·•]+$/g,"").trim(); }
+function piIsFooter(name){ return /^(gesamt|summe|total|zwischensumme|subtotal|stand\s*:|seite\s+\d|page\s+\d)/i.test(String(name||"").trim()); }
+
+/* ---------- Text mit Positionen aus dem PDF ---------- */
+function piExtractPages(file,onProgress){
+  return ensurePdfjs().then(function(){ return file.arrayBuffer(); }).then(function(buf){
+    return window.pdfjsLib.getDocument({data:buf}).promise;
+  }).then(function(pdf){
+    var pages=[], chain=Promise.resolve();
+    for(var p=1;p<=pdf.numPages;p++){ (function(p){ chain=chain.then(function(){
+      if(onProgress) onProgress(p,pdf.numPages);
+      return pdf.getPage(p).then(function(page){
+        var vp=page.getViewport({scale:1});
+        return page.getTextContent().then(function(tc){
+          var items=[];
+          (tc.items||[]).forEach(function(it){
+            var s=String(it.str||"").replace(/\s+/g," ").trim(); if(!s||!it.transform) return;
+            var h=Math.abs(it.transform[3])||Math.abs(it.transform[0])||it.height||8;
+            items.push({x:it.transform[4],y:it.transform[5],w:it.width||0,h:h,s:s});
+          });
+          pages.push({num:p,w:vp.width,h:vp.height,items:items.length,lines:piLines(items)});
+        });
+      });
+    }); })(p); }
+    return chain.then(function(){ return pages; });
+  });
+}
+/* Textstücke zu Zeilen (gleiche y-Höhe) und Zellen (zusammenhängende Wörter) bündeln */
+function piLines(items){
+  items.sort(function(a,b){ return (b.y-a.y)||(a.x-b.x); });
+  var lines=[];
+  items.forEach(function(it){
+    var L=lines[lines.length-1];
+    var tol=Math.max(2,Math.min(it.h,L?L.h:it.h)*0.45);
+    if(L&&Math.abs(L.y-it.y)<=tol){ L.cells.push(it); }
+    else lines.push({y:it.y,h:it.h,cells:[it]});
+  });
+  lines.forEach(function(L){
+    L.cells.sort(function(a,b){ return a.x-b.x; });
+    var merged=[];
+    L.cells.forEach(function(c){
+      var p=merged[merged.length-1];
+      if(p&&p.s===c.s&&Math.abs(p.x-c.x)<2) return;   // deckungsgleicher Überdruck (fett) – nur einmal
+      if(p&&(c.x-(p.x+p.w))<Math.max(1.5,p.h*0.35)){ p.s=piJoin(p.s,c.s); p.w=(c.x+c.w)-p.x; }
+      else merged.push({x:c.x,y:c.y,w:c.w,h:c.h,s:c.s});
+    });
+    L.cells=merged; L.text=merged.map(function(c){ return c.s; }).join(" ");
+  });
+  return lines;
+}
+
+/* ---------- Quelle 1: Tabelle mit Kopfzeile (Kategorie | Material | Anzahl | Kommentar / Fixture | Mode | IDs | Anzahl) ---------- */
+var PI_RX={
+  name:/^(fixture(s)?( ?type)?|fixture ?name|typ(e)?|material(ien)?|artikel|bezeichnung|ger(ä|ae)t(e)?|device(s)?|item(s)?|name|equipment|produkt(e)?|product(s)?|leuchte(n)?|lampe(n)?|scheinwerfer|instrument( type)?|model(l)?|beschreibung|description)$/i,
+  qty:/^(anzahl|anz\.?|menge|st(ü|ue)ck(zahl)?|stk\.?|qty\.?|quantity|count|total|pcs\.?|units?|amount)$/i,
+  cat:/^(kategorie|gruppe|category|group|bereich|abteilung|section|sparte|positionsgruppe|warengruppe|klasse|gewerk)$/i,
+  comment:/^(kommentar(e)?|bemerkung(en)?|notiz(en)?|comment(s)?|note(s)?|remarks?|hinweis(e)?|info(s)?|zubeh(ö|oe)r)$/i
+};
+function piHeader(L){
+  if(L.cells.length<2) return null;
+  var cols=[];
+  L.cells.forEach(function(c){
+    var s=piClean(c.s).replace(/[:*]+$/,"").trim(), role="ignore";
+    if(PI_RX.qty.test(s)) role="qty"; else if(PI_RX.name.test(s)) role="name"; else if(PI_RX.cat.test(s)) role="cat"; else if(PI_RX.comment.test(s)) role="comment";
+    cols.push({x:c.x,x2:c.x+c.w,role:role,label:s});
+  });
+  if(cols.some(function(c){ return c.label.length>40; })) return null;
+  var seen={};
+  cols.forEach(function(c){ if(c.role==="ignore") return; if(seen[c.role]) c.role="ignore"; else seen[c.role]=true; });
+  if(!seen.name||!seen.qty) return null;
+  return cols;
+}
+function piTableTitle(pg,h){
+  var above=pg.lines.filter(function(L){ return L.y>h.y&&(L.y-h.y)<Math.max(60,h.lineH*6); }).sort(function(a,b){ return a.y-b.y; });
+  for(var i=0;i<above.length;i++){ var t=piClean(above[i].text); if(t.length>=3&&!/^\d/.test(t)) return t.slice(0,80); }
+  return "";
+}
+function piCollectRows(src,pg,lines){
+  var cols=src.cols, tol=Math.max(6,(src.lineH||8)*1.5);
+  var qi=-1, ni=-1, ci=-1;
+  cols.forEach(function(c,i){ if(c.role==="qty") qi=i; if(c.role==="name") ni=i; if(c.role==="cat") ci=i; });
+  var rows=[], lastRow=null, lastY=null, nameLines=0;
+  lines.slice().sort(function(a,b){ return b.y-a.y; }).forEach(function(L){
+    var row={name:"",qty:null,cat:"",comment:""}, cellsInName=0;
+    L.cells.forEach(function(c){
+      var k=-1; for(var i=0;i<cols.length;i++){ if(cols[i].x-tol<=c.x) k=i; }
+      if(k>=0&&k+1<cols.length&&c.x>cols[k].x2&&(cols[k+1].x-c.x)<(c.x-cols[k].x2)) k++;   // zentrierte Spalte: näher am nächsten Kopf
+      if(qi>=0&&k!==qi&&/^\d{1,4}(\s|$)/.test(c.s)){ var qx=cols[qi].x, nx=(qi+1<cols.length?cols[qi+1].x:Infinity); if(c.x+c.w>=qx-tol&&c.x<nx-1) k=qi; }
+      if(k<0) return;
+      var role=cols[k].role;
+      if(role==="qty"){
+        var m=/^(\d+(?:[.,]\d+)?)(?:\s*(?:x|×|st(?:k|ück)?\.?|pcs\.?))?(?:\s+(.*))?$/i.exec(c.s);
+        if(m){ row.qty=parseFloat(m[1].replace(",",".")); if(m[2]) row.comment=piJoin(row.comment,m[2]); return; }
+        role="comment";
+      }
+      if(role==="name"){ row.name=piJoin(row.name,c.s); cellsInName++; }
+      else if(role==="cat") row.cat=piJoin(row.cat,c.s);
+      else if(role==="comment") row.comment=piJoin(row.comment,c.s);
+    });
+    row.name=piClean(row.name); row.cat=piClean(row.cat); row.comment=piClean(row.comment);
+    if(row.name) nameLines++;
+    if(row.qty!=null&&row.name){
+      if(piIsFooter(row.name)){ lastRow=null; return; }
+      row.page=pg.num; row._line=L; rows.push(row); lastRow=row; lastY=L.y;
+    } else if(row.qty==null&&row.name&&!row.cat&&lastRow&&lastY!=null&&(lastY-L.y)<(src.lineH||8)*1.8&&L.cells.length===1&&cellsInName===1){
+      lastRow.name=piJoin(lastRow.name,row.name); lastY=L.y;   // Umbruchzeile der Bezeichnung
+    } else { lastRow=null; }
+  });
+  return {rows:rows,nameLines:nameLines};
+}
+function piFindTables(pages){
+  var sources=[], active=null;
+  pages.forEach(function(pg){
+    var headers=[];
+    pg.lines.forEach(function(L,li){ var cols=piHeader(L); if(cols){ L.used=true; headers.push({li:li,y:L.y,lineH:L.h,cols:cols}); } });
+    function addRows(src,res,cont){
+      if(!res.rows.length) return;
+      if(cont&&!(res.rows.length>=2&&res.rows.length>=res.nameLines*0.5)) return;   // Folgeseite passt nicht zum Tabellenraster
+      res.rows.forEach(function(r){ if(r._line){ r._line.used=true; delete r._line; } src.rows.push(r); });
+      if(src.pages.indexOf(pg.num)<0) src.pages.push(pg.num);
+    }
+    if(headers.length){
+      if(active) addRows(active,piCollectRows(active,pg,pg.lines.filter(function(L){ return L.y>headers[0].y; })),true);
+      headers.forEach(function(h,i){
+        var src={kind:"table",page:pg.num,pages:[pg.num],cols:h.cols,lineH:h.lineH,rows:[],title:piTableTitle(pg,h),
+                 nameLabel:(h.cols.filter(function(c){ return c.role==="name"; })[0]||{}).label||"",hasCat:h.cols.some(function(c){ return c.role==="cat"; })};
+        var lo=(i+1<headers.length)?headers[i+1].y:-Infinity;
+        addRows(src,piCollectRows(src,pg,pg.lines.filter(function(L){ return L.y<h.y&&L.y>lo; })),false);
+        sources.push(src); active=src;
+      });
+    } else if(active){
+      addRows(active,piCollectRows(active,pg,pg.lines),true);
+    }
+  });
+  sources.forEach(function(s){
+    if(s.hasCat){ var cur=""; s.rows.forEach(function(r){ if(r.cat) cur=r.cat; else r.cat=cur; }); }   // Kategorie nur in erster Zeile → weiterführen
+  });
+  return sources.filter(function(s){ return s.rows.length; });
+}
+
+/* ---------- Quelle 2: Legende im Plan (Bezeichnung … Zahl, mehrere Zeilen bündig untereinander) ---------- */
+function piFindLegends(pages){
+  var sources=[];
+  pages.forEach(function(pg){
+    var pairs=[], maxGap=pg.w*0.15;
+    pg.lines.forEach(function(L){
+      if(L.used) return;   // gehört schon zu einer Tabelle
+      for(var i=1;i<L.cells.length;i++){
+        var c=L.cells[i]; if(!/^\d{1,3}$/.test(c.s)) continue;
+        var t=L.cells[i-1]; if(/^\d+([.,]\d+)?$/.test(t.s)||/^\d/.test(t.s)) continue;
+        if(c.x-(t.x+t.w)>maxGap) continue;
+        var name=piClean(t.s); if(name.length<3||!/[A-Za-zÄÖÜäöü]{2}/.test(name)) continue;
+        if(/\b(x|×|stk|st(ü|ue)ck|pcs|m|cm|mm|kg|kw|a|v|w|qm|m²)$/i.test(name)) continue;   // "3 x", "16 A", "5,00 m" o.ä.
+        pairs.push({y:L.y,h:L.h,nx:t.x,qx2:c.x+c.w,name:name,qty:parseInt(c.s,10)});
+      }
+    });
+    pairs.sort(function(a,b){ return b.y-a.y; });
+    var blocks=[];
+    pairs.forEach(function(p){
+      var b=null;
+      for(var i=blocks.length-1;i>=0;i--){ var B=blocks[i]; var last=B.items[B.items.length-1];
+        if(Math.abs(p.nx-B.nx)<=Math.max(8,p.h)&&Math.abs(p.qx2-B.qx2)<=Math.max(20,p.h*2.5)&&(last.y-p.y)<=Math.max(60,p.h*6)){ b=B; break; } }
+      if(b) b.items.push(p); else blocks.push({nx:p.nx,qx2:p.qx2,items:[p]});
+    });
+    blocks.forEach(function(b){
+      if(b.items.length<2) return;
+      var names=b.items.map(function(i){ return piNorm(i.name); });
+      if(new Set(names).size<names.length) return;   // gleiche Namen mehrfach = Geräte-Etiketten im Plan, keine Legende
+      var top=b.items[0], head="";
+      var above=pg.lines.filter(function(L){ return L.y>top.y&&(L.y-top.y)<=Math.max(90,top.h*8); }).sort(function(x,y){ return x.y-y.y; });
+      for(var i=0;i<above.length;i++){ var cand=above[i].cells.filter(function(c){ return Math.abs(c.x-b.nx)<=Math.max(40,top.h*4); })[0];
+        if(cand){ var t=piClean(cand.s); if(t.length>=3&&t.length<=60&&!/\d{2,}/.test(t)){ head=t; break; } } }
+      sources.push({kind:"legend",page:pg.num,pages:[pg.num],title:head,rows:b.items.map(function(i){ return {name:i.name,qty:i.qty,cat:"",comment:"",page:pg.num}; })});
+    });
+  });
+  return sources;
+}
+
+/* ---------- Quelle 3: "4 x Bezeichnung" / "Bezeichnung 4x" (nur wenn sonst nichts gefunden) ---------- */
+function piFindPatterns(pages){
+  var sources=[];
+  pages.forEach(function(pg){
+    var rows=[];
+    pg.lines.forEach(function(L){
+      if(L.used) return;
+      var t=piClean(L.text), m;
+      if((m=/^(\d{1,3})\s*[x×]\s+([A-Za-zÄÖÜäöü].{2,60})$/.exec(t))) rows.push({name:piClean(m[2]),qty:parseInt(m[1],10),cat:"",comment:"",page:pg.num});
+      else if((m=/^([A-Za-zÄÖÜäöü].{2,60}?)\s+(\d{1,3})\s*[x×]$/.exec(t))) rows.push({name:piClean(m[1]),qty:parseInt(m[2],10),cat:"",comment:"",page:pg.num});
+    });
+    if(rows.length) sources.push({kind:"pattern",page:pg.num,pages:[pg.num],title:"",rows:rows});
+  });
+  return sources;
+}
+
+/* ---------- Zusammenfassen, Duplikate, Typ-Erkennung, Katalog ---------- */
+function piMergeRows(src){
+  var map={}, out=[];
+  src.rows.forEach(function(r){
+    var key=piNorm(r.cat)+"|"+piNorm(r.name);
+    if(map[key]){ map[key].qty+=(Number(r.qty)||0); map[key].n++; if(r.comment&&map[key].comment.indexOf(r.comment)<0) map[key].comment=piJoin(map[key].comment,r.comment); return; }
+    var o={id:uid(),name:r.name,qty:Number(r.qty)||0,cat:r.cat||"",comment:r.comment||"",n:1,on:true,page:r.page};
+    map[key]=o; out.push(o);
+  });
+  src.items=out;
+}
+function piDedupe(sources){
+  var rank={table:0,legend:1,pattern:2};
+  sources.sort(function(a,b){ return (rank[a.kind]-rank[b.kind])||(b.rows.length-a.rows.length)||(a.page-b.page); });
+  var accepted=[];
+  sources.forEach(function(s){
+    var names=new Set(s.rows.map(function(r){ return piNorm(r.name); })), dup=null;
+    accepted.forEach(function(a){
+      if(dup) return;
+      var an=new Set(a.rows.map(function(r){ return piNorm(r.name); })), inter=0;
+      names.forEach(function(n){ if(an.has(n)) inter++; });
+      var minN=Math.min(names.size,an.size);
+      if(minN&&inter/minN>=0.6) dup=a;
+    });
+    if(!dup&&s.kind==="pattern"&&accepted.length) dup=accepted[0];   // Muster-Treffer nur als Fallback
+    s.active=!dup; s.dupOf=dup||null;
+    if(!dup) accepted.push(s);
+  });
+  return sources;
+}
+var PI_KW={
+  licht:[/\bfixtures?\b/g,/\bdmx\b/g,/\bchannels?\b/g,/\bmode\b/g,/\bpar\b/g,/\bwash\b/g,/\bspot\b/g,/\bbeam\b/g,/\bprofile\b/g,/\bled\b/g,/\btubes?\b/g,/\bstrobe\b/g,/\bmoving\b/g,/\bblinder\b/g,/\bdimmer\b/g,/\bhaze[r]?\b/g,/\bnebel\b/g,/\btruss\b/g,/\bshowlight\b/g,/\bkeylight\b/g,/\blicht/g,/\bgobo\b/g,/\bzoom\b/g,/\brgb/g,/\bpixel\b/g,/\bstrike\b/g,/\bjdc/g,/\bsharpy\b/g,/\brobe\b/g,/\bayrton\b/g,/\bclay ?paky\b/g,/\bglp\b/g,/\bastera\b/g,/\bcameo\b/g,/\bchauvet\b/g,/\belation\b/g,/\barri\b/g,/\bskypanel\b/g,/\bfresnel\b/g,/\bverfolger\b/g,/\bscheinwerfer\b/g,/\bleuchte/g,/\bacme\b/g,/\bmartin\b/g,/\bmac\s?\d/g],
+  ton:[/\bton\b/g,/\btontechnik\b/g,/\baudio\b/g,/\bpa\b/g,/\bmischpult\b/g,/\bmixer\b/g,/\bmikro/g,/\bmic\b/g,/\bxlr\b/g,/\bspeakon\b/g,/\blautsprecher/g,/\bmonitor/g,/\bsub\b/g,/\bamp\b/g,/\bendstufe\b/g,/\bl-?acoustics\b/g,/\bd&b\b/g,/\bshure\b/g,/\bsennheiser\b/g,/\ballen\s?&\s?heath\b/g,/\byamaha\b/g,/\bmidas\b/g,/\bdigico\b/g,/\bdj\b/g,/\bcdj/g,/\bdjm/g,/\bfunkstrecke/g,/\bin-?ear/g,/\bstagebox\b/g,/\bdi-?box/g,/\bkapsel\b/g,/\bantenne/g,/\bline ?array\b/g,/\bbeschallung/g,/\bfoh\b/g,/\bnexo\b/g,/\bmeyer\b/g,/\bkling\b/g,/\bfreitag\b/g,/\bbackline\b/g]
+};
+function piDetectType(text){
+  var t=String(text||"").toLowerCase(), ls=0, ts=0;
+  PI_KW.licht.forEach(function(r){ ls+=(t.match(r)||[]).length; });
+  PI_KW.ton.forEach(function(r){ ts+=(t.match(r)||[]).length; });
+  if(ls===ts) return "auto";
+  return ls>ts?"licht":"ton";
+}
+var _piCatIdx=null;
+function piCatIndex(){
+  if(_piCatIdx) return _piCatIdx;
+  _piCatIdx=(typeof CAT!=="undefined"?CAT:[]).map(function(i){ var e=(typeof eff==="function")?eff(i):i; return {it:e,toks:piTokens(e.bez),norm:piNorm(e.bez)}; });
+  return _piCatIdx;
+}
+function piMatch(name,type){
+  var toks=piTokens(name); if(!toks.length) return null;
+  var norm=piNorm(name), best=null, bs=0;
+  var pref=type==="ton"?["Tontechnik","Kabel"]:(type==="licht"?["Lichttechnik","Kabel","Rigging"]:[]);
+  var digitToks=toks.filter(function(t){ return /\d/.test(t); }), wordToks=toks.filter(function(t){ return !/\d/.test(t); });
+  piCatIndex().forEach(function(c){
+    var s;
+    if(c.norm===norm) s=1;
+    else {
+      if(digitToks.some(function(t){ return c.toks.indexOf(t)<0; })) return;   // Modellnummern / Längen müssen alle passen
+      var hitW=wordToks.filter(function(t){ return c.toks.indexOf(t)>=0; }).length;
+      if(wordToks.length&&hitW/wordToks.length<0.75) return;
+      var hit=hitW+digitToks.length; if(!hit) return;
+      s=(hit/toks.length)*0.7+(hit/Math.max(1,c.toks.length))*0.3;
+    }
+    if(pref.length&&pref.indexOf(c.it.mwg)<0) s*=0.85;
+    if(s>bs){ bs=s; best=c.it; }
+  });
+  return bs>=0.7?{nr:best.nr,bez:piClean(best.bez),einheit:best.einheit||"",wg:best.wg||"",miet:Number(best.miet)||0,score:bs}:null;
+}
+
+/* ---------- Datei analysieren ---------- */
+function piAnalyze(pages,forcedType){
+  var sources=piFindTables(pages).concat(piFindLegends(pages));
+  var patterns=piFindPatterns(pages);
+  if(!sources.length) sources=patterns; else sources=sources.concat(patterns);
+  piDedupe(sources);
+  sources.forEach(piMergeRows);
+  var text=sources.filter(function(s){ return s.active; }).map(function(s){ return s.title+" "+s.rows.map(function(r){ return r.name+" "+r.cat; }).join(" "); }).join(" ");
+  var pg1=pages[0]?pages[0].lines.slice(0,6).map(function(L){ return L.text; }).join(" "):"";
+  var detected=piDetectType(text+" "+pg1);
+  var type=(forcedType&&forcedType!=="auto")?forcedType:detected;
+  sources.forEach(function(s){ s.items.forEach(function(it){ it.match=piMatch(it.name,type); it.useMatch=!!it.match; }); });
+  var hasCat=sources.some(function(s){ return s.active&&s.items.some(function(i){ return i.cat; }); });
+  var main=sources.filter(function(s){ return s.active; })[0];
+  var gname=piDefaultGroup(main,type);
+  return {sources:sources,type:type,detected:detected,hasCat:hasCat,groupMode:hasCat?"cat":"one",groupName:gname,jobName:piJobName(main,type),scan:pages.every(function(p){ return !p.items; })};
+}
+function piDefaultGroup(src,type){
+  if(src&&src.kind==="table"&&src.nameLabel){
+    var l=src.nameLabel; if(/^fixtures?$/i.test(l)) return "Fixtures"; if(/^(typ|type|name|bezeichnung|item|artikel|beschreibung|description)$/i.test(l)) return type==="ton"?"Tontechnik":(type==="licht"?"Lichttechnik":"Material"); return l;
+  }
+  if(src&&src.kind==="legend"&&src.title) return src.title;
+  return type==="ton"?"Tontechnik":(type==="licht"?"Lichttechnik":"Material");
+}
+function piJobName(src,type){ return type==="ton"?"Tontechnik":(type==="licht"?"Lichttechnik":"Material"); }
+function piAddFiles(list){
+  var files=[].slice.call(list||[]).filter(function(f){ return /\.pdf$/i.test(f.name)||f.type==="application/pdf"; });
+  if(!files.length){ toast("Bitte PDF-Dateien ablegen"); return; }
+  if(PI.busy){ toast("Bitte warten – Import läuft noch"); return; }
+  PI.busy=true;
+  var chain=Promise.resolve();
+  files.forEach(function(f){ chain=chain.then(function(){
+    var entry={id:uid(),name:f.name,size:f.size,status:"lesen",pages:0};
+    PI.files.push(entry); renderPlanImport();
+    return piExtractPages(f,function(p,n){ entry.status="Seite "+p+" von "+n+" wird gelesen …"; var el=document.querySelector('[data-pistat="'+entry.id+'"]'); if(el) el.textContent=entry.status; }).then(function(pages){
+      entry.pages=pages.length; entry.pageData=pages;
+      Object.assign(entry,piAnalyze(pages,PI.type)); entry.status="";
+      var n=piActiveItems(entry).length;
+      toast(n?("✓ "+f.name+": "+n+" Positionen erkannt"):("Keine Stückliste in "+f.name+" erkannt"));
+    }).catch(function(e){ entry.status=""; entry.error=(e&&e.message)||String(e); });
+  }).then(renderPlanImport); });
+  chain.then(function(){ PI.busy=false; renderPlanImport(); });
+}
+function piActiveItems(entry){
+  var out=[]; (entry.sources||[]).forEach(function(s){ if(!s.active) return; s.items.forEach(function(i){ if(i.on&&i.qty>0&&i.name) out.push(i); }); }); return out;
+}
+function piReanalyze(entry){
+  if(!entry.pageData) return;
+  var keepOn={}; (entry.sources||[]).forEach(function(s){ s.items.forEach(function(i){ keepOn[i.name]=i.on; }); });
+  Object.assign(entry,piAnalyze(entry.pageData,PI.type));
+  entry.sources.forEach(function(s){ s.items.forEach(function(i){ if(keepOn[i.name]===false) i.on=false; }); });
+}
+
+/* ---------- Ansicht ---------- */
+function piProjectList(){
+  return (DB.projects||[]).filter(function(p){ return !p.archiviert; }).sort(function(a,b){ return (b.nummer||"").localeCompare(a.nummer||""); });
+}
+function piSrcLabel(s){
+  var pg=s.pages.length>1?("S. "+Math.min.apply(null,s.pages)+"–"+Math.max.apply(null,s.pages)):("S. "+s.page);
+  var kind=s.kind==="table"?"Tabelle":(s.kind==="legend"?"Legende":"Muster");
+  return pg+" · "+kind+(s.title?(" „"+s.title+"“"):"")+" · "+s.items.length+" Typen";
+}
+function renderPlanImport(){
+  var wrap=document.getElementById("pi-results"); if(!wrap) return;
+  document.querySelectorAll("#pi-type button").forEach(function(b){ b.classList.toggle("on",b.dataset.t===PI.type); });
+  piRenderTarget();
+  if(!PI.files.length){ wrap.innerHTML='<div class="card"><div class="empty">Noch keine Datei – Lichtplan oder Tonliste (PDF) oben ablegen.<br><span style="font-size:12px">Erkannt werden Tabellen mit Kopfzeile (z. B. Kategorie · Material · Anzahl oder Fixture · Mode · Anzahl) und Legenden im Plan. Mehrseitige Pläne werden nur einmal gezählt.</span></div></div>'; return; }
+  wrap.innerHTML="";
+  PI.files.forEach(function(f){ wrap.appendChild(piRenderFile(f)); });
+}
+function piRenderFile(f){
+  var el=document.createElement("div"); el.className="card pi-file";
+  var items=piActiveItems(f), total=items.reduce(function(s,i){ return s+i.qty; },0);
+  var typePill=f.type==="ton"?'<span class="pill">Ton</span>':(f.type==="licht"?'<span class="pill">Licht / LED</span>':'<span class="pill" style="background:#eee9e1;color:#8a8170">Typ unklar</span>');
+  var head='<div class="job-head"><b style="font-size:15px">'+esc(f.name)+'</b> '+(f.status?'':typePill)+
+    '<span class="muted" style="font-size:12px" data-pistat="'+f.id+'">'+esc(f.status||((f.pages||0)+" Seiten · "+items.length+" Typen · "+total.toLocaleString("de-DE")+" Stk"+(f.detected&&f.detected!==f.type&&PI.type!=="auto"?" · erkannt: "+(f.detected==="ton"?"Ton":(f.detected==="licht"?"Licht":"unklar"))+", manuell "+(f.type==="ton"?"Ton":"Licht"):"")))+'</span>'+
+    '<span style="flex:1"></span>'+(f.done?'<span class="status angenommen">übernommen</span> ':'')+'<button class="btn sm danger" data-rm title="Datei aus der Liste entfernen">×</button></div>';
+  if(f.error){ el.innerHTML=head+'<div class="panel-pad" style="color:var(--danger)">Fehler: '+esc(f.error)+'</div>'; el.querySelector("[data-rm]").onclick=function(){ PI.files=PI.files.filter(function(x){ return x!==f; }); renderPlanImport(); }; return el; }
+  if(f.status){ el.innerHTML=head; return el; }
+  var srcs=(f.sources||[]);
+  var srcHtml=srcs.length?srcs.map(function(s,i){
+    var cls="pi-src"+(s.active?"":" off")+(s.dupOf?" dup":"");
+    var note=s.dupOf?(' <span class="muted">– Duplikat von '+esc(piSrcLabel(s.dupOf).split(" · ")[0]+" "+piSrcLabel(s.dupOf).split(" · ")[1])+'</span>'):"";
+    return '<span class="'+cls+'" data-src="'+i+'" title="'+(s.active?"Quelle wird gezählt – klicken zum Ausschließen":"Quelle ausgeschlossen – klicken zum Aktivieren")+'"><input type="checkbox" '+(s.active?"checked":"")+' style="margin:0">'+esc(piSrcLabel(s))+note+'</span>';
+  }).join(""):'<span class="muted">Keine Stückliste erkannt'+(f.scan?" – das PDF enthält keinen Text (Scan/Bild). Bitte als Text-PDF exportieren.":" – weder Tabelle mit Kopfzeile noch Legende gefunden.")+'</span>';
+  var multi=srcs.filter(function(s){ return s.active&&s.pages.length>1; }).length, dups=srcs.filter(function(s){ return s.dupOf; }).length;
+  var hint=(multi?'<span class="muted" style="font-size:12px">Tabelle läuft über mehrere Seiten – Zeilen fortlaufend gezählt.</span> ':"")+(dups?'<span class="muted" style="font-size:12px">'+dups+' Quelle'+(dups>1?"n":"")+' als Duplikat übersprungen (gleiche Typen auf anderer Seite).</span>':"");
+  var merged=srcs.filter(function(s){ return s.active; }).reduce(function(n,s){ return n+s.items.filter(function(i){ return i.n>1; }).length; },0);
+  if(merged) hint+=' <span class="muted" style="font-size:12px">'+merged+' Typ'+(merged>1?"en":"")+' aus mehreren Zeilen zusammengefasst (z. B. verschiedene Modes).</span>';
+  var groups=[]; items.forEach(function(i){ var g=i.cat||""; if(g&&groups.indexOf(g)<0) groups.push(g); });
+  var body='<div style="padding:12px 18px 4px"><div class="section-title" style="margin-bottom:6px">Quellen im PDF</div>'+srcHtml+'<div style="margin-top:6px">'+hint+'</div></div>';
+  body+='<div style="padding:8px 18px 12px;display:flex;gap:14px;align-items:center;flex-wrap:wrap">'+
+    '<span class="muted" style="font-size:12px">Positionsgruppen</span>'+
+    '<select data-gmode style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff">'+
+      '<option value="cat"'+(f.groupMode==="cat"?" selected":"")+'>je Kategorie aus der Liste'+(groups.length?(" ("+groups.length+")"):" (keine erkannt)")+'</option>'+
+      '<option value="one"'+(f.groupMode==="one"?" selected":"")+'>alle in eine Gruppe</option></select>'+
+    '<input data-gname value="'+esc(f.groupName||"")+'" placeholder="Name der Positionsgruppe" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:220px'+(f.groupMode==="one"?"":";opacity:.5")+'">'+
+    '<span class="muted" style="font-size:12px">Job-Name (bei neuem Job)</span><input data-jname value="'+esc(f.jobName||"")+'" style="border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-width:180px">'+
+    '</div>';
+  var rows="";
+  srcs.forEach(function(s,si){
+    if(!s.active) return;
+    s.items.forEach(function(it,ii){
+      var m=it.match;
+      rows+='<tr class="'+(it.on?"":"off")+'" data-si="'+si+'" data-ii="'+ii+'">'+
+        '<td style="width:34px"><input type="checkbox" data-on '+(it.on?"checked":"")+'></td>'+
+        '<td style="width:80px"><input class="anz" type="number" min="0" step="1" value="'+it.qty+'" data-qty></td>'+
+        '<td><input class="bez" value="'+esc(it.name)+'" data-name>'+(it.comment?'<div class="muted" style="font-size:11px;padding-left:7px">'+esc(it.comment)+'</div>':"")+'</td>'+
+        '<td style="width:180px"><input class="grp" value="'+esc(it.cat)+'" placeholder="'+esc(f.groupMode==="one"?(f.groupName||""):"(Standardgruppe)")+'" list="pi-groups-'+f.id+'" data-cat'+(f.groupMode==="one"?' style="opacity:.5"':"")+'></td>'+
+        '<td style="width:230px;font-size:12px">'+(m?('<label style="display:flex;gap:6px;align-items:flex-start;cursor:pointer" title="Katalog-Artikel übernehmen (Artikelnummer, Einheit'+(m.miet>0?", Mietpreis":"")+')"><input type="checkbox" data-usematch '+(it.useMatch?"checked":"")+' style="margin-top:2px"><span'+(it.useMatch?"":' class="muted"')+'>'+esc(m.bez)+(m.miet>0?' <span class="muted">· '+eur(m.miet)+'</span>':"")+'</span></label>'):'<span class="muted">kein Katalog-Treffer</span>')+'</td>'+
+        '<td class="muted nowrap" style="width:90px;font-size:11px">S. '+(it.page||s.page)+(it.n>1?(' · '+it.n+' Zeilen'):"")+'</td></tr>';
+    });
+  });
+  body+='<datalist id="pi-groups-'+f.id+'">'+groups.map(function(g){ return '<option value="'+esc(g)+'">'; }).join("")+'</datalist>';
+  body+='<table class="lines pi-tbl"><thead><tr><th></th><th>Anzahl</th><th>Bezeichnung</th><th>Gruppe</th><th>Katalog</th><th>Quelle</th></tr></thead><tbody>'+(rows||'<tr><td colspan="6" class="muted" style="text-align:center;padding:16px">Keine Positionen</td></tr>')+'</tbody></table>';
+  body+='<div class="grp-foot"><span class="muted" style="font-size:12px">'+items.length+' Positionen · '+total.toLocaleString("de-DE")+' Stück'+(groups.length&&f.groupMode==="cat"?(' · Gruppen: '+esc(groups.join(", "))):"")+'</span>'+
+    '<div style="margin-left:auto;display:flex;gap:8px"><button class="btn sm" data-addfree>+ Zeile</button><button class="btn primary" data-go'+(items.length?"":" disabled")+'>→ In Angebot übernehmen</button></div></div>';
+  el.innerHTML=head+body;
+  el.querySelector("[data-rm]").onclick=function(){ PI.files=PI.files.filter(function(x){ return x!==f; }); renderPlanImport(); };
+  el.querySelectorAll("[data-src]").forEach(function(sp){ sp.onclick=function(e){ var s=srcs[+sp.dataset.src]; s.active=!s.active; renderPlanImport(); }; });
+  el.querySelector("[data-gmode]").onchange=function(e){ f.groupMode=e.target.value; renderPlanImport(); };
+  el.querySelector("[data-gname]").oninput=function(e){ f.groupName=e.target.value; };
+  el.querySelector("[data-jname]").oninput=function(e){ f.jobName=e.target.value; };
+  el.querySelectorAll("tbody tr[data-si]").forEach(function(tr){
+    var it=srcs[+tr.dataset.si].items[+tr.dataset.ii];
+    tr.querySelector("[data-on]").onchange=function(e){ it.on=e.target.checked; tr.classList.toggle("off",!it.on); piUpdateFoot(el,f); };
+    tr.querySelector("[data-qty]").oninput=function(e){ it.qty=parseFloat(e.target.value)||0; piUpdateFoot(el,f); };
+    tr.querySelector("[data-name]").oninput=function(e){ it.name=e.target.value; };
+    tr.querySelector("[data-cat]").oninput=function(e){ it.cat=e.target.value; };
+    var um=tr.querySelector("[data-usematch]"); if(um) um.onchange=function(e){ it.useMatch=e.target.checked; };
+  });
+  el.querySelector("[data-addfree]").onclick=function(){
+    var s=srcs.filter(function(x){ return x.active; })[0];
+    if(!s){ s={kind:"table",page:1,pages:[1],title:"manuell",rows:[],items:[],active:true,dupOf:null}; srcs.push(s); f.sources=srcs; }
+    s.items.push({id:uid(),name:"",qty:1,cat:"",comment:"",n:1,on:true,page:s.page,match:null,useMatch:false}); renderPlanImport();
+    var last=document.querySelector('[data-pistat="'+f.id+'"]'); if(last){ var inp=last.closest(".pi-file").querySelector("tbody tr:last-child [data-name]"); if(inp) inp.focus(); }
+  };
+  var go=el.querySelector("[data-go]"); if(go) go.onclick=function(){ piTransfer(f); };
+  return el;
+}
+function piUpdateFoot(el,f){
+  var items=piActiveItems(f), total=items.reduce(function(s,i){ return s+i.qty; },0);
+  var foot=el.querySelector(".grp-foot > span"); if(foot) foot.textContent=items.length+" Positionen · "+total.toLocaleString("de-DE")+" Stück";
+  var st=el.querySelector('[data-pistat="'+f.id+'"]'); if(st) st.textContent=(f.pages||0)+" Seiten · "+items.length+" Typen · "+total.toLocaleString("de-DE")+" Stk";
+  var go=el.querySelector("[data-go]"); if(go) go.disabled=!items.length;
+}
+/* Ziel: Projekt → Angebot → Job */
+function piRenderTarget(){
+  var ps=document.getElementById("pi-proj"), os=document.getElementById("pi-offer"), js=document.getElementById("pi-job"); if(!ps) return;
+  var projs=piProjectList();
+  if(!projs.some(function(p){ return p.id===PI.target.projId; })) PI.target.projId=(typeof curProject!=="undefined"&&curProject&&projs.some(function(p){ return p.id===curProject.id; }))?curProject.id:(projs[0]?projs[0].id:"");
+  ps.innerHTML='<option value="">– Projekt wählen –</option>'+projs.map(function(p){ return '<option value="'+p.id+'"'+(p.id===PI.target.projId?" selected":"")+'>'+esc((p.nummer?p.nummer+" · ":"")+(p.name||""))+'</option>'; }).join("");
+  var p=projs.filter(function(x){ return x.id===PI.target.projId; })[0], offers=(p&&p.offers)||[];
+  if(!offers.some(function(o){ return o.id===PI.target.offerId; })&&PI.target.offerId!=="__new") PI.target.offerId=offers.length?offers[offers.length-1].id:"__new";
+  os.innerHTML=offers.map(function(o){ return '<option value="'+o.id+'"'+(o.id===PI.target.offerId?" selected":"")+'>'+esc((o.titel||"Angebot")+" · "+(o.status||"")+(o.datum?(" · "+o.datum.split("-").reverse().join(".")):""))+'</option>'; }).join("")+'<option value="__new"'+(PI.target.offerId==="__new"?" selected":"")+'>＋ Neues Angebot anlegen</option>';
+  var o=offers.filter(function(x){ return x.id===PI.target.offerId; })[0], jobs=(o&&o.jobs)||[];
+  if(!jobs.some(function(j){ return j.id===PI.target.jobId; })&&PI.target.jobId!=="__new") PI.target.jobId=jobs.length?jobs[0].id:"__new";
+  js.innerHTML=jobs.map(function(j){ return '<option value="'+j.id+'"'+(j.id===PI.target.jobId?" selected":"")+'>'+esc(((j.nummer||"")+" "+(j.name||"")).trim()||"Job")+'</option>'; }).join("")+'<option value="__new"'+(PI.target.jobId==="__new"?" selected":"")+'>＋ Neuer Job</option>';
+  os.disabled=!p; js.disabled=!p;
+  ps.onchange=function(){ PI.target.projId=ps.value; PI.target.offerId=""; PI.target.jobId=""; piRenderTarget(); };
+  os.onchange=function(){ PI.target.offerId=os.value; PI.target.jobId=""; piRenderTarget(); };
+  js.onchange=function(){ PI.target.jobId=js.value; };
+  var hint=document.getElementById("pi-target-hint");
+  if(hint) hint.textContent=p?("Positionen gehen in "+(p.nummer||"")+" · "+(PI.target.offerId==="__new"?"neues Angebot":((o&&o.titel)||"Angebot"))+" · "+(PI.target.jobId==="__new"?"neuer Job":(((jobs.filter(function(j){ return j.id===PI.target.jobId; })[0]||{}).name)||"Job"))):"Bitte zuerst ein Projekt anlegen.";
+}
+/* Übernahme ins Angebot */
+function piTransfer(f){
+  var items=piActiveItems(f); if(!items.length){ toast("Keine Positionen ausgewählt"); return; }
+  var p=(DB.projects||[]).filter(function(x){ return x.id===PI.target.projId; })[0]; if(!p){ toast("Bitte ein Projekt wählen"); return; }
+  if(typeof curProject!=="undefined"&&curProject&&curProject.id===p.id&&typeof pullProject==="function"){ try{ pullProject(); }catch(e){} }
+  if(!p.offers) p.offers=[];
+  var o=p.offers.filter(function(x){ return x.id===PI.target.offerId; })[0], createdOffer=false, createdJob=false;
+  if(!o){
+    var cust=(DB.customers||[]).filter(function(c){ return c.id===p.kunde; })[0];
+    o={id:uid(),titel:"Angebot "+(p.offers.length+1),status:"entwurf",datum:today(),gueltig:plusDays(today(),30),zahlung:(cust&&cust.zahlung)?cust.zahlung:"50%/50%",mwst:19,
+       anschreiben:"vielen Dank für Ihr Interesse an unseren Produkten und Leistungen. Gerne unterbreiten wir Ihnen folgendes Angebot:",terms:DEFAULT_TERMS,crew:[],transport:[],jobs:[]};
+    p.offers.push(o); createdOffer=true;
+  }
+  if(!o.jobs) o.jobs=[];
+  var j=o.jobs.filter(function(x){ return x.id===PI.target.jobId; })[0];
+  if(!j){
+    j={id:uid(),nummer:(p.nummer||"")+"."+String(o.jobs.length+1).padStart(2,"0"),name:piClean(f.jobName)||"Import",von:"",bis:"",groups:[]};
+    o.jobs.push(j); createdJob=true;
+  }
+  if(!j.groups) j.groups=[];
+  var order=[], byName={};
+  items.forEach(function(it){
+    var gname=piClean(f.groupMode==="cat"?(it.cat||f.groupName||"Material"):(f.groupName||"Material"))||"Material";
+    var key=piNorm(gname);
+    if(!byName[key]){
+      var ex=j.groups.filter(function(g){ return piNorm(g.name)===key; })[0];
+      if(!ex){ ex={id:uid(),name:gname,kat:"miete",preis:0,lines:[]}; j.groups.push(ex); ex._new=true; }
+      byName[key]=ex; order.push(ex);
+    }
+    var m=(it.useMatch&&it.match)?it.match:null;
+    var line={id:uid(),anz:it.qty,bez:piClean(it.name),einheit:m?m.einheit:"",wg:"",ek:null,vk:(m&&m.miet>0)?m.miet:null};
+    if(m) line.nr=m.nr;
+    if(it.comment) line.note=it.comment;
+    byName[key].lines.push(line);
+  });
+  var newGroups=order.filter(function(g){ return g._new; }).length; order.forEach(function(g){ delete g._new; });
+  save();
+  if(typeof curOffer!=="undefined"&&curOffer&&curOffer.id===o.id){ try{ renderJobs(); }catch(e){} }
+  f.done=true; f.doneRef={projId:p.id,offerId:o.id,jobId:j.id};
+  PI.target.offerId=o.id; PI.target.jobId=j.id;
+  renderPlanImport();
+  toast("✓ "+items.length+" Positionen → "+(p.nummer||"")+" · "+(o.titel||"Angebot")+(createdOffer?" (neu)":"")+" · Job "+(j.nummer||"")+(createdJob?" (neu)":"")+" · "+order.length+" Gruppe"+(order.length>1?"n":"")+(newGroups<order.length?(" ("+(order.length-newGroups)+" ergänzt)"):""));
+  var btn=document.getElementById("pi-open"); if(btn){ btn.style.display=""; btn.onclick=function(){ openProject(p.id); openOffer(o.id); if(o.jobs.some(function(x){ return x.id===j.id; })){ curOffer._activeJobId=j.id; renderJobs(); } }; }
+}
+/* Aus dem Angebots-Editor: aktuelles Projekt/Angebot/Job vorbelegen */
+function planImportFromEditor(){
+  if(typeof curProject!=="undefined"&&curProject){ PI.target.projId=curProject.id; if(typeof curOffer!=="undefined"&&curOffer){ PI.target.offerId=curOffer.id; PI.target.jobId=curOffer._activeJobId||""; } }
+  showView("import");
+}
+function initPlanImport(){
+  var dz=document.getElementById("pi-drop"); if(!dz) return;
+  var inp=document.getElementById("pi-file");
+  dz.onclick=function(e){ if(e.target.closest("button")) return; inp.click(); };
+  document.getElementById("pi-choose").onclick=function(e){ e.stopPropagation(); inp.click(); };
+  inp.onchange=function(e){ piAddFiles(e.target.files); inp.value=""; };
+  ["dragenter","dragover"].forEach(function(ev){ dz.addEventListener(ev,function(e){ e.preventDefault(); e.stopPropagation(); dz.classList.add("over"); }); });
+  ["dragleave","dragend"].forEach(function(ev){ dz.addEventListener(ev,function(e){ e.preventDefault(); dz.classList.remove("over"); }); });
+  dz.addEventListener("drop",function(e){ e.preventDefault(); e.stopPropagation(); dz.classList.remove("over"); piAddFiles(e.dataTransfer.files); });
+  // Ablegen irgendwo in der Import-Ansicht ebenfalls annehmen
+  var sec=document.getElementById("view-import");
+  sec.addEventListener("dragover",function(e){ if(e.dataTransfer&&[].some.call(e.dataTransfer.types||[],function(t){ return t==="Files"; })){ e.preventDefault(); dz.classList.add("over"); } });
+  sec.addEventListener("drop",function(e){ if(e.target.closest("#pi-drop")) return; e.preventDefault(); dz.classList.remove("over"); piAddFiles(e.dataTransfer.files); });
+  document.querySelectorAll("#pi-type button").forEach(function(b){ b.onclick=function(){ PI.type=b.dataset.t; PI.files.forEach(piReanalyze); renderPlanImport(); }; });
+  var ob=document.getElementById("pi-open"); if(ob) ob.style.display="none";
+  var eb=document.getElementById("ed-planimport"); if(eb) eb.onclick=planImportFromEditor;
+}
+initPlanImport();
 /* ===== Kalkulations-Rider (Zusammenfassung Jobs EK/VK + Crew + Transport, mit Grafik) ===== */
 function crewLineEK(c){ return (Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); }
 function crewEKTotal(o){ return (((o&&o.crew)||[]).reduce(function(s,c){return s+crewLineEK(c);},0)); }
