@@ -896,11 +896,36 @@ function load(){
   return d;
 }
 let STORAGE_OK=true;
-function save(){ if(typeof bumpDispoTs==="function"){ try{ bumpDispoTs(); }catch(e){} } try{ DB._ts=Date.now(); localStorage.setItem((typeof RESTRICTED!=="undefined"&&RESTRICTED)?(STORE+"_team"):STORE, JSON.stringify(DB)); }catch(e){ STORAGE_OK=false; warnStorage(); } scheduleAutoBackup(); if(typeof RESTRICTED!=="undefined"&&RESTRICTED){ if(typeof scheduleRestrictedPush==="function") scheduleRestrictedPush(); } else { scheduleCloudSave(); if(typeof scheduleDispoShares==="function"){ try{ scheduleDispoShares(); }catch(e){} } } }
-function warnStorage(){ if(document.getElementById("storage-warn")) return;
+/* Lokaler Zwischenspeicher: Chrome erlaubt ca. 5 MB je Website. Wird es zu viel, fällt die App auf eine
+   schlanke Kopie ohne die Server-Daten (Auswertung, Rechnungen) zurück – die kommen beim Start ohnehin
+   aus der Cloud (app_state „auswertung“). Die Cloud-Speicherung selbst ist davon nicht betroffen. */
+var STORE_SLIM_KEYS=["auswertung","rechnungen","rechnungenIdx"];
+var STORAGE_MODE="full";
+function storeKey(){ return (typeof RESTRICTED!=="undefined"&&RESTRICTED)?(STORE+"_team"):STORE; }
+function isQuotaErr(e){ return !!e&&(e.name==="QuotaExceededError"||e.name==="NS_ERROR_DOM_QUOTA_REACHED"||e.code===22||e.code===1014||/quota|exceeded/i.test(String(e.message||""))); }
+function localPersist(){
+  var key=storeKey(), json;
+  try{ json=JSON.stringify(DB); localStorage.setItem(key,json); if(STORAGE_MODE!=="full"){ STORAGE_MODE="full"; } STORAGE_OK=true; hideStorageWarn(); return true; }
+  catch(e){
+    if(isQuotaErr(e)){
+      var slim={}; Object.keys(DB).forEach(function(k){ if(STORE_SLIM_KEYS.indexOf(k)<0) slim[k]=DB[k]; });
+      try{ localStorage.setItem(key,JSON.stringify(slim)); STORAGE_OK=true; hideStorageWarn(); if(STORAGE_MODE!=="slim"){ STORAGE_MODE="slim"; try{ console.warn("Lokaler Speicher knapp ("+Math.round((json||"").length/1048576*10)/10+" MB) – Rechnungs-/Auswertungsdaten nur aus der Cloud."); }catch(e3){} } return true; }
+      catch(e2){ STORAGE_OK=false; warnStorage("quota",(json||"").length); return false; }
+    }
+    STORAGE_OK=false; warnStorage("blocked",(json||"").length); return false;
+  }
+}
+function save(){ if(typeof bumpDispoTs==="function"){ try{ bumpDispoTs(); }catch(e){} } DB._ts=Date.now(); localPersist(); scheduleAutoBackup(); if(typeof RESTRICTED!=="undefined"&&RESTRICTED){ if(typeof scheduleRestrictedPush==="function") scheduleRestrictedPush(); } else { scheduleCloudSave(); if(typeof scheduleDispoShares==="function"){ try{ scheduleDispoShares(); }catch(e){} } } }
+function hideStorageWarn(){ var b=document.getElementById("storage-warn"); if(b) b.remove(); }
+function warnStorage(kind,bytes){ if(document.getElementById("storage-warn")) return;
+  var mb=bytes?(Math.round(bytes/1048576*10)/10):0, cloud=(typeof SB!=="undefined"&&SB)?" Deine Daten werden weiterhin in der Cloud gespeichert – es fehlt nur der lokale Zwischenspeicher f\u00FCr den Offline-Start.":" Ohne Cloud-Anmeldung gehen \u00C4nderungen beim Schlie\u00DFen verloren.";
+  var msg=(kind==="quota")
+    ?("\u26A0 Der lokale Speicher des Browsers ist voll (Daten "+mb+" MB, Chrome erlaubt ca. 5 MB je Website)."+cloud)
+    :("\u26A0 Dieser Browser erlaubt keinen lokalen Speicher (privates Fenster, blockierte Website-Daten oder Safari mit lokaler Datei)."+cloud);
   var b=document.createElement("div"); b.id="storage-warn";
-  b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999;background:#b4493f;color:#fff;padding:10px 16px;text-align:center;font:14px/1.4 'Helvetica Neue',Arial,sans-serif";
-  b.innerHTML="\u26A0 Dieser Browser speichert keine Daten bei lokalen Dateien (z.B. Safari). Bitte \u00F6ffne die App in <b>Google Chrome</b>, damit Projekte &amp; Angebote erhalten bleiben.";
+  b.style.cssText="position:fixed;left:0;right:0;top:0;z-index:999;background:"+(kind==="quota"?"#b4632e":"#b4493f")+";color:#fff;padding:10px 44px 10px 16px;text-align:center;font:14px/1.4 'Helvetica Neue',Arial,sans-serif";
+  b.innerHTML=msg+'<button type="button" title="Ausblenden" style="position:absolute;right:10px;top:6px;background:transparent;border:0;color:#fff;font-size:20px;cursor:pointer;line-height:1">\u00D7</button>';
+  b.querySelector("button").onclick=function(){ b.remove(); };
   (document.body||document.documentElement).appendChild(b);
 }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -917,7 +942,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-17.1";
+var APP_VERSION="2026-09-17.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
