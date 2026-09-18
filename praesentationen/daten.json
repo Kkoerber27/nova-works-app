@@ -1,0 +1,439 @@
+{
+  "stand": "18.09.2026",
+  "gesamt": {
+    "stand": "18.09.2026",
+    "projekte": 19,
+    "angebot": 1704056.7,
+    "bestaetigt": 1814726.7,
+    "erloeseIst": 1572556.4,
+    "kostenIst": 1530114.52,
+    "eingangsrechnungen": 1536144.2,
+    "margeSoll": -123644.25,
+    "margeIst": 281412.18
+  },
+  "angeboten": {
+    "projekte": 12,
+    "angebot": 1277745
+  },
+  "forecast": {
+    "zwoelf": {
+      "rangeLbl": "nächste 12 Monate",
+      "periodLbl": "Sep 2026 – Aug 2027",
+      "T": {
+        "conf": 300966.4,
+        "open": 1707495,
+        "wc": 300966.4,
+        "wo": 957135,
+        "erl": 45738.4,
+        "soll": 978951.695,
+        "personal": 364380.125,
+        "transport": 83718,
+        "miete": 530853.5700000001,
+        "fix": 98113.68000000001,
+        "marge": 279149.70499999996,
+        "erg": 181036.02499999997
+      },
+      "planIn": 4,
+      "projekte": 19,
+      "monate": [
+        {
+          "label": "Sep 26",
+          "bestaetigt": 254446.4,
+          "offen": 0,
+          "abgerechnet": 45738.4,
+          "soll": 235249.00999999998,
+          "fix": 8051.14
+        },
+        {
+          "label": "Okt 26",
+          "bestaetigt": 0,
+          "offen": 130448.76383480216,
+          "abgerechnet": 0,
+          "soll": 128678.14869850376,
+          "fix": 8051.14
+        },
+        {
+          "label": "Nov 26",
+          "bestaetigt": 46520,
+          "offen": 141174.2612728018,
+          "abgerechnet": 0,
+          "soll": 153721.98968026237,
+          "fix": 8051.14
+        },
+        {
+          "label": "Dez 26",
+          "bestaetigt": 0,
+          "offen": 57216.974892396,
+          "abgerechnet": 0,
+          "soll": 48743.111621233875,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jan 27",
+          "bestaetigt": 0,
+          "offen": 4625,
+          "abgerechnet": 0,
+          "soll": 2115,
+          "fix": 8051.14
+        },
+        {
+          "label": "Feb 27",
+          "bestaetigt": 0,
+          "offen": 2165.3846153846157,
+          "abgerechnet": 0,
+          "soll": 1344.923076923077,
+          "fix": 9551.14
+        },
+        {
+          "label": "Mär 27",
+          "bestaetigt": 0,
+          "offen": 11909.615384615381,
+          "abgerechnet": 0,
+          "soll": 7397.07692307692,
+          "fix": 8051.14
+        },
+        {
+          "label": "Apr 27",
+          "bestaetigt": 0,
+          "offen": 98147.49999999999,
+          "abgerechnet": 0,
+          "soll": 83374.93499999998,
+          "fix": 8051.14
+        },
+        {
+          "label": "Mai 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jun 27",
+          "bestaetigt": 0,
+          "offen": 318262.5,
+          "abgerechnet": 0,
+          "soll": 293677.5,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jul 27",
+          "bestaetigt": 0,
+          "offen": 193184.99999999997,
+          "abgerechnet": 0,
+          "soll": 24649.99999999999,
+          "fix": 8051.14
+        },
+        {
+          "label": "Aug 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        }
+      ]
+    },
+    "jahr": {
+      "rangeLbl": "Kalenderjahr 2026",
+      "periodLbl": "Jan 2026 – Dez 2026",
+      "T": {
+        "conf": 1425431.6999999997,
+        "open": 657680,
+        "wc": 1425431.6999999997,
+        "wo": 328840,
+        "erl": 1572556.4,
+        "soll": 1781049.39,
+        "personal": 931589.49,
+        "transport": 148859.99999999997,
+        "miete": 700599.8999999999,
+        "fix": 88267.2,
+        "marge": -26777.690000000177,
+        "erg": -115044.89000000017
+      },
+      "planIn": 0,
+      "projekte": 23,
+      "monate": [
+        {
+          "label": "Jan 26",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 0
+        },
+        {
+          "label": "Feb 26",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 7875.13
+        },
+        {
+          "label": "Mär 26",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 7931.81
+        },
+        {
+          "label": "Apr 26",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        },
+        {
+          "label": "Mai 26",
+          "bestaetigt": 35451.99999999999,
+          "offen": 0,
+          "abgerechnet": 49995,
+          "soll": 33796.33999999999,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jun 26",
+          "bestaetigt": 521575,
+          "offen": 0,
+          "abgerechnet": 431945,
+          "soll": 502356.7,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jul 26",
+          "bestaetigt": 307797.33333333326,
+          "offen": 0,
+          "abgerechnet": 691996,
+          "soll": 383479.9866666666,
+          "fix": 8051.14
+        },
+        {
+          "label": "Aug 26",
+          "bestaetigt": 259640.96666666665,
+          "offen": 0,
+          "abgerechnet": 352882,
+          "soll": 295024.1033333333,
+          "fix": 8051.14
+        },
+        {
+          "label": "Sep 26",
+          "bestaetigt": 254446.4,
+          "offen": 0,
+          "abgerechnet": 45738.4,
+          "soll": 235249.00999999998,
+          "fix": 8051.14
+        },
+        {
+          "label": "Okt 26",
+          "bestaetigt": 0,
+          "offen": 130448.76383480216,
+          "abgerechnet": 0,
+          "soll": 128678.14869850376,
+          "fix": 8051.14
+        },
+        {
+          "label": "Nov 26",
+          "bestaetigt": 46520,
+          "offen": 141174.2612728018,
+          "abgerechnet": 0,
+          "soll": 153721.98968026237,
+          "fix": 8051.14
+        },
+        {
+          "label": "Dez 26",
+          "bestaetigt": 0,
+          "offen": 57216.974892396,
+          "abgerechnet": 0,
+          "soll": 48743.111621233875,
+          "fix": 8051.14
+        }
+      ]
+    },
+    "naechstes": {
+      "rangeLbl": "Kalenderjahr 2027",
+      "periodLbl": "Jan 2027 – Dez 2027",
+      "T": {
+        "conf": 0,
+        "open": 1049815,
+        "wc": 0,
+        "wo": 628295,
+        "erl": 0,
+        "soll": 412559.435,
+        "personal": 133111.25,
+        "transport": 47313,
+        "miete": 232135.185,
+        "fix": 99613.68,
+        "marge": 215735.565,
+        "erg": 116121.88500000001
+      },
+      "planIn": 4,
+      "projekte": 4,
+      "monate": [
+        {
+          "label": "Jan 27",
+          "bestaetigt": 0,
+          "offen": 4625,
+          "abgerechnet": 0,
+          "soll": 2115,
+          "fix": 8051.14
+        },
+        {
+          "label": "Feb 27",
+          "bestaetigt": 0,
+          "offen": 2165.3846153846157,
+          "abgerechnet": 0,
+          "soll": 1344.923076923077,
+          "fix": 9551.14
+        },
+        {
+          "label": "Mär 27",
+          "bestaetigt": 0,
+          "offen": 11909.615384615381,
+          "abgerechnet": 0,
+          "soll": 7397.07692307692,
+          "fix": 8051.14
+        },
+        {
+          "label": "Apr 27",
+          "bestaetigt": 0,
+          "offen": 98147.49999999999,
+          "abgerechnet": 0,
+          "soll": 83374.93499999998,
+          "fix": 8051.14
+        },
+        {
+          "label": "Mai 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jun 27",
+          "bestaetigt": 0,
+          "offen": 318262.5,
+          "abgerechnet": 0,
+          "soll": 293677.5,
+          "fix": 8051.14
+        },
+        {
+          "label": "Jul 27",
+          "bestaetigt": 0,
+          "offen": 193184.99999999997,
+          "abgerechnet": 0,
+          "soll": 24649.99999999999,
+          "fix": 8051.14
+        },
+        {
+          "label": "Aug 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        },
+        {
+          "label": "Sep 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8551.14
+        },
+        {
+          "label": "Okt 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 9051.14
+        },
+        {
+          "label": "Nov 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        },
+        {
+          "label": "Dez 27",
+          "bestaetigt": 0,
+          "offen": 0,
+          "abgerechnet": 0,
+          "soll": 0,
+          "fix": 8051.14
+        }
+      ]
+    }
+  },
+  "deal": {
+    "stand": "18.09.2026",
+    "name": "ProEvent 2026",
+    "parteien": [
+      "Nova Works",
+      "CGS",
+      "TCLG"
+    ],
+    "projekte": [
+      {
+        "nr": "26-0007",
+        "name": "80er Live",
+        "ums": [
+          412556,
+          235000,
+          245000
+        ],
+        "kosten": 458040.23000000004
+      },
+      {
+        "nr": "26-0008",
+        "name": "Oberhausen",
+        "ums": [
+          144210,
+          65000,
+          55000
+        ],
+        "kosten": 157113.90999999997
+      }
+    ],
+    "umsatz": 1156766,
+    "kosten": 615154.14,
+    "auszahlungen": 350000,
+    "auszahlungenJePartner": {
+      "CGS": 225000,
+      "TCLG": 125000
+    },
+    "rechnungen": {
+      "gestelltNetto": 1047766,
+      "gestelltBrutto": 1246791.54,
+      "gestelltAnz": 27,
+      "bezahltBrutto": 788472.56,
+      "bezahltAnz": 18,
+      "offenBrutto": 383348.98,
+      "offenAnz": 9,
+      "jeProjekt": [
+        {
+          "projekt": "26-0007 · 80er Live",
+          "n": 20,
+          "netto": 815056,
+          "brutto": 969866.6399999999,
+          "offen": 458318.98,
+          "bezahlt": 511547.66
+        },
+        {
+          "projekt": "26-0008 · Oberhausen",
+          "n": 7,
+          "netto": 232710,
+          "brutto": 276924.9,
+          "offen": 0,
+          "bezahlt": 276924.9
+        }
+      ]
+    }
+  }
+}

@@ -12,27 +12,18 @@ const C = { bg:"F7F5F2", panel:"FFFFFF", ink:"3D3D3D", inkSoft:"6A6A6A", gold:"A
 const FONT = "Helvetica";
 const W = 13.333, H = 7.5;
 
-/* ---------- Daten ---------- */
-/* Deal-Auswertung ProEvent 2026 (Nova Works App → Auswertung → Deal-Auswertung), Stand 07.08.2026, alle Beträge netto */
-const DEAL = {
-  stand: "07.08.2026",
-  parteien: ["Nova Works", "CGS", "TCLG"],
-  projekte: [
-    { nr:"26-0007", name:"80er Live",  ums:[412556, 235000, 245000], kosten:151483.36 },
-    { nr:"26-0008", name:"Oberhausen", ums:[114210,  65000,  55000], kosten:157113.91 },
-  ],
-  rechnungen: { gestelltNetto:874624, gestelltBrutto:1040752.56, bezahltBrutto:678992.56, bezahltAnz:15, offenBrutto:361760, offenAnz:7 },
+/* ---------- Daten ----------
+   Quelle: praesentationen/daten.json, erzeugt mit  node praesentationen/daten-aus-backup.js <Sicherung.json>
+   (Auswertung „Summe Bestätigt“, Forecast und Deal-Auswertung mit der Rechenlogik der App). */
+const DATEN = (() => { try { return JSON.parse(require("fs").readFileSync(path.join(__dirname, "daten.json"), "utf8")); } catch (e) { return {}; } })();
+const GESAMT = DATEN.gesamt || null;          // Zeile „Summe Bestätigt“ der Auswertung
+const FORECAST = DATEN.forecast || null;      // { zwoelf, jahr, naechstes } je mit T und monate[]
+const DEAL = DATEN.deal || {                  // Deal-Auswertung ProEvent 2026 (Fallback: PDF-Stand 07.08.2026)
+  stand: "07.08.2026", name: "ProEvent 2026", parteien: ["Nova Works", "CGS", "TCLG"],
+  projekte: [ { nr:"26-0007", name:"80er Live", ums:[412556, 235000, 245000], kosten:151483.36 }, { nr:"26-0008", name:"Oberhausen", ums:[114210, 65000, 55000], kosten:157113.91 } ],
+  umsatz: 1126766, kosten: 308597.27, auszahlungen: 0, auszahlungenJePartner: {},
+  rechnungen: { gestelltNetto:874624, gestelltBrutto:1040752.56, gestelltAnz:22, bezahltBrutto:678992.56, bezahltAnz:15, offenBrutto:361760, offenAnz:7 },
 };
-/* Gesamt Nova Works: Zeile „Summe Bestätigt“ aus Nova Works App → Auswertung (Bestätigte Projekte), alle Beträge netto.
-   null = Zahlen liegen noch nicht vor. */
-const GESAMT = null;
-/* Beispielstruktur:
-const GESAMT = { stand:"22.09.2026", projekte:17, angebot:0, bestaetigt:0, erloeseIst:0, kostenIst:0, eingangsrechnungen:0, margeSoll:0, margeIst:0 }; */
-/* Forecast (Nova Works App → Forecast → PowerPoint-Export). null = Zahlen liegen noch nicht vor. */
-const FORECAST = null;
-/* Beispielstruktur:
-const FORECAST = { zeitraum:"Nächste 12 Monate", bestaetigt:0, offenGewichtet:0, abgerechnet:0, marge:0, fixkosten:0,
-  monate:[{ label:"Okt 26", bestaetigt:0, offen:0, abgerechnet:0 }, …] }; */
 
 const eur = n => (Math.round(n)).toLocaleString("de-DE") + " €";
 const eurK = n => (Math.round(n/1000)).toLocaleString("de-DE") + " T€";
@@ -69,11 +60,16 @@ function contentSlide(topNr, title, sub, part){
   if(sub) txt(s, sub, { x:topNr?1.55:0.6, y:1.3, w:9.5, h:0.35, fontSize:12.5, color:C.inkSoft });
   return s;
 }
+/* Schriftgröße, bei der ein Betrag in die Kachelbreite passt (Helvetica fett, Ziffer ≈ 0,56 em, Punkt/Leerzeichen ≈ 0,28 em) */
+function fitPt(text, maxIn, maxPt){
+  const em = [...String(text)].reduce((a,ch) => a + (/[\d€A-Za-z]/.test(ch) ? 0.58 : (ch === "-" || ch === "−") ? 0.6 : 0.3), 0);
+  return Math.max(12, Math.min(maxPt, Math.floor(maxIn*72/em)));
+}
 function kpi(s, x, y, w, label, value, sub, col){
   card(s, x, y, w, 1.35);
   const narrow = w < 2.5;
   txt(s, label.toUpperCase(), { x:x+0.25, y:y+0.18, w:w-0.5, h:0.28, fontSize:narrow?8:9, color:C.inkSoft, charSpacing:narrow?0.6:1.5 });
-  txt(s, value, { x:x+0.25, y:y+0.45, w:w-0.5, h:0.5, fontSize:22, bold:true, color:col||C.ink, valign:"middle" });
+  txt(s, value, { x:x+0.25, y:y+0.45, w:w-0.5, h:0.5, fontSize:fitPt(value, w-0.5, 22), bold:true, color:col||C.ink, valign:"middle" });
   if(sub) txt(s, sub, { x:x+0.25, y:y+0.95, w:w-0.5, h:0.28, fontSize:9.5, color:C.inkSoft });
 }
 function placeholder(s, x, y, w, h, text){
@@ -208,40 +204,44 @@ const TOPS = [
 
 /* ===== 6 TOP 3a Deal-Auswertung ===== */
 {
-  const t = TOPS[2]; const s = contentSlide(t.nr, t.titel, "Deal-Auswertung ProEvent 2026 · Stand "+DEAL.stand+" · alle Beträge netto", "1 von 2");
-  const tot = { ums:[0,0,0], kosten:0 };
-  DEAL.projekte.forEach(p => { p.ums.forEach((v,i)=>tot.ums[i]+=v); tot.kosten+=p.kosten; });
+  const t = TOPS[2]; const s = contentSlide(t.nr, t.titel, "Deal-Auswertung "+DEAL.name+" · Stand "+DEAL.stand+" · alle Beträge netto", "1 von 2");
   const sum = a => a.reduce((x,y)=>x+y,0);
-  const rows = [[TH("Projekt"), THr("Nova Works"), THr("CGS"), THr("TCLG"), THr("Umsatz gesamt"), THr("Anteil"), THr("Kosten (NW)"), THr("Marge Deal"), THr("Marge NW-Sicht")]];
+  const tot = { ums:DEAL.parteien.map(()=>0), kosten:0 };
+  DEAL.projekte.forEach(p => { p.ums.forEach((v,i)=>tot.ums[i]+=v); tot.kosten+=p.kosten; });
+  const U = sum(tot.ums), mNW = tot.ums[0]-tot.kosten, vorSplit = U-tot.kosten, rest = vorSplit-(DEAL.auszahlungen||0);
+  const rows = [[TH("Projekt")].concat(DEAL.parteien.map(THr)).concat([THr("Umsatz gesamt"), THr("Anteil"), THr("Kosten (NW)"), THr("Marge Deal"), THr("Marge NW-Sicht")])];
   DEAL.projekte.forEach(p => {
-    const u = sum(p.ums), mNW = p.ums[0]-p.kosten;
-    rows.push([TD(p.nr+" · "+p.name,{b:1}), TD(eur(p.ums[0]),{r:1,b:1}), TD(eur(p.ums[1]),{r:1}), TD(eur(p.ums[2]),{r:1}), TD(eur(u),{r:1,b:1}), TD(pct(u,sum(tot.ums)),{r:1,col:C.inkSoft}), TD(eur(p.kosten),{r:1}), TD(eur(u-p.kosten),{r:1,col:C.ok}), TD(eur(mNW),{r:1,b:1,col:mNW>=0?C.ok:C.danger})]);
+    const u = sum(p.ums), m = p.ums[0]-p.kosten;
+    rows.push([TD(p.nr+" · "+p.name,{b:1})].concat(p.ums.map((v,i)=>TD(eur(v),{r:1,b:i===0}))).concat([TD(eur(u),{r:1,b:1}), TD(pct(u,U),{r:1,col:C.inkSoft}), TD(eur(p.kosten),{r:1}), TD(eur(u-p.kosten),{r:1,col:(u-p.kosten)>=0?C.ok:C.danger}), TD(eur(m),{r:1,b:1,col:m>=0?C.ok:C.danger})]));
   });
-  const U = sum(tot.ums), mNW = tot.ums[0]-tot.kosten;
-  rows.push([TD("Deal gesamt",{b:1,bt:1}), TD(eur(tot.ums[0]),{r:1,b:1,bt:1}), TD(eur(tot.ums[1]),{r:1,b:1,bt:1}), TD(eur(tot.ums[2]),{r:1,b:1,bt:1}), TD(eur(U),{r:1,b:1,bt:1}), TD("",{bt:1}), TD(eur(tot.kosten),{r:1,b:1,bt:1}), TD(eur(U-tot.kosten),{r:1,b:1,bt:1,col:C.ok}), TD(eur(mNW),{r:1,b:1,bt:1,col:C.ok})]);
-  rows.push([TD("Umsatz-Anteil je Partei",{col:C.inkSoft,fs:9}), TD(pct(tot.ums[0],U),{r:1,col:C.inkSoft,fs:9}), TD(pct(tot.ums[1],U),{r:1,col:C.inkSoft,fs:9}), TD(pct(tot.ums[2],U),{r:1,col:C.inkSoft,fs:9}), TD(""), TD(""), TD(""), TD(""), TD("")]);
+  rows.push([TD("Deal gesamt",{b:1,bt:1})].concat(tot.ums.map(v=>TD(eur(v),{r:1,b:1,bt:1}))).concat([TD(eur(U),{r:1,b:1,bt:1}), TD("",{bt:1}), TD(eur(tot.kosten),{r:1,b:1,bt:1}), TD(eur(vorSplit),{r:1,b:1,bt:1,col:vorSplit>=0?C.ok:C.danger}), TD(eur(mNW),{r:1,b:1,bt:1,col:mNW>=0?C.ok:C.danger})]));
+  rows.push([TD("Umsatz-Anteil je Partei",{col:C.inkSoft,fs:9})].concat(tot.ums.map(v=>TD(pct(v,U),{r:1,col:C.inkSoft,fs:9}))).concat([TD(""), TD(""), TD(""), TD(""), TD("")]));
   s.addTable(rows, { x:0.6, y:1.95, w:W-1.2, colW:[2.25,1.35,1.2,1.2,1.5,0.8,1.35,1.4,1.08], rowH:0.38, fontFace:FONT });
-  /* Diagramm: Umsatz je Partei und Projekt */
   s.addChart(pres.charts.BAR, DEAL.parteien.map((pt,i) => ({ name:pt, labels:DEAL.projekte.map(p=>p.name), values:DEAL.projekte.map(p=>p.ums[i]) })),
     Object.assign({ x:0.6, y:4.15, w:6.3, h:2.5, barDir:"col", barGrouping:"clustered", barGapWidthPct:60, chartColors:[C.ink, C.gold, C.greyLight],
       showLegend:true, legendPos:"b", showValue:true, dataLabelPosition:"outEnd", dataLabelColor:C.inkSoft, dataLabelFontSize:8, dataLabelFormatCode:"#,##0",
       showTitle:true, title:"UMSATZ JE PARTEI UND PROJEKT (€, NETTO)" }, chartBase));
-  /* Kennzahlen rechts */
-  kpi(s, 7.2, 4.15, 2.65, "Umsatz Nova Works", eur(tot.ums[0]), pct(tot.ums[0],U)+" des Deals");
-  kpi(s, 10.08, 4.15, 2.65, "Marge NW-Sicht", eur(mNW), pct(mNW,tot.ums[0])+" vom NW-Umsatz", C.ok);
-  card(s, 7.2, 5.65, 5.53, 1.0, C.goldBg);
-  txt(s, "80er Live trägt die Marge: "+eur(DEAL.projekte[0].ums[0]-DEAL.projekte[0].kosten)+" aus Nova-Works-Sicht. Oberhausen liegt aus Nova-Works-Sicht bei "+eur(DEAL.projekte[1].ums[0]-DEAL.projekte[1].kosten)+" (Kosten über dem eigenen Umsatzanteil).",
-    { x:7.4, y:5.72, w:5.15, h:0.86, fontSize:10.5, valign:"middle" });
-  s.addNotes("TOP 3 – Deal-Auswertung aus der Nova Works App (Auswertung → Deal-Auswertung), Stand 07.08.2026. Nova-Works-Umsatz = bestätigte Projektsumme, Partnerumsätze CGS/TCLG manuell erfasst, Kosten (NW) aus der Kostenkontrolle.");
+  /* Kostensplit rechts (wie in der App) */
+  card(s, 7.2, 4.15, 5.53, 2.5);
+  txt(s, "KOSTENSPLIT · NETTO", { x:7.45, y:4.3, w:5, h:0.28, fontSize:9, color:C.inkSoft, charSpacing:1.5 });
+  const ks = [["Einnahmen alle Parteien", eur(U)], ["− Kosten gesamt", eur(tot.kosten)], ["= Ergebnis vor Split", eur(vorSplit), true], ["− Auszahlungen Partner", eur(DEAL.auszahlungen||0)], ["= verbleibt Nova Works", eur(rest), true]];
+  ks.forEach((k,i) => {
+    const y = 4.65+i*0.34, bold = !!k[2];
+    if(bold) s.addShape(pres.shapes.LINE, { x:7.45, y:y-0.02, w:5.05, h:0, line:{ color:C.line, width:0.75 } });
+    txt(s, k[0], { x:7.45, y, w:3.2, h:0.32, fontSize:11, bold, valign:"middle" });
+    txt(s, k[1], { x:10.4, y, w:2.1, h:0.32, fontSize:11, bold, align:"right", valign:"middle", color:bold?((k[0].includes("verbleibt")?rest:vorSplit)>=0?C.ok:C.danger):C.ink });
+  });
+  txt(s, "Nova-Works-Sicht: Umsatz "+eur(tot.ums[0])+" − Kosten "+eur(tot.kosten)+" = "+eur(mNW)+(tot.ums[0]>0?" ("+pct(mNW,tot.ums[0])+")":""), { x:7.45, y:6.36, w:5.05, h:0.26, fontSize:9, color:C.inkSoft });
+  s.addNotes("TOP 3 – Deal-Auswertung aus der Nova Works App (Auswertung → Deal-Auswertung), Stand "+DEAL.stand+". Nova-Works-Umsatz = bestätigte Projektsumme, Partnerumsätze CGS/TCLG manuell erfasst, Kosten (NW) aus der Kostenkontrolle, Auszahlungen an Partner aus dem Kostensplit.");
 }
 
 /* ===== 7 TOP 3b Rechnungen + Zukunft Kunde MK ===== */
 {
   const t = TOPS[2]; const s = contentSlide(t.nr, "Rechnungsstand und Zukunft Kunde MK?", "Rechnungen an den Kunden über alle Parteien · Stand "+DEAL.stand, "2 von 2");
   const R = DEAL.rechnungen;
-  kpi(s, 0.6, 1.95, 3.3, "In Rechnung gestellt", eur(R.gestelltNetto), "netto · "+eur(R.gestelltBrutto)+" brutto");
+  kpi(s, 0.6, 1.95, 3.3, "In Rechnung gestellt", eur(R.gestelltNetto), (R.gestelltAnz?R.gestelltAnz+" Rechnungen · ":"")+"netto · "+eur(R.gestelltBrutto)+" brutto");
   kpi(s, 0.6, 3.5, 3.3, "Bezahlt", eur(R.bezahltBrutto), R.bezahltAnz+" Rechnungen · brutto", C.ok);
-  kpi(s, 0.6, 5.05, 3.3, "Offen", eur(R.offenBrutto), R.offenAnz+" Rechnungen · brutto · nur 80er Live", C.gold);
+  kpi(s, 0.6, 5.05, 3.3, "Offen", eur(R.offenBrutto), R.offenAnz+" Rechnungen · brutto", C.gold);
   s.addChart(pres.charts.DOUGHNUT, [{ name:"Rechnungen", labels:["Bezahlt","Offen"], values:[Math.round(R.bezahltBrutto), Math.round(R.offenBrutto)] }],
     Object.assign({ x:4.1, y:1.95, w:3.6, h:4.45, holeSize:60, chartColors:[C.ink, C.gold], showLegend:true, legendPos:"b", showPercent:true, showValue:false, dataLabelColor:"FFFFFF", dataLabelFontSize:10,
       showTitle:true, title:"ZAHLUNGSSTAND (BRUTTO)" }, chartBase));
@@ -251,7 +251,7 @@ const TOPS = [
   const q = ["Erfahrungen aus 80er Live und Oberhausen", "Konditionen und Zahlungsziele", "Rollenverteilung mit CGS und TCLG", "Umfang 2027: Tour, Einzelshows, Festivals", "Entscheidung: weiter, anpassen oder beenden?"];
   s.addText(q.map((p,i)=>({ text:p, options:{ bullet:{ code:"25A0" }, breakLine:i<q.length-1, paraSpaceAfter:8 } })),
     { x:8.3, y:3.0, w:4.2, h:3.2, fontFace:FONT, fontSize:12, color:C.ink, margin:0, isTextBox:true, valign:"top" });
-  s.addNotes("TOP 3 – Rechnungsstand aus der Deal-Auswertung (Stand 07.08.2026). Diskussionspunkte zur Zukunft mit dem Kunden.");
+  s.addNotes("TOP 3 – Rechnungsstand aus der Deal-Auswertung (Stand "+DEAL.stand+"). Diskussionspunkte zur Zukunft mit dem Kunden.");
 }
 
 /* ===== 8 TOP 4 Messeauftritt ===== */
@@ -270,17 +270,18 @@ const TOPS = [
 
 /* ===== 9 TOP 5 Forecast ===== */
 {
-  const t = TOPS[4]; const s = contentSlide(t.nr, t.titel, FORECAST ? ("Forecast · "+FORECAST.zeitraum+" · alle Beträge netto") : "Kennzahlen aus dem Forecast der Nova Works App · alle Beträge netto");
-  const F = FORECAST;
-  const v = k => F ? eur(F[k]) : "–";
-  const fc = F ? F.bestaetigt+F.offenGewichtet : 0;
+  const t = TOPS[4];
+  const F = FORECAST && FORECAST.zwoelf, T = F && F.T;
+  const s = contentSlide(t.nr, t.titel, F ? ("Forecast · "+F.rangeLbl+" ("+F.periodLbl+") · "+F.projekte+" Projekte, "+F.planIn+" Planeinträge · alle Beträge netto · Stand "+DATEN.stand) : "Kennzahlen aus dem Forecast der Nova Works App · alle Beträge netto");
+  const v = k => T ? eur(T[k]) : "–";
+  const fc = T ? T.wc+T.wo : 0;
   const tiles = [
-    ["Bestätigt / fest", v("bestaetigt"), "Projektsumme bestätigter Projekte", C.ok],
-    ["Offen (gewichtet)", v("offenGewichtet"), "Angebote „auf Anfrage“ × Wahrscheinlichkeit", C.gold],
-    ["Forecast Umsatz", F ? eur(fc) : "–", "Bestätigt + Offen gewichtet"],
-    ["Abgerechnet", v("abgerechnet"), "Ausgangsrechnungen"],
-    ["Marge (Forecast)", v("marge"), F ? pct(F.marge,fc)+" vom Forecast-Umsatz" : "Umsatz − geplante Kosten", C.ok],
-    ["nach Fixkosten", F ? eur(F.marge-F.fixkosten) : "–", F ? "Fixkosten "+eur(F.fixkosten) : "Marge − Fixkosten aus dem Overhead"],
+    ["Bestätigt / fest", v("conf"), "Projektsumme bestätigter Projekte", C.ok],
+    ["Offen (gewichtet)", v("wo"), T ? "aus "+eur(T.open)+" Angeboten „auf Anfrage“" : "Angebote „auf Anfrage“ × Wahrscheinlichkeit", C.gold],
+    ["Forecast Umsatz", T ? eur(fc) : "–", "Bestätigt + Offen gewichtet"],
+    ["Abgerechnet", v("erl"), "Ausgangsrechnungen"],
+    ["Marge (Forecast)", v("marge"), T ? pct(T.marge,fc)+" vom Forecast-Umsatz" : "Umsatz − geplante Kosten", T && T.marge<0 ? C.danger : C.ok],
+    ["nach Fixkosten", v("erg"), T ? "Fixkosten "+eur(T.fix) : "Marge − Fixkosten aus dem Overhead", T && T.erg<0 ? C.danger : C.ok],
   ];
   const tw = 1.92, tg = 0.15;
   tiles.forEach((k,i) => kpi(s, 0.6+i*(tw+tg), 1.95, tw, k[0], k[1], k[2], k[3]));
@@ -289,12 +290,20 @@ const TOPS = [
         { name:"Bestätigt / fest", labels:F.monate.map(m=>m.label), values:F.monate.map(m=>Math.round(m.bestaetigt)) },
         { name:"Offen gewichtet",  labels:F.monate.map(m=>m.label), values:F.monate.map(m=>Math.round(m.offen)) },
         { name:"Abgerechnet",      labels:F.monate.map(m=>m.label), values:F.monate.map(m=>Math.round(m.abgerechnet)) }],
-      Object.assign({ x:0.6, y:3.5, w:W-1.2, h:3.1, barDir:"col", barGrouping:"clustered", chartColors:[C.ink, C.gold, C.greyLight], showLegend:true, legendPos:"b",
+      Object.assign({ x:0.6, y:3.5, w:8.0, h:3.15, barDir:"col", barGrouping:"clustered", barGapWidthPct:50, chartColors:[C.ink, C.gold, C.greyLight], showLegend:true, legendPos:"b",
         showTitle:true, title:"UMSATZ JE MONAT (€, NETTO)" }, chartBase));
+    /* Kalenderjahre rechts */
+    const J = FORECAST.jahr, N = FORECAST.naechstes;
+    const yr = (lbl, X) => { const f = X.T.wc+X.T.wo; return [TD(lbl,{b:1,fs:8.5}), TD(eur(f),{r:1,b:1,fs:8.5}), TD(eur(X.T.marge),{r:1,fs:8.5,col:X.T.marge>=0?C.ok:C.danger}), TD(eur(X.T.erg),{r:1,b:1,fs:8.5,col:X.T.erg>=0?C.ok:C.danger})]; };
+    const rows = [[TH("Zeitraum"), THr("Forecast"), THr("Marge"), THr("Ergebnis")], yr("Kalenderjahr 2026", J), yr("Kalenderjahr 2027", N), yr("Nächste 12 Mon.", F)];
+    card(s, 8.85, 3.5, 3.88, 3.15);
+    txt(s, "ÜBERSICHT NACH ZEITRAUM", { x:9.05, y:3.62, w:3.5, h:0.28, fontSize:9, color:C.inkSoft, charSpacing:1.5 });
+    s.addTable(rows, { x:9.0, y:3.95, w:3.6, colW:[1.1,0.9,0.8,0.8], rowH:0.4, fontFace:FONT, fontSize:8.5 });
+    txt(s, J.rangeLbl+": "+eur(J.T.erl)+" abgerechnet · Kosten geplant "+eur(J.T.soll)+" · Fixkosten "+eur(J.T.fix), { x:9.05, y:5.95, w:3.5, h:0.6, fontSize:8, color:C.inkSoft, valign:"top" });
   } else {
-    placeholder(s, 0.6, 3.5, W-1.2, 3.1, "Umsatz je Monat (Bestätigt · Offen gewichtet · Abgerechnet)\nZahlen folgen aus dem Forecast der Nova Works App (Forecast → PowerPoint-Export)");
+    placeholder(s, 0.6, 3.5, W-1.2, 3.15, "Umsatz je Monat (Bestätigt · Offen gewichtet · Abgerechnet)\nZahlen folgen aus dem Forecast der Nova Works App");
   }
-  s.addNotes("TOP 5 – Forecast und Ausblick. Zahlen aus Nova Works App → Forecast; dort PowerPoint-Export nutzen oder Werte in FORECAST im Build-Skript eintragen.");
+  s.addNotes("TOP 5 – Forecast und Ausblick. Zahlen aus Nova Works App → Forecast (Standard „nächste 12 Monate“, dazu Kalenderjahr 2026 und 2027), berechnet aus der Datensicherung vom "+DATEN.stand+".");
 }
 
 /* ===== 10 TOP 6 Sonstiges ===== */
