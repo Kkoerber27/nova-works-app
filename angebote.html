@@ -989,7 +989,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-17.3";
+var APP_VERSION="2026-09-18.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -3931,9 +3931,9 @@ function reRow(r){
     +'<td>'+_dup+esc(r.senderName||r.senderEmail||"—")+'<div style="font-size:11px;color:var(--ink-soft)">'+esc(String(r.subject||"").slice(0,64))+'</div></td>'
     +'<td class="nowrap">'+reMailBadge(r.mailbox)+'</td>'
     +'<td class="nowrap">'+esc(r.invoiceDate||r.received||"")+'</td>'
-    +'<td class="right nowrap"><b>'+eur(invNet(r))+'</b></td>'
+    +'<td class="right nowrap"><b>'+eur(invNet(r))+'</b>'+(reIsEdited(r)?'<div class="muted" style="font-size:10px" title="'+esc(reEditInfo(r))+'">✎ korrigiert</div>':'')+'</td>'
     +'<td class="nowrap">'+reTargetLabel(r)+'</td>'
-    +'<td class="nowrap">'+link+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button>'+(r._manual?(' <button class="btn sm danger re-mandel2" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung löschen">🗑</button>'):'')+'</td>'
+    +'<td class="nowrap">'+link+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button> <button class="btn sm ghost re-edit" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung bearbeiten: Absender, Betreff, Datum, Netto/Brutto/MwSt korrigieren">✎</button>'+(r._manual?(' <button class="btn sm danger re-mandel2" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung löschen">🗑</button>'):'')+'</td>'
     +'</tr>';
 }
 function reTable(list){
@@ -3944,9 +3944,45 @@ function reWireAssign(scope){
   (scope||document).querySelectorAll(".re-assign").forEach(function(b){
     b.onclick=function(){ var id=decodeURIComponent(b.dataset.id); var inv=reList().filter(function(x){return x.id===id;})[0]; if(inv) openAssignInvoice(inv); };
   });
+  (scope||document).querySelectorAll(".re-edit").forEach(function(b){
+    b.onclick=function(e){ e.stopPropagation(); var id=decodeURIComponent(b.dataset.id); var inv=reList().filter(function(x){return x.id===id;})[0]; if(inv) openInvoiceEditModal(inv); };
+  });
   (scope||document).querySelectorAll(".re-mandel2").forEach(function(b){
     b.onclick=function(){ var id=decodeURIComponent(b.dataset.id); if(confirm("Manuelle Rechnung endgültig löschen?")) delManualInvoice(id); };
   });
+}
+/* ===== Rechnungen bearbeiten (Beträge, Absender, Datum korrigieren) =====
+   Manuelle Rechnungen werden direkt geändert. Rechnungen aus dem Postfach kommen bei jedem Start neu
+   vom Server – ihre Korrekturen liegen deshalb in DB.rechOverrides[invId] und werden nach dem Laden
+   wieder angewendet (wie die Zuordnungen in rechEdits). */
+var RE_EDIT_FIELDS=["senderName","subject","invoiceDate","amount","gross","vat"];
+function reOverrides(){ if(!DB.rechOverrides) DB.rechOverrides={}; return DB.rechOverrides; }
+function reIsEdited(r){ return !!(r&&(r._edited||(DB.rechOverrides&&DB.rechOverrides[r.id]))); }
+function reEditInfo(r){ var o=(DB.rechOverrides||{})[r.id]||r._editOrig; if(!o||!o._orig) return "manuell korrigiert"; var g=o._orig; return "Original: "+(g.senderName||"—")+" · Netto "+eur(invM(g.amount))+(g.gross!=null?(" · Brutto "+eur(invM(g.gross))):"")+(g.invoiceDate?(" · "+g.invoiceDate):""); }
+function reApplyOverrides(){ var ov=DB.rechOverrides; if(!ov) return; (DB.rechnungen||[]).forEach(function(r){ var o=ov[r.id]; if(!o) return; RE_EDIT_FIELDS.forEach(function(k){ if(o[k]!==undefined) r[k]=o[k]; }); r._edited=true; }); }
+function reSaveEdit(inv,vals){
+  var orig={senderName:inv.senderName,subject:inv.subject,invoiceDate:inv.invoiceDate,amount:inv.amount,gross:inv.gross,vat:inv.vat};
+  var prev=inv._manual?inv._editOrig:(reOverrides()[inv.id]||{})._orig;
+  var o={_orig:prev||orig};
+  o.senderName=String(vals.senderName||"").trim(); o.subject=String(vals.subject||"").trim()||"Rechnung"; o.invoiceDate=vals.invoiceDate||"";
+  o.amount=Number(vals.netto)||0; o.gross=(vals.brutto!=null?Number(vals.brutto):null); o.vat=(vals.vat!=null?Number(vals.vat):null);
+  RE_EDIT_FIELDS.forEach(function(k){ inv[k]=o[k]; }); inv._edited=true;
+  if(inv._manual){ inv._editOrig=o._orig; } else { reOverrides()[inv.id]=o; }
+  save();
+}
+function reResetEdit(inv){
+  var o=inv._manual?inv._editOrig:(reOverrides()[inv.id]||{})._orig; if(!o) return;
+  RE_EDIT_FIELDS.forEach(function(k){ inv[k]=o[k]; }); delete inv._edited; delete inv._editOrig; if(!inv._manual) delete reOverrides()[inv.id];
+  save();
+}
+function openInvoiceEditModal(inv){
+  var pref={ senderName:inv.senderName||"", subject:inv.subject||"", invoiceDate:String(inv.invoiceDate||"").slice(0,10), netto:invNet(inv), brutto:(inv.gross!=null&&inv.gross!==""?Number(inv.gross):null), vat:(inv.vat!=null&&inv.vat!==""?Number(inv.vat):null) };
+  openInvoiceReviewModal(pref,function(vals){
+    reSaveEdit(inv,vals); toast("Rechnung korrigiert");
+    if(typeof renderRechnungen==="function"&&document.getElementById("re-body")) renderRechnungen();
+    if(typeof renderOverhead==="function"&&document.getElementById("oh-body")&&document.getElementById("view-overhead").classList.contains("active")) renderOverhead();
+    if(typeof renderAuswertung==="function"&&document.getElementById("view-auswertung")&&document.getElementById("view-auswertung").classList.contains("active")){ try{ renderAuswertung(); }catch(e){} }
+  },null,{ title:"Rechnung bearbeiten", intro:(reIsEdited(inv)?("Bereits korrigiert. "+reEditInfo(inv)):"Beträge, Absender, Betreff und Datum korrigieren – z. B. wenn die Rechnung falsch eingelesen wurde.")+(inv._manual?"":" Die Korrektur bleibt auch nach dem Neuladen der Rechnungen vom Server erhalten."), saveLabel:"Speichern", canReset:reIsEdited(inv), onReset:function(){ reResetEdit(inv); toast("Originalwerte wiederhergestellt"); if(typeof renderRechnungen==="function") renderRechnungen(); } });
 }
 function parseInvoicePdf(lines, fileName){
   // Zwei Lesarten je Zeile: roh und mit zusammengefügten Zahlfragmenten ("1. 655,05" → "1.655,05");
@@ -4026,17 +4062,19 @@ function addManualInvoice(o){
   save(); if(typeof renderRechnungen==="function") renderRechnungen(); toast("Rechnung hinzugefügt – jetzt zuordnen");
 }
 function delManualInvoice(id){ if(!DB.rechManual) return; DB.rechManual=DB.rechManual.filter(function(x){return x.id!==id;}); if(DB.rechEdits) delete DB.rechEdits[id]; save(); if(typeof renderRechnungen==="function") renderRechnungen(); toast("Rechnung gelöscht"); }
-function openInvoiceReviewModal(pref, onSave, onCancel){
+function openInvoiceReviewModal(pref, onSave, onCancel, opts){
+  opts=opts||{};
   var bg=document.getElementById("re-pdf-bg");
   if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="re-pdf-bg";
-    bg.innerHTML='<div class="modal"><div class="modal-head"><h3>PDF-Rechnung erfassen</h3><button class="x" data-x>×</button></div><div class="modal-body" id="re-pdf-body"></div></div>';
+    bg.innerHTML='<div class="modal"><div class="modal-head"><h3 id="re-pdf-title">PDF-Rechnung erfassen</h3><button class="x" data-x>×</button></div><div class="modal-body" id="re-pdf-body"></div></div>';
     document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg){ closeModal("re-pdf-bg"); if(bg._oncancel) bg._oncancel(); } };
   }
+  var ttl=document.getElementById("re-pdf-title"); if(ttl) ttl.textContent=opts.title||"PDF-Rechnung erfassen";
   bg._oncancel=onCancel||null;
   var body=document.getElementById("re-pdf-body");
   function fld(l,id,v,ph,type){ return '<div class="field"><label>'+l+'</label><input id="'+id+'" '+(type?('type="'+type+'"'):'')+' value="'+esc(v==null?"":String(v))+'" placeholder="'+(ph||"")+'"></div>'; }
   function deNum(x){ return (x==null||x==="")?"":Number(x).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}); }
-  body.innerHTML='<div class="muted" style="font-size:12px;margin-bottom:10px">Aus PDF vorausgefüllt – bitte prüfen/ergänzen.'+(pref.fileName?(' Datei: '+esc(pref.fileName)):'')+'</div>'
+  body.innerHTML='<div class="muted" style="font-size:12px;margin-bottom:10px">'+(opts.intro?esc(opts.intro):('Aus PDF vorausgefüllt – bitte prüfen/ergänzen.'+(pref.fileName?(' Datei: '+esc(pref.fileName)):'')))+'</div>'
     + fld("Absender / Rechnungssteller","rp-sender",pref.senderName,"z. B. Muster GmbH")
     + fld("Betreff / Rechnungs-Nr.","rp-subject",pref.subject,"")
     + '<div class="grid3">'
@@ -4045,8 +4083,9 @@ function openInvoiceReviewModal(pref, onSave, onCancel){
     + fld("Brutto € (optional)","rp-brutto",deNum(pref.brutto),"")
     + '</div>'
     + fld("MwSt € (optional)","rp-vat",deNum(pref.vat),"")
-    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px"><button class="btn sm" data-x>Abbrechen</button><button class="btn sm primary" id="rp-save">Speichern &amp; in Eingang</button></div>';
+    + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'+(opts.canReset?'<button class="btn sm" id="rp-reset" style="margin-right:auto" title="Auf die ursprünglich eingelesenen Werte zurücksetzen">↩ Original wiederherstellen</button>':'')+'<button class="btn sm" data-x>Abbrechen</button><button class="btn sm primary" id="rp-save">'+esc(opts.saveLabel||"Speichern & in Eingang")+'</button></div>';
   bg.querySelectorAll("[data-x]").forEach(function(b){ b.onclick=function(){ closeModal("re-pdf-bg"); if(onCancel) onCancel(); }; });
+  var rs=document.getElementById("rp-reset"); if(rs) rs.onclick=function(){ closeModal("re-pdf-bg"); if(opts.onReset) opts.onReset(); };
   document.getElementById("rp-save").onclick=function(){
     var v=function(id){ var e=document.getElementById(id); return e?e.value:""; };
     onSave({ senderName:v("rp-sender"), subject:(v("rp-subject")||"Rechnung"), invoiceDate:v("rp-date"),
@@ -5593,7 +5632,7 @@ function reShowMessen(){
       all.sort(function(a,b){ return String(b.invoiceDate||b.received||"").localeCompare(String(a.invoiceDate||a.received||"")); }).map(function(r){
         return '<tr><td>'+esc(r.senderName||r.senderEmail||"—")+'<div class="muted" style="font-size:11px">'+esc(String(r.subject||"").slice(0,64))+'</div></td><td class="nowrap">'+esc(String(r.invoiceDate||r.received||"").slice(0,10))+'</td><td class="right nowrap"><b>'+eur(invNet(r))+'</b></td>'+
           '<td><select class="messe-sel" data-id="'+encodeURIComponent(r.id)+'" style="font-size:12px;padding:3px;border:1px solid var(--line);border-radius:5px"><option value="">– keine –</option>'+messeSorted().map(function(m){ return '<option value="'+esc(m.id)+'"'+(mp[r.id]===m.id?' selected':'')+'>'+esc(messeLabel(m))+'</option>'; }).join("")+'</select></td>'+
-          '<td class="nowrap">'+(r.webLink?('<a href="'+esc(r.webLink)+'" target="_blank" rel="noopener" title="Mail öffnen">✉︎</a> '):'')+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button></td></tr>'; }).join("")+'</tbody></table>';
+          '<td class="nowrap">'+(r.webLink?('<a href="'+esc(r.webLink)+'" target="_blank" rel="noopener" title="Mail öffnen">✉︎</a> '):'')+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button> <button class="btn sm ghost re-edit" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung bearbeiten">✎</button></td></tr>'; }).join("")+'</tbody></table>';
   }
   el.innerHTML=h;
   el.querySelector("#messe-new-add").onclick=function(){ var m=addMesse(el.querySelector("#messe-new-name").value,el.querySelector("#messe-new-jahr").value,el.querySelector("#messe-new-ort").value); if(!m){ toast("Name der Messe fehlt"); return; } toast("Messe angelegt: "+messeLabel(m)); reShowMessen(); };
@@ -5700,6 +5739,7 @@ function openAssignInvoice(inv){
   h+='<div style="font-weight:600;margin:14px 0 6px">Projekt</div><input id="re-proj-search" placeholder="Projektnummer / Name …" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px"><div id="re-proj-list" style="max-height:220px;overflow:auto;margin-top:6px"></div>';
   h+='<div style="margin-top:16px;display:flex;gap:8px;justify-content:space-between">';
   h+= (inv.status==="ignoriert") ? '<button class="btn sm" id="re-unignore">↩︎ Zurück in Eingang</button>' : '<button class="btn sm" id="re-ignore">Ignorieren</button>';
+  h+=' <button class="btn sm" id="re-editbtn" title="Beträge, Absender, Datum korrigieren">✎ Bearbeiten</button>';
   if(inv._manual) h+=' <button class="btn sm danger" id="re-mandel">🗑 Rechnung löschen</button>';
   h+='<button class="btn sm" data-close="re-assign-bg">Schließen</button></div>';
   body.innerHTML=h;
@@ -5708,6 +5748,7 @@ function openAssignInvoice(inv){
     assignInvoiceSparte(inv,b.dataset.sp); closeModal("re-assign-bg"); }; });
   if(inv.assignType==="general"&&inv.generalCat==="messe"){ var spb=body.querySelector('.re-sp[data-sp="messe"]'); if(spb) spb.parentNode.insertAdjacentHTML("afterend",messePickHtml(inv)); messePickWire(body,inv,function(){ closeModal("re-assign-bg"); }); }
   var ig=document.getElementById("re-ignore"); if(ig) ig.onclick=function(){ ignoreInvoice(inv,true); closeModal("re-assign-bg"); };
+  var eb=document.getElementById("re-editbtn"); if(eb) eb.onclick=function(){ closeModal("re-assign-bg"); openInvoiceEditModal(inv); };
   var ug=document.getElementById("re-unignore"); if(ug) ug.onclick=function(){ ignoreInvoice(inv,false); closeModal("re-assign-bg"); };
   var md=document.getElementById("re-mandel"); if(md) md.onclick=function(){ if(confirm("Manuelle Rechnung wirklich löschen?")){ delManualInvoice(inv.id); closeModal("re-assign-bg"); } };
   body.querySelector("[data-close]").onclick=function(){ closeModal("re-assign-bg"); };
@@ -7440,7 +7481,7 @@ function renderProjectAuswertung(){
 function awCloudLoad(cb){
   if(typeof SB==="undefined"||!SB){ if(cb)cb(); return; }
   SB.from("app_state").select("data").eq("id","auswertung").maybeSingle()
-  .then(function(res){ var d=res&&res.data&&res.data.data; if(d){ DB.auswertung=d.auswertung||{}; DB.rechnungenIdx=d.rechnungenIdx||{}; DB.rechnungen=d.rechnungen||[]; DB.auswertungMeta=d.auswertungMeta||DB.auswertungMeta; } if(typeof awReconcileRech==="function") awReconcileRech(); if(typeof reAusgangAuto==="function"){ try{ reAusgangAuto(); }catch(eA){} } if(cb){cb();} else { var av=document.getElementById("view-auswertung"); if(av&&av.classList.contains("active")&&typeof renderAuswertung==="function") renderAuswertung(); var rv=document.getElementById("view-rechnungen"); if(rv&&rv.classList.contains("active")&&typeof renderRechnungen==="function") renderRechnungen(); if(typeof curProject!=="undefined"&&curProject&&document.getElementById("pd-auswertung")&&typeof renderProjectAuswertung==="function") renderProjectAuswertung(); } })
+  .then(function(res){ var d=res&&res.data&&res.data.data; if(d){ DB.auswertung=d.auswertung||{}; DB.rechnungenIdx=d.rechnungenIdx||{}; DB.rechnungen=d.rechnungen||[]; DB.auswertungMeta=d.auswertungMeta||DB.auswertungMeta; } if(typeof reApplyOverrides==="function") reApplyOverrides(); if(typeof awReconcileRech==="function") awReconcileRech(); if(typeof reAusgangAuto==="function"){ try{ reAusgangAuto(); }catch(eA){} } if(cb){cb();} else { var av=document.getElementById("view-auswertung"); if(av&&av.classList.contains("active")&&typeof renderAuswertung==="function") renderAuswertung(); var rv=document.getElementById("view-rechnungen"); if(rv&&rv.classList.contains("active")&&typeof renderRechnungen==="function") renderRechnungen(); if(typeof curProject!=="undefined"&&curProject&&document.getElementById("pd-auswertung")&&typeof renderProjectAuswertung==="function") renderProjectAuswertung(); } })
   .catch(function(){ if(cb)cb(); });
 }
 function syncAuswertung(){
