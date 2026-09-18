@@ -13,6 +13,7 @@ Sechs TOPs: Zusammenfassung/IST-Zustand, Überblick der letzten 4 Monate (mit Vo
 
 Datenquellen im Skript (`gesellschafterversammlung_2026-09-23.js`, Block „Daten“):
 
+- `GESAMT` – noch `null`; Zeile „Summe Bestätigt“ aus der App (Auswertung) eintragen, dann füllt sich TOP 1.
 - `DEAL` – Zahlen aus der Deal-Auswertung ProEvent 2026 der App (Auswertung → Deal-Auswertung), Stand 07.08.2026.
 - `FORECAST` – noch `null`; Werte aus der App (Forecast → PowerPoint-Export) eintragen, dann rendert das Skript Kacheln und Monatsdiagramm.
 

@@ -23,6 +23,11 @@ const DEAL = {
   ],
   rechnungen: { gestelltNetto:874624, gestelltBrutto:1040752.56, bezahltBrutto:678992.56, bezahltAnz:15, offenBrutto:361760, offenAnz:7 },
 };
+/* Gesamt Nova Works: Zeile „Summe Bestätigt“ aus Nova Works App → Auswertung (Bestätigte Projekte), alle Beträge netto.
+   null = Zahlen liegen noch nicht vor. */
+const GESAMT = null;
+/* Beispielstruktur:
+const GESAMT = { stand:"22.09.2026", projekte:17, angebot:0, bestaetigt:0, erloeseIst:0, kostenIst:0, eingangsrechnungen:0, margeSoll:0, margeIst:0 }; */
 /* Forecast (Nova Works App → Forecast → PowerPoint-Export). null = Zahlen liegen noch nicht vor. */
 const FORECAST = null;
 /* Beispielstruktur:
@@ -49,8 +54,12 @@ function circleNo(s, x, y, d, n, fs){
   s.addShape(pres.shapes.OVAL, { x, y, w:d, h:d, fill:{ color:C.goldBg }, line:{ color:C.goldBg } });
   txt(s, String(n), { x, y, w:d, h:d, fontSize:fs||22, bold:true, color:C.gold, align:"center", valign:"middle" });
 }
-function contentSlide(topNr, title, sub){
-  const s = pres.addSlide(); pageNo++;
+const SECTION = {};
+function contentSlide(topNr, title, sub, part){
+  const sec = topNr ? ("TOP "+topNr+" · "+TOPS[topNr-1].titel) : "Einstieg";
+  if(!SECTION[sec]){ pres.addSection({ title:sec }); SECTION[sec]=1; }
+  const s = pres.addSlide({ sectionTitle:sec }); pageNo++;
+  if(topNr && part) txt(s, "TOP "+topNr+"  ·  FOLIE "+part, { x:W-0.6-4.2, y:1.0, w:4.2, h:0.28, fontSize:8.5, color:C.gold, charSpacing:2, align:"right", bold:true });
   s.background = { color:C.bg };
   s.addImage({ path:LOGO, x:W-0.6-1.8, y:0.42, w:1.8, h:0.452 });
   txt(s, "NOVA WORKS GmbH  ·  Gesellschafterversammlung  ·  Denkendorf, 23.09.2026", { x:0.6, y:H-0.55, w:9, h:0.3, fontSize:9, color:C.inkSoft, valign:"middle" });
@@ -80,7 +89,7 @@ const chartBase = { catAxisLabelColor:C.inkSoft, catAxisLabelFontSize:9, catAxis
 /* ---------- TOPs ---------- */
 const TOPS = [
   { nr:1, titel:"Kurze Zusammenfassung und IST-Zustand", sub:"Wo steht die NOVA WORKS GmbH heute?" },
-  { nr:2, titel:"Überblick der letzten 4 Monate",          sub:"Projekte Mai bis September 2026 · Vorstellung der Nova Works App" },
+  { nr:2, titel:"Überblick der letzten 4 Monate",          sub:"Projekte Mai bis September 2026 und Vorstellung der Nova Works App" },
   { nr:3, titel:"80er im Detail und Zukunft Kunde MK?",     sub:"Deal-Auswertung 26-0007 80er Live und 26-0008 Oberhausen" },
   { nr:4, titel:"Messeauftritt",                            sub:"Planung, Ziele und Budget" },
   { nr:5, titel:"Forecast und Ausblick",                    sub:"Zusammenfassung aus dem Forecast der Nova Works App" },
@@ -89,7 +98,8 @@ const TOPS = [
 
 /* ===== 1 Titel ===== */
 {
-  const s = pres.addSlide();
+  pres.addSection({ title:"Einstieg" }); SECTION["Einstieg"]=1;
+  const s = pres.addSlide({ sectionTitle:"Einstieg" });
   s.background = { color:C.bg };
   s.addShape(pres.shapes.RECTANGLE, { x:W*0.62, y:0, w:W*0.38, h:H, fill:{ color:C.goldBg }, line:{ color:C.goldBg } });
   s.addImage({ path:LOGO, x:1.0, y:1.2, w:4.6, h:1.156 });
@@ -119,56 +129,66 @@ const TOPS = [
 
 /* ===== 3 TOP 1 ===== */
 {
-  const t = TOPS[0]; const s = contentSlide(t.nr, t.titel, t.sub);
-  const nw = DEAL.projekte.reduce((a,p)=>a+p.ums[0],0), kos = DEAL.projekte.reduce((a,p)=>a+p.kosten,0), all = DEAL.projekte.reduce((a,p)=>a+p.ums.reduce((x,y)=>x+y,0),0);
-  txt(s, "ZAHLEN AUS DEM DEAL PROEVENT 2026 · STAND "+DEAL.stand+" · NETTO", { x:0.6, y:1.95, w:7, h:0.3, fontSize:9, color:C.inkSoft, charSpacing:1.5 });
-  kpi(s, 0.6, 2.3, 3.7, "Umsatz Nova Works", eur(nw), "Anteil "+pct(nw,all)+" am Gesamtdeal "+eur(all));
-  kpi(s, 4.5, 2.3, 3.7, "Marge Nova-Works-Sicht", eur(nw-kos), pct(nw-kos,nw)+" · Kosten "+eur(kos), C.ok);
-  kpi(s, 0.6, 3.85, 3.7, "Offene Kundenrechnungen", eur(DEAL.rechnungen.offenBrutto), DEAL.rechnungen.offenAnz+" Rechnungen · brutto · alle Parteien", C.gold);
-  kpi(s, 4.5, 3.85, 3.7, "Bezahlt", eur(DEAL.rechnungen.bezahltBrutto), DEAL.rechnungen.bezahltAnz+" Rechnungen · brutto · alle Parteien");
-  card(s, 8.6, 1.95, 4.13, 4.6);
-  txt(s, "IST-ZUSTAND", { x:8.9, y:2.15, w:3.6, h:0.3, fontSize:9, color:C.inkSoft, charSpacing:1.5 });
-  const pts = ["Team und Auslastung", "Liquidität und offene Forderungen", "Kunden und Partner (ProEvent, CGS, TCLG)", "Werkzeuge: Nova Works App im Einsatz", "Offene Punkte"];
+  const t = TOPS[0]; const s = contentSlide(t.nr, t.titel, "Gesamt Nova Works · Auswertung der bestätigten Projekte" + (GESAMT ? " · Stand "+GESAMT.stand : "") + " · alle Beträge netto");
+  const G = GESAMT, v = k => G ? eur(G[k]) : "–";
+  txt(s, "SUMME BESTÄTIGT" + (G ? " · "+G.projekte+" PROJEKTE" : ""), { x:0.6, y:1.95, w:8, h:0.3, fontSize:9, color:C.inkSoft, charSpacing:1.5 });
+  const row1 = [
+    ["Angebot", v("angebot"), "Netto aus den Angeboten"],
+    ["Bestätigt", v("bestaetigt"), "aktuelle Projektsumme bestätigter Projekte", C.ok],
+    ["Erlöse (Ist)", v("erloeseIst"), "Summe aller Ausgangsrechnungen"],
+    ["Kosten (Ist)", v("kostenIst"), "zugeordnete Eingangsrechnungen"],
+  ];
+  const row2 = [
+    ["Marge Soll", v("margeSoll"), G ? pct(G.margeSoll,G.bestaetigt)+" · Budget − geplante Kosten" : "Budget − geplante Kosten (Kalkulations-Soll)", C.ok],
+    ["Marge Ist", v("margeIst"), G ? pct(G.margeIst,G.bestaetigt)+" · Budget − Kosten Ist" : "Budget − Kosten Ist", C.ok],
+    ["Eingangsrechn.", v("eingangsrechnungen"), "zugewiesene Eingangsrechnungen"],
+    ["Offen beim Kunden", G ? eur(G.bestaetigt-G.erloeseIst) : "–", "Bestätigt − Erlöse (Ist)", C.gold],
+  ];
+  const tw = 1.92, tg = 0.15;
+  row1.forEach((k,i) => kpi(s, 0.6+i*(tw+tg), 2.3, tw, k[0], k[1], k[2], k[3]));
+  row2.forEach((k,i) => kpi(s, 0.6+i*(tw+tg), 3.85, tw, k[0], k[1], k[2], k[3]));
+  if(!G) txt(s, "Zahlen folgen aus der Nova Works App (Auswertung → Zeile „Summe Bestätigt“).", { x:0.6, y:5.35, w:8.2, h:0.4, fontSize:10, italic:true, color:C.goldSoft });
+  card(s, 9.0, 1.95, 3.73, 4.6);
+  txt(s, "IST-ZUSTAND", { x:9.3, y:2.15, w:3.2, h:0.3, fontSize:9, color:C.inkSoft, charSpacing:1.5 });
+  const pts = ["Team und Auslastung", "Liquidität und offene Forderungen", "Kunden und Partner", "Werkzeuge: Nova Works App im Einsatz", "Offene Punkte"];
   s.addText(pts.map((p,i)=>({ text:p, options:{ bullet:{ code:"25A0" }, breakLine:i<pts.length-1, paraSpaceAfter:8 } })),
-    { x:8.9, y:2.5, w:3.6, h:2.6, fontFace:FONT, fontSize:12.5, color:C.ink, margin:0, isTextBox:true, valign:"top" });
-  txt(s, "Stichpunkte werden vor der Versammlung ergänzt.", { x:8.9, y:5.7, w:3.6, h:0.6, fontSize:10, italic:true, color:C.goldSoft });
-  s.addNotes("TOP 1 – Kurze Zusammenfassung und IST-Zustand. Kennzahlen stammen aus der Deal-Auswertung ProEvent 2026 (Stand 07.08.2026).");
+    { x:9.3, y:2.5, w:3.2, h:2.9, fontFace:FONT, fontSize:12, color:C.ink, margin:0, isTextBox:true, valign:"top" });
+  txt(s, "Stichpunkte werden vor der Versammlung ergänzt.", { x:9.3, y:5.7, w:3.2, h:0.6, fontSize:10, italic:true, color:C.goldSoft });
+  s.addNotes("TOP 1 – Kurze Zusammenfassung und IST-Zustand. Kennzahlen = Zeile „Summe Bestätigt“ der Auswertung in der Nova Works App (alle bestätigten Projekte, netto).");
 }
 
 /* ===== 4 TOP 2a Zeitstrahl ===== */
 {
-  const t = TOPS[1]; const s = contentSlide(t.nr, t.titel, "Was ist seit Mai 2026 passiert?");
-  const months = ["Mai", "Juni", "Juli", "August", "September"];
-  const x0 = 0.6, x1 = W-0.6, y = 2.55, mw = (x1-x0)/months.length;
-  s.addShape(pres.shapes.LINE, { x:x0, y:y, w:x1-x0, h:0, line:{ color:C.goldSoft, width:1.5 } });
-  months.forEach((m,i) => {
-    s.addShape(pres.shapes.OVAL, { x:x0+i*mw+mw/2-0.09, y:y-0.09, w:0.18, h:0.18, fill:{ color:C.gold }, line:{ color:C.gold } });
-    txt(s, m+" 2026", { x:x0+i*mw, y:y-0.55, w:mw, h:0.35, fontSize:12, bold:true, align:"center", color:C.ink });
-  });
-  const items = [
-    { m:0, t:"Vorbereitung Inselfieber", d:"26-0008 · Vorkasse an ProEvent" },
-    { m:1, t:"Inselfieber Oberhausen", d:"26-0008 · 10.–15.06. · Royal Stage, Bühne, Rigging, LED" },
-    { m:2, t:"80er Live Hamburg", d:"26-0007.01 · Audio, Backline, Zusätze" },
-    { m:2, t:"80er Live Schalke", d:"26-0007 · Backline Zusätze" },
-    { m:3, t:"80er Live Frankfurt", d:"26-0007.03 · Abschlussrechnung 26.08." },
-    { m:3, t:"Weitere Projekte", d:"SWR NPF 2026 · Ina Müller & Band · Red Bull Energy Station" },
-    { m:4, t:"Nova Works App", d:"Forecast, Deal-Auswertung, Kalkulations-Assistent, Messen" },
-    { m:4, t:"Gesellschafter-\nversammlung", d:"23.09. Denkendorf" },
+  const t = TOPS[1]; const s = contentSlide(t.nr, t.titel, "Projekte Mai bis September 2026", "1 von 2");
+  const MONATE = [
+    { m:"Mai",       p:[["26-0015","SWR3 ESC Party"],["26-0011","Ikarus"],["26-0029","LED Trailer Krones"]] },
+    { m:"Juni",      p:[["26-0026","i&u Studios · LED Säule"],["26-0021","EB – No Limits FFM"],["26-0008","Inselfieber Oberhausen"],["26-0016","CSD München"]] },
+    { m:"Juli",      p:[["26-0007","80er Live"],["26-0012","Summerjam"],["26-0023","SWR – Andy Borg"],["26-0033","Festspielhaus Bayreuth · Alle Farben"]] },
+    { m:"August",    p:[["26-0014","Shutdown Festival"]] },
+    { m:"September", p:[["26-0005","Sven Väth Bayreuth"],["26-0032","Glücksgefühle"],["26-0037","Red Bull @ GG · Energy Station"],["26-0043","Laser Mainz–Berlin"],["26-0047","FR Veranstaltungsleiter"]] },
   ];
-  const slots = {};
-  items.forEach(it => {
-    const k = it.m, n = slots[k] = (slots[k]||0)+1;
-    const cx = x0+it.m*mw+0.12, cw = mw-0.24, cy = y+0.35+(n-1)*1.7;
-    card(s, cx, cy, cw, 1.5);
-    txt(s, it.t, { x:cx+0.18, y:cy+0.15, w:cw-0.36, h:0.45, fontSize:12, bold:true, valign:"top" });
-    txt(s, it.d, { x:cx+0.18, y:cy+0.62, w:cw-0.36, h:0.8, fontSize:9.5, color:C.inkSoft, valign:"top" });
+  const x0 = 0.6, x1 = W-0.6, y = 2.35, mw = (x1-x0)/MONATE.length;
+  s.addShape(pres.shapes.LINE, { x:x0, y:y, w:x1-x0, h:0, line:{ color:C.goldSoft, width:1.5 } });
+  const n = MONATE.reduce((a,m)=>a+m.p.length,0);
+  txt(s, n+" Projekte in fünf Monaten", { x:W-0.6-4.2, y:1.3, w:4.2, h:0.35, fontSize:12.5, color:C.inkSoft, align:"right" });
+  MONATE.forEach((mo,i) => {
+    const cx = x0+i*mw;
+    s.addShape(pres.shapes.OVAL, { x:cx+mw/2-0.09, y:y-0.09, w:0.18, h:0.18, fill:{ color:C.gold }, line:{ color:C.gold } });
+    txt(s, mo.m+" 2026", { x:cx, y:y-0.55, w:mw, h:0.35, fontSize:12, bold:true, align:"center" });
+    const bx = cx+0.1, bw = mw-0.2, by = y+0.35, rh = 0.72, bh = 0.25+mo.p.length*rh;
+    card(s, bx, by, bw, bh);
+    mo.p.forEach((pr,j) => {
+      const ry = by+0.18+j*rh;
+      txt(s, pr[0], { x:bx+0.18, y:ry, w:bw-0.36, h:0.25, fontSize:9, color:C.gold, bold:true, charSpacing:1 });
+      txt(s, pr[1], { x:bx+0.18, y:ry+0.24, w:bw-0.36, h:0.42, fontSize:11, bold:true, valign:"top" });
+    });
   });
-  s.addNotes("TOP 2 – Überblick der letzten 4 Monate. Zeitstrahl der Projekte seit Mai 2026.");
+  s.addNotes("TOP 2 – Überblick der letzten 4 Monate: Projekte je Monat (Mai bis September 2026).");
 }
 
 /* ===== 5 TOP 2b Nova Works App ===== */
 {
-  const t = TOPS[1]; const s = contentSlide(t.nr, "Die Nova Works App", "Eine Web-App für Angebot, Crew, Disposition, Auswertung und Forecast · angebote.nova-works.de");
+  const t = TOPS[1]; const s = contentSlide(t.nr, "Die Nova Works App", "Eine Web-App für Angebot, Crew, Disposition, Auswertung und Forecast · angebote.nova-works.de", "2 von 2");
   const cols = [
     { h:"Angebote & Projekte", l:["Projekte mit Angeboten, Jobs und Material", "Angebots-PDF und Zusätze im Nova-Design", "Crew-Kalkulation und Transport", "Kalkulations-Assistent mit Erfahrungswerten und KI-Einschätzung", "Lieferanten-Anfragen als PDF"] },
     { h:"Crew & Disposition", l:["Crewplanung nach Gewerken und Phasen", "Crew Sheet, Schichtplan, Bauzeitenplan", "Hotelplanung und Funkgeräte-Ausgabe", "Crew per E-Mail anfragen", "Freelancer-Datenbank mit Adressen"] },
@@ -188,7 +208,7 @@ const TOPS = [
 
 /* ===== 6 TOP 3a Deal-Auswertung ===== */
 {
-  const t = TOPS[2]; const s = contentSlide(t.nr, t.titel, "Deal-Auswertung ProEvent 2026 · Stand "+DEAL.stand+" · alle Beträge netto");
+  const t = TOPS[2]; const s = contentSlide(t.nr, t.titel, "Deal-Auswertung ProEvent 2026 · Stand "+DEAL.stand+" · alle Beträge netto", "1 von 2");
   const tot = { ums:[0,0,0], kosten:0 };
   DEAL.projekte.forEach(p => { p.ums.forEach((v,i)=>tot.ums[i]+=v); tot.kosten+=p.kosten; });
   const sum = a => a.reduce((x,y)=>x+y,0);
@@ -217,7 +237,7 @@ const TOPS = [
 
 /* ===== 7 TOP 3b Rechnungen + Zukunft Kunde MK ===== */
 {
-  const t = TOPS[2]; const s = contentSlide(t.nr, "Rechnungsstand und Zukunft Kunde MK?", "Rechnungen an den Kunden über alle Parteien · Stand "+DEAL.stand);
+  const t = TOPS[2]; const s = contentSlide(t.nr, "Rechnungsstand und Zukunft Kunde MK?", "Rechnungen an den Kunden über alle Parteien · Stand "+DEAL.stand, "2 von 2");
   const R = DEAL.rechnungen;
   kpi(s, 0.6, 1.95, 3.3, "In Rechnung gestellt", eur(R.gestelltNetto), "netto · "+eur(R.gestelltBrutto)+" brutto");
   kpi(s, 0.6, 3.5, 3.3, "Bezahlt", eur(R.bezahltBrutto), R.bezahltAnz+" Rechnungen · brutto", C.ok);
@@ -293,7 +313,8 @@ const TOPS = [
 
 /* ===== 11 Abschluss ===== */
 {
-  const s = pres.addSlide();
+  pres.addSection({ title:"Abschluss" });
+  const s = pres.addSlide({ sectionTitle:"Abschluss" });
   s.background = { color:C.ink };
   s.addShape(pres.shapes.ROUNDED_RECTANGLE, { x:3.4, y:2.1, w:6.55, h:1.7, fill:{ color:"FFFFFF" }, line:{ color:"FFFFFF" }, rectRadius:0.12 });
   s.addImage({ path:LOGO, x:3.9, y:2.4, w:5.55, h:1.394 });
