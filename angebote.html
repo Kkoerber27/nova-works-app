@@ -989,7 +989,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-18.1";
+var APP_VERSION="2026-09-18.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -4074,18 +4074,46 @@ function openInvoiceReviewModal(pref, onSave, onCancel, opts){
   var body=document.getElementById("re-pdf-body");
   function fld(l,id,v,ph,type){ return '<div class="field"><label>'+l+'</label><input id="'+id+'" '+(type?('type="'+type+'"'):'')+' value="'+esc(v==null?"":String(v))+'" placeholder="'+(ph||"")+'"></div>'; }
   function deNum(x){ return (x==null||x==="")?"":Number(x).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}); }
+  /* Steuersatz aus den vorhandenen Werten ableiten (19 / 7 / 0), sonst 19 */
+  var rateGuess=19; (function(){ var n=Number(pref.netto)||0, v=(pref.vat!=null?Number(pref.vat):null), b=(pref.brutto!=null?Number(pref.brutto):null);
+    if(n>0){ var r=null; if(v!=null&&v>=0) r=v/n*100; else if(b!=null&&b>=n) r=(b-n)/n*100; if(r!=null){ if(Math.abs(r-19)<0.6) rateGuess=19; else if(Math.abs(r-7)<0.6) rateGuess=7; else if(r<0.3) rateGuess=0; else rateGuess=Math.round(r*10)/10; } } })();
   body.innerHTML='<div class="muted" style="font-size:12px;margin-bottom:10px">'+(opts.intro?esc(opts.intro):('Aus PDF vorausgefüllt – bitte prüfen/ergänzen.'+(pref.fileName?(' Datei: '+esc(pref.fileName)):'')))+'</div>'
     + fld("Absender / Rechnungssteller","rp-sender",pref.senderName,"z. B. Muster GmbH")
     + fld("Betreff / Rechnungs-Nr.","rp-subject",pref.subject,"")
     + '<div class="grid3">'
     + fld("Rechnungsdatum","rp-date",pref.invoiceDate,"","date")
     + fld("Netto €","rp-netto",deNum(pref.netto),"0,00")
-    + fld("Brutto € (optional)","rp-brutto",deNum(pref.brutto),"")
+    + fld("Brutto €","rp-brutto",deNum(pref.brutto),"")
     + '</div>'
-    + fld("MwSt € (optional)","rp-vat",deNum(pref.vat),"")
+    + '<div class="grid3">'
+    + fld("MwSt €","rp-vat",deNum(pref.vat),"")
+    + '<div class="field"><label>Steuersatz %</label><div style="display:flex;gap:4px;align-items:center"><input id="rp-rate" type="number" step="0.5" min="0" max="100" value="'+rateGuess+'" style="width:70px;text-align:right">'
+    + '<button type="button" class="btn sm rp-rq" data-r="19">19 %</button><button type="button" class="btn sm rp-rq" data-r="7">7 %</button><button type="button" class="btn sm rp-rq" data-r="0">0 %</button></div></div>'
+    + '<div class="field"><label>&nbsp;</label><div class="muted" id="rp-calc-hint" style="font-size:11.5px;line-height:1.4">Netto oder Brutto eintippen – der Rest wird mit dem Steuersatz automatisch berechnet.</div></div>'
+    + '</div>'
     + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">'+(opts.canReset?'<button class="btn sm" id="rp-reset" style="margin-right:auto" title="Auf die ursprünglich eingelesenen Werte zurücksetzen">↩ Original wiederherstellen</button>':'')+'<button class="btn sm" data-x>Abbrechen</button><button class="btn sm primary" id="rp-save">'+esc(opts.saveLabel||"Speichern & in Eingang")+'</button></div>';
   bg.querySelectorAll("[data-x]").forEach(function(b){ b.onclick=function(){ closeModal("re-pdf-bg"); if(onCancel) onCancel(); }; });
   var rs=document.getElementById("rp-reset"); if(rs) rs.onclick=function(){ closeModal("re-pdf-bg"); if(opts.onReset) opts.onReset(); };
+  /* Automatik: Netto ⇄ Brutto ⇄ MwSt über den Steuersatz */
+  (function(){
+    var q=function(id){ return document.getElementById(id); }, N=q("rp-netto"), B=q("rp-brutto"), V=q("rp-vat"), R=q("rp-rate"), H=q("rp-calc-hint");
+    var r2=function(x){ return Math.round(x*100)/100; }, val=function(el){ return awNumOr(el.value,null); };
+    var rate=function(){ var r=parseFloat(String(R.value).replace(",",".")); return isNaN(r)||r<0?0:r; };
+    var base="netto";
+    var hint=function(t){ if(H) H.textContent=t; };
+    var fromNetto=function(){ var n=val(N); if(n==null){ return; } var v=r2(n*rate()/100); V.value=deNum(v); B.value=deNum(r2(n+v)); hint("Brutto und MwSt aus Netto × "+rate()+" % berechnet."); };
+    var fromBrutto=function(){ var b=val(B); if(b==null){ return; } var n=r2(b/(1+rate()/100)); N.value=deNum(n); V.value=deNum(r2(b-n)); hint("Netto und MwSt aus Brutto ÷ (1 + "+rate()+" %) berechnet."); };
+    var fromVat=function(){ var n=val(N), v=val(V); if(n==null||v==null) return; B.value=deNum(r2(n+v)); if(n>0) R.value=String(Math.round(v/n*1000)/10); hint("Brutto = Netto + MwSt; Steuersatz angepasst."); };
+    N.addEventListener("input",function(){ base="netto"; fromNetto(); });
+    B.addEventListener("input",function(){ base="brutto"; fromBrutto(); });
+    V.addEventListener("input",function(){ fromVat(); });
+    R.addEventListener("input",function(){ if(base==="brutto") fromBrutto(); else fromNetto(); });
+    document.querySelectorAll("#re-pdf-body .rp-rq").forEach(function(b){ b.onclick=function(){ R.value=b.dataset.r; if(base==="brutto"&&val(B)!=null) fromBrutto(); else fromNetto(); }; });
+    /* Lücken beim Öffnen füllen: nur Brutto bekannt → Netto/MwSt rechnen; nur Netto → Brutto/MwSt rechnen */
+    var n0=val(N), b0=val(B);
+    if((n0==null||n0===0)&&b0!=null&&b0>0){ base="brutto"; fromBrutto(); }
+    else if(n0!=null&&(val(B)==null||val(V)==null)){ fromNetto(); }
+  })();
   document.getElementById("rp-save").onclick=function(){
     var v=function(id){ var e=document.getElementById(id); return e?e.value:""; };
     onSave({ senderName:v("rp-sender"), subject:(v("rp-subject")||"Rechnung"), invoiceDate:v("rp-date"),
