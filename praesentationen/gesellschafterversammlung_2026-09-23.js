@@ -165,7 +165,7 @@ const TOPS = [
     { m:"Juni",      p:[["26-0026","i&u Studios · LED Säule"],["26-0021","EB – No Limits FFM"],["26-0008","Inselfieber Oberhausen"],["26-0016","CSD München"]] },
     { m:"Juli",      p:[["26-0007","80er Live"],["26-0012","Summerjam"],["26-0023","SWR – Andy Borg"],["26-0033","Festspielhaus Bayreuth · Alle Farben"]] },
     { m:"August",    p:[["26-0014","Shutdown Festival"]] },
-    { m:"September", p:[["26-0005","Sven Väth Bayreuth"],["26-0032","Glücksgefühle"],["26-0037","Red Bull @ GG · Energy Station"],["26-0043","Laser Mainz–Berlin"],["26-0047","FR Veranstaltungsleiter"]] },
+    { m:"September", p:[["26-0005","Sven Väth Bayreuth"],["26-0032","Glücksgefühle"],["26-0037","Red Bull @ GG · Energy Station"],["26-0031","SWR NPF 2026"],["26-0043","Laser Mainz–Berlin"],["26-0047","FR Veranstaltungsleiter"]] },
   ];
   const x0 = 0.6, x1 = W-0.6, y = 2.35, mw = (x1-x0)/MONATE.length;
   s.addShape(pres.shapes.LINE, { x:x0, y:y, w:x1-x0, h:0, line:{ color:C.goldSoft, width:1.5 } });
@@ -175,7 +175,7 @@ const TOPS = [
     const cx = x0+i*mw;
     s.addShape(pres.shapes.OVAL, { x:cx+mw/2-0.09, y:y-0.09, w:0.18, h:0.18, fill:{ color:C.gold }, line:{ color:C.gold } });
     txt(s, mo.m+" 2026", { x:cx, y:y-0.55, w:mw, h:0.35, fontSize:12, bold:true, align:"center" });
-    const bx = cx+0.1, bw = mw-0.2, by = y+0.35, rh = 0.72, bh = 0.25+mo.p.length*rh;
+    const bx = cx+0.1, bw = mw-0.2, by = y+0.35, rh = 0.64, bh = 0.25+mo.p.length*rh;
     card(s, bx, by, bw, bh);
     mo.p.forEach((pr,j) => {
       const ry = by+0.18+j*rh;
