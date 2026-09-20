@@ -441,6 +441,7 @@
       <input id="crew-search" type="search" placeholder="Suche: Name, Funktion oder Stadt …" autocomplete="off" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 12px;margin-bottom:12px;font-size:13px">
       <table><thead><tr><th>Name</th><th>Funktion</th><th>Typ</th><th>Geburtstag</th><th class="right">Tagessatz</th><th>Telefon</th></tr></thead><tbody id="cm-rows"></tbody></table>
     </div>
+    <div class="card panel-pad" style="margin-bottom:22px" id="crew-ranking"></div>
     <div class="card panel-pad">
       <div class="section-title">Verfügbarkeit / Einsatzplanung</div>
       <div id="crew-timeline"></div>
@@ -989,7 +990,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-18.2";
+var APP_VERSION="2026-09-20.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -2029,7 +2030,7 @@ function renderProjectCrewPlan(){
   });
 }
 /* ---- Crew-Übersicht (Timeline + Konflikte) ---- */
-function renderCrewView(){ renderCrewList(); renderCrewTimeline(); }
+function renderCrewView(){ renderCrewList(); if(typeof renderCrewRanking==="function") renderCrewRanking(); renderCrewTimeline(); }
 function renderCrewTimeline(){
   var el=document.getElementById("crew-timeline"); if(!el) return;
   var all=[]; DB.projects.forEach(function(p){ (p.crewPlan||[]).forEach(function(a){ if(a.personId&&a.von&&a.bis) all.push({p:p,a:a}); }); });
@@ -2167,7 +2168,7 @@ function renderProjectCrewPlan(){
   });
 }
 /* ---- Crew-Seite: Pool + Import + Timeline ---- */
-function renderCrewView(){ renderCrewList(); renderCrewTimeline(); }
+function renderCrewView(){ renderCrewList(); if(typeof renderCrewRanking==="function") renderCrewRanking(); renderCrewTimeline(); }
 function crewAnyNum(s){ if(!s) return 0; var m=/(\d{4})-(\d{1,2})-(\d{1,2})/.exec(s); if(m) return new Date(+m[1],+m[2]-1,+m[3],12).getTime(); var g=/(\d{1,2})\.(\d{1,2})\.(\d{4})/.exec(s); if(g) return new Date(+g[3],+g[2]-1,+g[1],12).getTime(); return 0; }
 function crewFieldNums(s){ var arr=String(s||"").match(/\d{4}-\d{1,2}-\d{1,2}|\d{1,2}\.\d{1,2}\.\d{4}/g)||[]; return arr.map(crewAnyNum).filter(Boolean); }
 function dispoPersonSpan(p,person){
@@ -2490,7 +2491,8 @@ function renderCrewList(){
   var __q=(((typeof document!=="undefined"&&document.getElementById("crew-search"))||{}).value||"").trim().toLowerCase();
   var list=__q?__all.filter(function(m){ return (((m.name||"")+" "+(memberFunks(m).join(" "))+" "+(m.funktion||"")+" "+(m.ort||"")+" "+(m.plz||"")+" "+(m.notiz||"")).toLowerCase().indexOf(__q)>=0); }):__all;
   var cc=document.getElementById("cm-count"); if(cc) cc.textContent=__q?(list.length+" von "+__all.length+" Mitarbeitern"):(__all.length+" Mitarbeiter");
-  tb.innerHTML=list.map(function(m){return '<tr class="row-click" data-id="'+m.id+'"><td><strong>'+esc(m.name)+'</strong>'+(m.ort?'<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>':'')+'</td><td>'+esc(memberFunks(m).join(", "))+((m.dokumente&&m.dokumente.length)?('<div style="margin-top:2px">'+memberDocChips(m,true)+'</div>'):'')+'</td><td>'+esc(m.typ||"")+'</td><td class="nowrap">'+(m.geburtstag?(esc(crewGebDE(m.geburtstag))+(crewAge(m.geburtstag)!=null?(' <span class="muted">· '+crewAge(m.geburtstag)+'</span>'):'')+(String(m.geburtstag).slice(5,10)===(function(){var n=new Date();return ("0"+(n.getMonth()+1)).slice(-2)+"-"+("0"+n.getDate()).slice(-2);})()?" 🎂":"")):'<span class="muted">—</span>')+'</td><td class="right nowrap">'+(m.satz?eur(m.satz):"—")+'</td><td class="muted nowrap">'+esc(m.tel||"")+' <button class="btn sm ghost cm-vcf-row" data-id="'+m.id+'" title="Visitenkarte teilen (AirDrop / .vcf)" style="padding:2px 6px;margin-left:4px">📇</button></td></tr>';}).join("")
+  var rankBy={}; if(typeof crewRankCompute==="function"){ try{ crewRankCompute().forEach(function(s){ rankBy[s.m.id]=s; }); }catch(e){} }
+  tb.innerHTML=list.map(function(m){return '<tr class="row-click" data-id="'+m.id+'"><td><strong>'+esc(m.name)+'</strong>'+(rankBy[m.id]&&rankBy[m.id].hasData?(' <span style="margin-left:4px">'+crewStarsHtml(rankBy[m.id].stars,11)+'</span>'):'')+(m.ort?'<div class="muted" style="font-size:11px">'+esc(m.ort)+'</div>':'')+'</td><td>'+esc(memberFunks(m).join(", "))+((m.dokumente&&m.dokumente.length)?('<div style="margin-top:2px">'+memberDocChips(m,true)+'</div>'):'')+'</td><td>'+esc(m.typ||"")+'</td><td class="nowrap">'+(m.geburtstag?(esc(crewGebDE(m.geburtstag))+(crewAge(m.geburtstag)!=null?(' <span class="muted">· '+crewAge(m.geburtstag)+'</span>'):'')+(String(m.geburtstag).slice(5,10)===(function(){var n=new Date();return ("0"+(n.getMonth()+1)).slice(-2)+"-"+("0"+n.getDate()).slice(-2);})()?" 🎂":"")):'<span class="muted">—</span>')+'</td><td class="right nowrap">'+(m.satz?eur(m.satz):"—")+'</td><td class="muted nowrap">'+esc(m.tel||"")+' <button class="btn sm ghost cm-vcf-row" data-id="'+m.id+'" title="Visitenkarte teilen (AirDrop / .vcf)" style="padding:2px 6px;margin-left:4px">📇</button></td></tr>';}).join("")
     || '<tr><td colspan="6" class="muted" style="text-align:center;padding:16px">Noch keine Mitarbeiter.</td></tr>';
   tb.querySelectorAll("tr[data-id]").forEach(function(tr){ tr.onclick=function(){ openCrewMember(tr.dataset.id); }; });
   tb.querySelectorAll(".cm-vcf-row").forEach(function(b){ b.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===b.dataset.id;}); if(m) vcShareCrew(m); }; });
@@ -5011,6 +5013,92 @@ function bdayApply(){
   if(typeof renderCrewList==="function"){ try{ renderCrewList(); }catch(e){} }
   if(typeof renderCustomers==="function"){ try{ renderCustomers(); }catch(e){} }
   toast("🎂 "+n+" Geburtstag"+(n===1?"":"e")+" übernommen ("+nc+" Crew, "+nk+" Adressen)");
+}
+/* =========================================================================
+   CREW-RANKING – Sterne (0–5) aus gewichteten Kriterien. Gewichte in DB.crewRankWeights
+   (0 = Kriterium aus). Daten: Dispositionen der Projekte (Crew Sheet, Status, Phasen-Daten),
+   Crew-Planung, Funktionen, Dokumente und eine manuelle Bewertung je Person (m.rating).
+   ========================================================================= */
+var CREW_RANK_CRIT=[
+  {k:"buchungen",label:"Häufigkeit der Buchungen",hint:"Anzahl bestätigter Einsätze (Projekte)",w:5},
+  {k:"tage",label:"Einsatztage",hint:"Summe der Einsatztage aus Auf-/Abbau, Proben und Show",w:3},
+  {k:"zuverl",label:"Zuverlässigkeit",hint:"Anteil bestätigter Einsätze an allen Anfragen (Absagen zählen negativ)",w:3},
+  {k:"aktuell",label:"Aktualität",hint:"Wie lange der letzte Einsatz zurückliegt (jünger = besser)",w:2},
+  {k:"manuell",label:"Eigene Bewertung",hint:"Deine Sterne je Person (Spalte „Eigene Bewertung“)",w:2},
+  {k:"funk",label:"Vielseitigkeit",hint:"Anzahl hinterlegter Funktionen",w:1},
+  {k:"doks",label:"Befähigungen",hint:"Anzahl Dokumente / Nachweise",w:1}
+];
+function crewRankWeights(){ if(!DB.crewRankWeights) DB.crewRankWeights={}; var W=DB.crewRankWeights; CREW_RANK_CRIT.forEach(function(c){ if(W[c.k]==null) W[c.k]=c.w; }); return W; }
+function crewNameKey(s){ return String(s||"").toLowerCase().replace(/\s+/g," ").trim(); }
+/* Einsatzdaten je Crew-Mitglied (Name-Abgleich mit den Dispositionen) */
+function crewRankStats(){
+  var byKey={}; (DB.crew||[]).forEach(function(m){ if(m.name) byKey[crewNameKey(m.name)]={m:m,book:0,anfr:0,abs:0,tage:0,last:0,projs:{}}; });
+  var today=Date.now();
+  (DB.projects||[]).forEach(function(p){
+    if(p.ampel==="abgesagt") return;
+    var d=p.dispo;
+    if(d&&d.personnel&&d.personnel.length){
+      d.personnel.forEach(function(pe){ var st=byKey[crewNameKey(pe.name)]; if(!st) return;
+        var s=dispoPersonSpan(p,pe), days=s?(Math.round((s.bis-s.von)/86400000)+1):0, future=s&&s.von>today;
+        if(pe.status==="abgesagt"){ st.abs++; return; }
+        if(pe.status==="bestaetigt"){ if(!st.projs[p.id]){ st.projs[p.id]=1; st.book++; } st.tage+=days; if(s&&!future&&s.bis>st.last) st.last=s.bis; }
+        else st.anfr++;
+      });
+    } else if(p.cp&&p.cp.crew){
+      Object.keys(p.cp.crew).forEach(function(k){ (p.cp.crew[k]||[]).forEach(function(e){ var st=byKey[crewNameKey(e.name)]; if(!st) return; var r=personRange(p,e); var days=(r.von&&r.bis)?(Math.round((dnum(r.bis)-dnum(r.von))/86400000)+1):0;
+        if(!st.projs[p.id]){ st.projs[p.id]=1; st.book++; } st.tage+=days; if(r.bis&&dnum(r.bis)<=today&&dnum(r.bis)>st.last) st.last=dnum(r.bis); }); });
+    }
+  });
+  return Object.keys(byKey).map(function(k){ var st=byKey[k], m=st.m;
+    st.funk=(typeof memberFunks==="function"?memberFunks(m):[]).filter(Boolean).length; st.doks=(m.dokumente||[]).length; st.manuell=Number(m.rating)||0;
+    st.zuverl=(st.book+st.abs)>0?(st.book/(st.book+st.abs)):null;
+    st.sinceDays=st.last?Math.round((today-st.last)/86400000):null;
+    return st; });
+}
+function crewRankCompute(){
+  var W=crewRankWeights(), S=crewRankStats(), maxB=0,maxT=0,maxF=0,maxD=0;
+  S.forEach(function(s){ if(s.book>maxB)maxB=s.book; if(s.tage>maxT)maxT=s.tage; if(s.funk>maxF)maxF=s.funk; if(s.doks>maxD)maxD=s.doks; });
+  S.forEach(function(s){
+    var v={};
+    v.buchungen=maxB?s.book/maxB:0;
+    v.tage=maxT?s.tage/maxT:0;
+    v.zuverl=s.zuverl==null?null:s.zuverl;
+    v.aktuell=s.sinceDays==null?null:Math.max(0,1-s.sinceDays/730);   /* 0 Tage = 1, 2 Jahre = 0 */
+    v.manuell=s.manuell?(s.manuell/5):null;
+    v.funk=maxF?s.funk/maxF:0;
+    v.doks=maxD?s.doks/maxD:0;
+    var sum=0, wsum=0; CREW_RANK_CRIT.forEach(function(c){ var w=Number(W[c.k])||0; if(w<=0||v[c.k]==null) return; sum+=w*v[c.k]; wsum+=w; });
+    s.v=v; s.score=wsum?sum/wsum:0; s.stars=Math.round(s.score*10)/2;   /* halbe Sterne */
+    s.hasData=s.book>0||s.anfr>0||s.abs>0||s.manuell>0;
+  });
+  S.sort(function(a,b){ return b.score-a.score||b.book-a.book||String(a.m.name).localeCompare(String(b.m.name),"de"); });
+  return S;
+}
+function crewStarsHtml(stars,size){ var h="", i; size=size||14; for(i=1;i<=5;i++){ var full=stars>=i, half=!full&&stars>=i-0.5; h+='<span style="font-size:'+size+'px;color:'+((full||half)?'#c9a227':'#d9d4c8')+';position:relative;display:inline-block;width:'+size+'px;line-height:1">'+(half?'<span style="position:absolute;left:0;top:0;width:50%;overflow:hidden;color:#c9a227">★</span><span style="color:#d9d4c8">★</span>':'★')+'</span>'; } return '<span title="'+stars.toFixed(1).replace(".",",")+' von 5 Sternen" style="white-space:nowrap">'+h+'</span>'; }
+function crewRankOf(m){ var S=crewRankCompute(); for(var i=0;i<S.length;i++) if(S[i].m===m) return S[i]; return null; }
+function renderCrewRanking(){
+  var el=document.getElementById("crew-ranking"); if(!el) return;
+  var W=crewRankWeights(), S=crewRankCompute();
+  var open=(function(){ try{ return localStorage.getItem("crew_rank_w")==="1"; }catch(e){ return false; } })();
+  var h='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px"><div class="section-title" style="margin:0">Crew-Ranking</div><span class="muted" style="font-size:12px">'+S.filter(function(s){return s.hasData;}).length+' von '+S.length+' Personen mit Daten · Sterne aus gewichteten Kriterien</span><span style="flex:1"></span><button class="btn sm" id="crk-toggle">'+(open?'▾ Gewichtung ausblenden':'⚖ Gewichtung anpassen')+'</button></div>';
+  if(open){
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;background:#fbfaf7">'+
+      CREW_RANK_CRIT.map(function(c,i){ return '<label title="'+esc(c.hint)+'" style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;min-width:130px"><span><b>'+(i+1)+'.</b> '+esc(c.label)+'</span><input type="number" class="crk-w" data-k="'+c.k+'" min="0" max="10" step="1" value="'+(Number(W[c.k])||0)+'" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"></label>'; }).join("")+
+      '<div class="muted" style="font-size:11px;flex-basis:100%">Gewicht 0 = Kriterium aus. Jedes Kriterium wird auf 0–1 normiert (Bestwert der Crew = 1), dann gewichtet gemittelt und in halbe Sterne übersetzt. Absagen zählen bei der Zuverlässigkeit negativ, Aktualität fällt über 2 Jahre auf 0. <a href="#" id="crk-reset" style="color:var(--ink-soft)">Standard wiederherstellen</a></div></div>';
+  }
+  h+='<div style="overflow-x:auto"><table class="lines" style="font-size:12.5px"><thead><tr><th>#</th><th>Name</th><th>Sterne</th><th class="right" title="Bestätigte Einsätze (Projekte)">Buchungen</th><th class="right" title="Einsatztage gesamt">Tage</th><th class="right" title="Anfragen ohne Bestätigung / Absagen">Angefr. / Abs.</th><th class="right" title="Bestätigt ÷ (Bestätigt + Absagen)">Zuverl.</th><th title="Letzter Einsatz">Zuletzt</th><th class="right">Funkt.</th><th class="right">Doks</th><th title="Eigene Bewertung – anklicken zum Setzen">Eigene Bewertung</th></tr></thead><tbody>'+
+    S.map(function(s,i){ var m=s.m, own=Number(m.rating)||0;
+      var ownStars=''; for(var k=1;k<=5;k++) ownStars+='<span class="crk-own" data-id="'+esc(m.id)+'" data-v="'+k+'" style="cursor:pointer;font-size:15px;color:'+(own>=k?'#c9a227':'#d9d4c8')+'" title="'+k+' Stern'+(k>1?'e':'')+'">★</span>';
+      return '<tr class="row-click" data-id="'+esc(m.id)+'"'+(s.hasData?'':' style="opacity:.55"')+'><td class="muted">'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+(m.funktion?('<div class="muted" style="font-size:11px">'+esc(memberFunks(m).join(", "))+'</div>'):'')+'</td><td>'+crewStarsHtml(s.stars)+' <span class="muted" style="font-size:11px">'+s.stars.toFixed(1).replace(".",",")+'</span></td>'+
+        '<td class="right">'+s.book+'</td><td class="right">'+s.tage+'</td><td class="right muted">'+s.anfr+' / '+s.abs+'</td><td class="right">'+(s.zuverl==null?'<span class="muted">–</span>':(Math.round(s.zuverl*100)+' %'))+'</td><td class="nowrap">'+(s.last?fmtDate(isoFromNum(s.last)):'<span class="muted">–</span>')+'</td><td class="right">'+s.funk+'</td><td class="right">'+s.doks+'</td><td class="nowrap">'+ownStars+(own?' <span class="crk-own-x muted" data-id="'+esc(m.id)+'" style="cursor:pointer;font-size:11px" title="Bewertung löschen">×</span>':'')+'</td></tr>'; }).join("")+
+    '</tbody></table></div>';
+  el.innerHTML=h;
+  var tg=document.getElementById("crk-toggle"); if(tg) tg.onclick=function(){ try{ localStorage.setItem("crew_rank_w",open?"0":"1"); }catch(e){} renderCrewRanking(); };
+  el.querySelectorAll(".crk-w").forEach(function(inp){ inp.onchange=function(){ crewRankWeights()[inp.dataset.k]=Math.max(0,Math.min(10,parseInt(inp.value,10)||0)); save(); renderCrewRanking(); renderCrewList(); }; });
+  var rs=document.getElementById("crk-reset"); if(rs) rs.onclick=function(e){ e.preventDefault(); DB.crewRankWeights={}; crewRankWeights(); save(); renderCrewRanking(); renderCrewList(); };
+  el.querySelectorAll(".crk-own").forEach(function(sp){ sp.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===sp.dataset.id;}); if(!m) return; m.rating=+sp.dataset.v; save(); renderCrewRanking(); renderCrewList(); }; });
+  el.querySelectorAll(".crk-own-x").forEach(function(sp){ sp.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===sp.dataset.id;}); if(!m) return; delete m.rating; save(); renderCrewRanking(); renderCrewList(); }; });
+  el.querySelectorAll("tr[data-id]").forEach(function(tr){ tr.onclick=function(){ openCrewMember(tr.dataset.id); }; });
 }
 /* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
