@@ -808,6 +808,10 @@
       <div class="field"><label>Tagessatz €</label><input id="cm-satz" type="number" step="0.01"></div>
       <div class="field"><label>Telefon</label><input id="cm-tel"></div>
     </div>
+    <div class="grid2">
+      <div class="field"><label>Entfernung zum Lager (km) <span style="font-weight:400;color:#999">für Fahrkosten im Ranking</span></label><input id="cm-km" type="number" step="1" min="0"></div>
+      <div class="field"><label>Eigene Bewertung <span style="font-weight:400;color:#999">1–5 Sterne</span></label><select id="cm-rating"><option value="">–</option><option value="1">★</option><option value="2">★★</option><option value="3">★★★</option><option value="4">★★★★</option><option value="5">★★★★★</option></select></div>
+    </div>
     <div class="field"><label>E-Mail</label><input id="cm-email"></div>
     <div class="field"><label>Firma</label><input id="cm-firma"></div>
     <div class="field"><label>Straße &amp; Nr.</label><input id="cm-strasse"></div>
@@ -990,7 +994,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-20.1";
+var APP_VERSION="2026-09-20.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -2460,7 +2464,7 @@ function openCrewMember(id){
   document.getElementById("cm-title").textContent=c._new?"Neuer Mitarbeiter":"Mitarbeiter bearbeiten";
   set("cm-name",c.name); set("cm-satz",c.satz); set("cm-tel",c.tel); set("cm-email",c.email);
   set("cm-firma",c.firma); set("cm-strasse",c.strasse); set("cm-plz",c.plz); set("cm-ort",c.ort); set("cm-land",c.land); set("cm-bundesland",c.bundesland); set("cm-notiz",c.notiz);
-  set("cm-geb",c.geburtstag);
+  set("cm-geb",c.geburtstag); set("cm-km",(c.km!=null?c.km:"")); document.getElementById("cm-rating").value=c.rating?String(c.rating):"";
   var _alterFld=document.getElementById("cm-alter");
   var _updAlter=function(){ var a=crewAge(document.getElementById("cm-geb").value); _alterFld.value=(a!=null?(a+" Jahre"):""); };
   _updAlter(); document.getElementById("cm-geb").onchange=_updAlter;
@@ -2480,6 +2484,7 @@ function saveCrewMember(){
   c.funktionen=funks; c.funktion=funks[0]||"";
   c.satz=parseFloat(document.getElementById("cm-satz").value)||0; c.typ=document.getElementById("cm-typ").value;
   c.tel=g("cm-tel"); c.email=g("cm-email"); c.firma=g("cm-firma"); c.strasse=g("cm-strasse"); c.plz=g("cm-plz"); c.ort=g("cm-ort"); c.land=g("cm-land"); c.bundesland=g("cm-bundesland"); c.notiz=g("cm-notiz"); c.geburtstag=g("cm-geb");
+  var kmv=g("cm-km"); c.km=kmv===""?"":Math.max(0,parseFloat(kmv)||0); var rv=g("cm-rating"); if(rv) c.rating=+rv; else delete c.rating;
   if(!DB.crew) DB.crew=[];
   if(c._new){ delete c._new; DB.crew.push(c); }
   save(); closeModal("cm-bg"); renderCrewView(); toast("Mitarbeiter gespeichert");
@@ -5021,18 +5026,35 @@ function bdayApply(){
    ========================================================================= */
 var CREW_RANK_CRIT=[
   {k:"buchungen",label:"Häufigkeit der Buchungen",hint:"Anzahl bestätigter Einsätze (Projekte)",w:5},
-  {k:"tage",label:"Einsatztage",hint:"Summe der Einsatztage aus Auf-/Abbau, Proben und Show",w:3},
-  {k:"zuverl",label:"Zuverlässigkeit",hint:"Anteil bestätigter Einsätze an allen Anfragen (Absagen zählen negativ)",w:3},
-  {k:"aktuell",label:"Aktualität",hint:"Wie lange der letzte Einsatz zurückliegt (jünger = besser)",w:2},
+  {k:"satz",label:"Tagessatz",hint:"Tagessatz der Person (niedriger = besser); ohne Tagessatz nicht gewertet",w:4},
+  {k:"ueber",label:"Überstunden / Mehrkosten",hint:"Eingangsrechnungen der Person je Projekt im Vergleich zum geplanten Crew-EK (Tage × EK-Satz aus Angebot bzw. Rolle); Mehrkosten = schlechter",w:3},
+  {k:"fahrt",label:"Fahrkosten",hint:"Entfernung zum Lager in km (Feld „Entfernung“ beim Mitarbeiter); näher = besser",w:3},
+  {k:"tage",label:"Einsatztage",hint:"Summe der Einsatztage aus Auf-/Abbau, Proben und Show",w:2},
+  {k:"zuverl",label:"Zuverlässigkeit",hint:"Anteil bestätigter Einsätze an allen Anfragen (Absagen zählen negativ)",w:2},
   {k:"manuell",label:"Eigene Bewertung",hint:"Deine Sterne je Person (Spalte „Eigene Bewertung“)",w:2},
+  {k:"aktuell",label:"Aktualität",hint:"Wie lange der letzte Einsatz zurückliegt (jünger = besser)",w:1},
   {k:"funk",label:"Vielseitigkeit",hint:"Anzahl hinterlegter Funktionen",w:1},
   {k:"doks",label:"Befähigungen",hint:"Anzahl Dokumente / Nachweise",w:1}
 ];
+/* Geplanter Crew-EK je Tag für eine Funktion: Crew-Zeile im Angebot, sonst Rolle, sonst Tagessatz der Person */
+function crewPlanRate(p,funktion,m){
+  var f=String(funktion||"").toLowerCase().trim(), best=0;
+  if(f&&typeof kostenOffers==="function"){ kostenOffers(p).forEach(function(o){ (o.crew||[]).forEach(function(c){ var cf=String(c.funktion||"").toLowerCase(); if(cf&&(cf===f||cf.indexOf(f)>=0||f.indexOf(cf)>=0)&&(Number(c.ek)||0)>0&&!(typeof kaIsReise==="function"&&kaIsReise(c))) best=Math.max(best,Number(c.ek)||0); }); }); }
+  if(!best&&funktion) best=roleEK(funktion)||0;
+  if(!best&&m) best=Number(m.satz)||0;
+  return best;
+}
+/* Rechnungen einer Person in einem Projekt (Absender = Name oder Firma) */
+function crewPersonInvoices(p,m){
+  var keys=[awKey(m.name)]; if(m.firma) keys.push(awKey(m.firma)); keys=keys.filter(function(k){ return k.length>=4; });
+  if(!keys.length) return [];
+  return projInvoicesFor(p).filter(function(r){ var sk=awKey(r.senderName)+" "+awKey(r.senderEmail); return keys.some(function(k){ return sk.indexOf(k)>=0; }); });
+}
 function crewRankWeights(){ if(!DB.crewRankWeights) DB.crewRankWeights={}; var W=DB.crewRankWeights; CREW_RANK_CRIT.forEach(function(c){ if(W[c.k]==null) W[c.k]=c.w; }); return W; }
 function crewNameKey(s){ return String(s||"").toLowerCase().replace(/\s+/g," ").trim(); }
 /* Einsatzdaten je Crew-Mitglied (Name-Abgleich mit den Dispositionen) */
 function crewRankStats(){
-  var byKey={}; (DB.crew||[]).forEach(function(m){ if(m.name) byKey[crewNameKey(m.name)]={m:m,book:0,anfr:0,abs:0,tage:0,last:0,projs:{}}; });
+  var byKey={}; (DB.crew||[]).forEach(function(m){ if(m.name) byKey[crewNameKey(m.name)]={m:m,book:0,anfr:0,abs:0,tage:0,last:0,projs:{},planByP:{}}; });
   var today=Date.now();
   (DB.projects||[]).forEach(function(p){
     if(p.ampel==="abgesagt") return;
@@ -5041,7 +5063,8 @@ function crewRankStats(){
       d.personnel.forEach(function(pe){ var st=byKey[crewNameKey(pe.name)]; if(!st) return;
         var s=dispoPersonSpan(p,pe), days=s?(Math.round((s.bis-s.von)/86400000)+1):0, future=s&&s.von>today;
         if(pe.status==="abgesagt"){ st.abs++; return; }
-        if(pe.status==="bestaetigt"){ if(!st.projs[p.id]){ st.projs[p.id]=1; st.book++; } st.tage+=days; if(s&&!future&&s.bis>st.last) st.last=s.bis; }
+        if(pe.status==="bestaetigt"){ if(!st.projs[p.id]){ st.projs[p.id]=1; st.book++; } st.tage+=days; if(s&&!future&&s.bis>st.last) st.last=s.bis;
+          if(days>0&&!future){ var rate=crewPlanRate(p,pe.gewerk,st.m); if(rate>0){ st.planByP[p.id]=(st.planByP[p.id]||0)+days*rate; } } }
         else st.anfr++;
       });
     } else if(p.cp&&p.cp.crew){
@@ -5051,16 +5074,24 @@ function crewRankStats(){
   });
   return Object.keys(byKey).map(function(k){ var st=byKey[k], m=st.m;
     st.funk=(typeof memberFunks==="function"?memberFunks(m):[]).filter(Boolean).length; st.doks=(m.dokumente||[]).length; st.manuell=Number(m.rating)||0;
+    st.satz=Number(m.satz)||0; st.km=(m.km!=null&&m.km!=="")?Number(m.km):null;
+    /* Ist (Rechnungen der Person) vs. Plan (Tage × EK) über alle Projekte mit beidem */
+    st.plan=0; st.ist=0; st.nVgl=0;
+    Object.keys(st.planByP).forEach(function(pid){ var p=(DB.projects||[]).find(function(x){ return x.id===pid; }); if(!p) return; var inv=crewPersonInvoices(p,m); if(!inv.length) return; var ist=inv.reduce(function(a,r){ return a+invNet(r); },0); if(ist<=0) return; st.plan+=st.planByP[pid]; st.ist+=ist; st.nVgl++; });
+    st.ueber=(st.plan>0&&st.nVgl>0)?(st.ist/st.plan-1):null;   /* +0.12 = 12 % über Plan */
     st.zuverl=(st.book+st.abs)>0?(st.book/(st.book+st.abs)):null;
     st.sinceDays=st.last?Math.round((today-st.last)/86400000):null;
     return st; });
 }
 function crewRankCompute(){
-  var W=crewRankWeights(), S=crewRankStats(), maxB=0,maxT=0,maxF=0,maxD=0;
-  S.forEach(function(s){ if(s.book>maxB)maxB=s.book; if(s.tage>maxT)maxT=s.tage; if(s.funk>maxF)maxF=s.funk; if(s.doks>maxD)maxD=s.doks; });
+  var W=crewRankWeights(), S=crewRankStats(), maxB=0,maxT=0,maxF=0,maxD=0, minS=Infinity,maxS=0, minK=Infinity,maxK=0;
+  S.forEach(function(s){ if(s.book>maxB)maxB=s.book; if(s.tage>maxT)maxT=s.tage; if(s.funk>maxF)maxF=s.funk; if(s.doks>maxD)maxD=s.doks; if(s.satz>0){ if(s.satz<minS)minS=s.satz; if(s.satz>maxS)maxS=s.satz; } if(s.km!=null){ if(s.km<minK)minK=s.km; if(s.km>maxK)maxK=s.km; } });
   S.forEach(function(s){
     var v={};
     v.buchungen=maxB?s.book/maxB:0;
+    v.satz=(s.satz>0)?((maxS>minS)?(1-(s.satz-minS)/(maxS-minS)):1):null;          /* günstigster = 1, teuerster = 0 */
+    v.ueber=(s.ueber==null)?null:Math.max(0,1-Math.max(0,s.ueber)/0.5);           /* im Plan = 1, 50 % drüber = 0 */
+    v.fahrt=(s.km==null)?null:((maxK>minK)?(1-(s.km-minK)/(maxK-minK)):1);        /* nächster = 1, weitester = 0 */
     v.tage=maxT?s.tage/maxT:0;
     v.zuverl=s.zuverl==null?null:s.zuverl;
     v.aktuell=s.sinceDays==null?null:Math.max(0,1-s.sinceDays/730);   /* 0 Tage = 1, 2 Jahre = 0 */
@@ -5084,18 +5115,21 @@ function renderCrewRanking(){
   if(open){
     h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;padding:10px 12px;border:1px dashed var(--line);border-radius:8px;background:#fbfaf7">'+
       CREW_RANK_CRIT.map(function(c,i){ return '<label title="'+esc(c.hint)+'" style="display:flex;flex-direction:column;gap:3px;font-size:11.5px;min-width:130px"><span><b>'+(i+1)+'.</b> '+esc(c.label)+'</span><input type="number" class="crk-w" data-k="'+c.k+'" min="0" max="10" step="1" value="'+(Number(W[c.k])||0)+'" style="width:64px;padding:4px 6px;border:1px solid var(--line);border-radius:6px"></label>'; }).join("")+
-      '<div class="muted" style="font-size:11px;flex-basis:100%">Gewicht 0 = Kriterium aus. Jedes Kriterium wird auf 0–1 normiert (Bestwert der Crew = 1), dann gewichtet gemittelt und in halbe Sterne übersetzt. Absagen zählen bei der Zuverlässigkeit negativ, Aktualität fällt über 2 Jahre auf 0. <a href="#" id="crk-reset" style="color:var(--ink-soft)">Standard wiederherstellen</a></div></div>';
+      '<div class="muted" style="font-size:11px;flex-basis:100%">Gewicht 0 = Kriterium aus. Jedes Kriterium wird auf 0–1 normiert (Bestwert der Crew = 1), dann gewichtet gemittelt und in halbe Sterne übersetzt. Tagessatz und Fahrkosten (km): niedrigster Wert der Crew = 1, höchster = 0. Überstunden: Rechnungen der Person im Plan = 1, 50 % über Plan = 0 (nur Projekte mit Rechnung und geplantem Crew-EK). Absagen zählen bei der Zuverlässigkeit negativ, Aktualität fällt über 2 Jahre auf 0. <a href="#" id="crk-reset" style="color:var(--ink-soft)">Standard wiederherstellen</a></div></div>';
   }
-  h+='<div style="overflow-x:auto"><table class="lines" style="font-size:12.5px"><thead><tr><th>#</th><th>Name</th><th>Sterne</th><th class="right" title="Bestätigte Einsätze (Projekte)">Buchungen</th><th class="right" title="Einsatztage gesamt">Tage</th><th class="right" title="Anfragen ohne Bestätigung / Absagen">Angefr. / Abs.</th><th class="right" title="Bestätigt ÷ (Bestätigt + Absagen)">Zuverl.</th><th title="Letzter Einsatz">Zuletzt</th><th class="right">Funkt.</th><th class="right">Doks</th><th title="Eigene Bewertung – anklicken zum Setzen">Eigene Bewertung</th></tr></thead><tbody>'+
+  h+='<div style="overflow-x:auto"><table class="lines" style="font-size:12.5px"><thead><tr><th>#</th><th>Name</th><th>Sterne</th><th class="right" title="Bestätigte Einsätze (Projekte)">Buchungen</th><th class="right" title="Tagessatz der Person">Tagessatz</th><th class="right" title="Rechnungen der Person gegenüber geplantem Crew-EK (Projekte mit Rechnung und Plan)">Ist vs. Plan</th><th class="right" title="Entfernung zum Lager in km – hier direkt eintragen">km</th><th class="right" title="Einsatztage gesamt">Tage</th><th class="right" title="Anfragen ohne Bestätigung / Absagen">Angefr. / Abs.</th><th class="right" title="Bestätigt ÷ (Bestätigt + Absagen)">Zuverl.</th><th title="Letzter Einsatz">Zuletzt</th><th class="right">Funkt.</th><th class="right">Doks</th><th title="Eigene Bewertung – anklicken zum Setzen">Eigene Bewertung</th></tr></thead><tbody>'+
     S.map(function(s,i){ var m=s.m, own=Number(m.rating)||0;
       var ownStars=''; for(var k=1;k<=5;k++) ownStars+='<span class="crk-own" data-id="'+esc(m.id)+'" data-v="'+k+'" style="cursor:pointer;font-size:15px;color:'+(own>=k?'#c9a227':'#d9d4c8')+'" title="'+k+' Stern'+(k>1?'e':'')+'">★</span>';
       return '<tr class="row-click" data-id="'+esc(m.id)+'"'+(s.hasData?'':' style="opacity:.55"')+'><td class="muted">'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+(m.funktion?('<div class="muted" style="font-size:11px">'+esc(memberFunks(m).join(", "))+'</div>'):'')+'</td><td>'+crewStarsHtml(s.stars)+' <span class="muted" style="font-size:11px">'+s.stars.toFixed(1).replace(".",",")+'</span></td>'+
-        '<td class="right">'+s.book+'</td><td class="right">'+s.tage+'</td><td class="right muted">'+s.anfr+' / '+s.abs+'</td><td class="right">'+(s.zuverl==null?'<span class="muted">–</span>':(Math.round(s.zuverl*100)+' %'))+'</td><td class="nowrap">'+(s.last?fmtDate(isoFromNum(s.last)):'<span class="muted">–</span>')+'</td><td class="right">'+s.funk+'</td><td class="right">'+s.doks+'</td><td class="nowrap">'+ownStars+(own?' <span class="crk-own-x muted" data-id="'+esc(m.id)+'" style="cursor:pointer;font-size:11px" title="Bewertung löschen">×</span>':'')+'</td></tr>'; }).join("")+
+        '<td class="right">'+s.book+'</td><td class="right nowrap">'+(s.satz?eur(s.satz):'<span class="muted">–</span>')+'</td>'+
+        '<td class="right nowrap" style="color:'+(s.ueber==null?'inherit':(s.ueber>0.02?'#c0392b':'#2d7a4f'))+'"'+(s.ueber!=null?(' title="'+s.nVgl+' Projekt'+(s.nVgl===1?'':'e')+': Rechnungen '+eur(s.ist)+' · Plan '+eur(s.plan)+'"'):'')+'>'+(s.ueber==null?'<span class="muted">–</span>':((s.ueber>0?'+':'')+Math.round(s.ueber*100)+' %'))+'</td>'+
+        '<td class="right"><input type="number" class="crk-km" data-id="'+esc(m.id)+'" value="'+(s.km!=null?s.km:'')+'" placeholder="km" min="0" step="1" style="width:58px;text-align:right;padding:2px 4px;border:1px solid var(--line);border-radius:5px"></td><td class="right">'+s.tage+'</td><td class="right muted">'+s.anfr+' / '+s.abs+'</td><td class="right">'+(s.zuverl==null?'<span class="muted">–</span>':(Math.round(s.zuverl*100)+' %'))+'</td><td class="nowrap">'+(s.last?fmtDate(isoFromNum(s.last)):'<span class="muted">–</span>')+'</td><td class="right">'+s.funk+'</td><td class="right">'+s.doks+'</td><td class="nowrap">'+ownStars+(own?' <span class="crk-own-x muted" data-id="'+esc(m.id)+'" style="cursor:pointer;font-size:11px" title="Bewertung löschen">×</span>':'')+'</td></tr>'; }).join("")+
     '</tbody></table></div>';
   el.innerHTML=h;
   var tg=document.getElementById("crk-toggle"); if(tg) tg.onclick=function(){ try{ localStorage.setItem("crew_rank_w",open?"0":"1"); }catch(e){} renderCrewRanking(); };
   el.querySelectorAll(".crk-w").forEach(function(inp){ inp.onchange=function(){ crewRankWeights()[inp.dataset.k]=Math.max(0,Math.min(10,parseInt(inp.value,10)||0)); save(); renderCrewRanking(); renderCrewList(); }; });
   var rs=document.getElementById("crk-reset"); if(rs) rs.onclick=function(e){ e.preventDefault(); DB.crewRankWeights={}; crewRankWeights(); save(); renderCrewRanking(); renderCrewList(); };
+  el.querySelectorAll(".crk-km").forEach(function(inp){ inp.onclick=function(e){ e.stopPropagation(); }; inp.onchange=function(){ var m=(DB.crew||[]).find(function(x){return x.id===inp.dataset.id;}); if(!m) return; m.km=inp.value===""?"":Math.max(0,parseFloat(inp.value)||0); save(); renderCrewRanking(); renderCrewList(); }; });
   el.querySelectorAll(".crk-own").forEach(function(sp){ sp.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===sp.dataset.id;}); if(!m) return; m.rating=+sp.dataset.v; save(); renderCrewRanking(); renderCrewList(); }; });
   el.querySelectorAll(".crk-own-x").forEach(function(sp){ sp.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===sp.dataset.id;}); if(!m) return; delete m.rating; save(); renderCrewRanking(); renderCrewList(); }; });
   el.querySelectorAll("tr[data-id]").forEach(function(tr){ tr.onclick=function(){ openCrewMember(tr.dataset.id); }; });
