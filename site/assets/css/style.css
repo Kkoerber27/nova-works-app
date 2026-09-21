@@ -1992,9 +1992,15 @@ textarea.field__input { min-height: 150px; resize: vertical; }
      Seite, keine Ueberschrift bleibt allein am Fuss stehen. */
   /* Ein Strich fuer alles: Auf Papier ist jede Farbe im Satz schwarz.
      Einzeln aufgezaehlt bliebe zwangslaeufig etwas uebrig - die
-     Hervorhebungen etwa tragen ihre eigene Regel mit hoeherem Gewicht. */
-  .legal--agb,
-  .legal--agb * { color: #000 !important; }
+     Hervorhebungen etwa tragen ihre eigene Regel mit hoeherem Gewicht.
+
+     Das gilt fuer alle Rechtstexte, nicht nur die AGB: Impressum und
+     Datenschutzerklaerung werden genauso ausgedruckt und abgeheftet,
+     und ihr Fliesstext ist auf dem Schirm ebenso gedaempft. Vorher
+     stand hier nur die AGB-Regel - die beiden anderen Seiten kamen
+     grau aus dem Drucker. Gefunden hat das die neue Druckpruefung. */
+  .legal,
+  .legal * { color: #000 !important; }
   .legal--agb .agb__geltung::before { background: #000; }
   .legal--agb h2,
   .legal--agb .agb__inhalt { border-color: #999; }
