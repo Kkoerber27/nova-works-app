@@ -152,6 +152,28 @@
   .x{background:none;border:none;font-size:22px;color:var(--ink-soft);cursor:pointer;line-height:1}
   .matlist td{padding:8px 12px}
   .matlist .add{white-space:nowrap}
+  #anruf-fab{position:fixed;left:18px;bottom:22px;z-index:900;width:52px;height:52px;border-radius:50%;border:0;background:var(--ink);color:#fff;font-size:22px;cursor:pointer;box-shadow:0 6px 18px rgba(0,0,0,.25);display:flex;align-items:center;justify-content:center}
+  #anruf-fab:hover{transform:translateY(-1px)}
+  #anruf-badge{position:absolute;top:-4px;right:-4px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;background:#5a7d52;color:#fff;font-size:11px;font-weight:700;display:none;align-items:center;justify-content:center;font-family:inherit}
+  #anruf-panel{position:fixed;left:0;top:0;bottom:0;width:360px;max-width:100vw;background:#fff;box-shadow:4px 0 24px rgba(0,0,0,.18);z-index:950;transform:translateX(-105%);transition:transform .22s ease;display:flex;flex-direction:column;font-size:13px}
+  #anruf-panel.open{transform:none}
+  #anruf-inner{display:flex;flex-direction:column;height:100%;overflow:auto;padding:14px 16px 90px}
+  .an-head{display:flex;align-items:center;gap:6px;margin-bottom:12px;font-size:15px}
+  .an-head .x{background:transparent;border:0;font-size:22px;cursor:pointer;color:#777;line-height:1}
+  .an-add{display:flex;flex-direction:column;gap:6px;padding:10px;border:1px dashed var(--line);border-radius:8px;background:#fbfaf7;margin-bottom:12px}
+  .an-add input{width:100%;padding:7px 9px;border:1px solid var(--line);border-radius:6px;font-size:13px;box-sizing:border-box}
+  .an-item{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px;background:#fff}
+  .an-item.late{border-color:#e4b2ac;background:#fdf5f4}
+  .an-row1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .an-row1 .an-open{font-weight:700;color:var(--ink);text-decoration:none}
+  .an-row1 .an-open:hover{text-decoration:underline}
+  .an-typ{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#8a6d3b;background:var(--gold-bg);border-radius:4px;padding:1px 5px}
+  .an-tel{font-size:12px;color:#2f6fb0;text-decoration:none;margin-left:auto;white-space:nowrap}
+  .an-note{margin:4px 0 2px;font-size:12.5px;line-height:1.4}
+  .an-row2{display:flex;align-items:center;gap:6px;margin-top:6px;font-size:11px}
+  .an-donehead{margin:6px 0 8px;font-size:12px}.an-donehead a{color:var(--ink-soft);text-decoration:none}
+  .an-list.done .an-item{background:#faf9f6}
+  @media (min-width:1500px){ body.anruf-open main{margin-left:360px} }
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
     padding:11px 20px;border-radius:24px;font-size:13px;z-index:90;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
@@ -994,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-20.2";
+var APP_VERSION="2026-09-21.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5134,6 +5156,86 @@ function renderCrewRanking(){
   el.querySelectorAll(".crk-own-x").forEach(function(sp){ sp.onclick=function(e){ e.stopPropagation(); var m=(DB.crew||[]).find(function(x){return x.id===sp.dataset.id;}); if(!m) return; delete m.rating; save(); renderCrewRanking(); renderCrewList(); }; });
   el.querySelectorAll("tr[data-id]").forEach(function(tr){ tr.onclick=function(){ openCrewMember(tr.dataset.id); }; });
 }
+/* =========================================================================
+   ANRUFLISTE – seitliches Panel (links) als Notizzettel für Anrufe.
+   DB.anrufe = [{id,name,typ:"kunde"|"crew"|"",refId,note,due,createdAt,doneAt,result}]
+   Erledigte Anrufe bei Kunden landen zusätzlich im CRM-Verlauf (Typ „Anruf“).
+   ========================================================================= */
+function anrufe(){ if(!DB.anrufe) DB.anrufe=[]; return DB.anrufe; }
+function anrufOpen(){ return anrufe().filter(function(a){ return !a.doneAt; }); }
+function anrufPeople(){
+  var out=[];
+  (DB.customers||[]).forEach(function(c){ if(!c.firma) return; var lbl=c.firma+(c.ap?(" – "+c.ap):""); out.push({key:lbl,typ:"kunde",id:c.id,name:lbl,tel:c.tel||"",sub:"Kunde"}); });
+  (DB.crew||[]).forEach(function(m){ if(!m.name) return; out.push({key:m.name,typ:"crew",id:m.id,name:m.name,tel:m.tel||"",sub:"Crew"+(m.funktion?(" · "+m.funktion):"")}); });
+  return out;
+}
+function anrufResolve(name){ var k=String(name||"").trim().toLowerCase(); if(!k) return null; var P=anrufPeople(); return P.find(function(p){ return p.key.toLowerCase()===k; })||P.find(function(p){ return p.key.toLowerCase().indexOf(k)===0; })||null; }
+function anrufTel(a){ if(a.typ==="kunde"){ var c=(DB.customers||[]).find(function(x){ return x.id===a.refId; }); return c?(c.tel||""):""; } if(a.typ==="crew"){ var m=(DB.crew||[]).find(function(x){ return x.id===a.refId; }); return m?(m.tel||""):""; } return ""; }
+function anrufAdd(name,note,due,pref){
+  name=String(name||"").trim(); if(!name){ toast("Name fehlt"); return null; }
+  var p=pref||anrufResolve(name);
+  var a={id:uid(),name:p?p.name:name,typ:p?p.typ:"",refId:p?p.id:"",note:String(note||"").trim(),due:due||"",createdAt:today(),doneAt:"",result:""};
+  anrufe().unshift(a); save(); renderAnrufe(); return a;
+}
+function anrufDone(a,result){
+  a.doneAt=today(); a.result=String(result||"").trim();
+  if(a.typ==="kunde"&&typeof crmOf==="function"){ var c=(DB.customers||[]).find(function(x){ return x.id===a.refId; }); if(c){ crmOf(c).log.push({ts:Date.now(),typ:"anruf",text:"Anruf erledigt"+(a.note?(": "+a.note):"")+(a.result?(" – "+a.result):"")}); } }
+  save(); renderAnrufe(); if(typeof renderCrm==="function"&&document.getElementById("view-crm")&&document.getElementById("view-crm").classList.contains("active")) renderCrm();
+}
+function anrufOpenTarget(a){
+  if(a.typ==="kunde"&&typeof openCrmCustomer==="function"){ openCrmCustomer(a.refId); return; }
+  if(a.typ==="crew"){ showView("crew"); if(typeof openCrewMember==="function") openCrewMember(a.refId); return; }
+}
+var anrufPanelOpen=(function(){ try{ return localStorage.getItem("anruf_open")==="1"; }catch(e){ return false; } })(), anrufShowDone=false;
+function anrufToggle(force){ anrufPanelOpen=(force==null)?!anrufPanelOpen:!!force; try{ localStorage.setItem("anruf_open",anrufPanelOpen?"1":"0"); }catch(e){} renderAnrufe(); if(anrufPanelOpen){ var i=document.getElementById("an-name"); if(i) setTimeout(function(){ i.focus(); },50); } }
+function ensureAnrufDom(){
+  if(document.getElementById("anruf-fab")) return;
+  var fab=document.createElement("button"); fab.id="anruf-fab"; fab.type="button"; fab.title="Anrufliste öffnen"; fab.innerHTML='📞<span id="anruf-badge"></span>'; fab.onclick=function(){ anrufToggle(); };
+  document.body.appendChild(fab);
+  var p=document.createElement("aside"); p.id="anruf-panel"; p.innerHTML='<div id="anruf-inner"></div>'; document.body.appendChild(p);
+  document.addEventListener("keydown",function(e){ if(e.key==="Escape"&&anrufPanelOpen&&!document.querySelector(".modal-bg.open")) anrufToggle(false); });
+}
+function renderAnrufe(){
+  ensureAnrufDom();
+  var open=anrufOpen(), t=today(), over=open.filter(function(a){ return a.due&&a.due<t; }).length, due=open.filter(function(a){ return a.due===t; }).length;
+  var badge=document.getElementById("anruf-badge"); if(badge){ badge.textContent=open.length?String(open.length):""; badge.style.display=open.length?"inline-flex":"none"; badge.style.background=over?"#c0392b":(due?"#b4632e":"#5a7d52"); }
+  var fab=document.getElementById("anruf-fab"); if(fab) fab.title=open.length?(open.length+" offene Anruf"+(open.length===1?"":"e")+(over?(" · "+over+" überfällig"):"")):"Anrufliste";
+  var panel=document.getElementById("anruf-panel"); panel.classList.toggle("open",anrufPanelOpen);
+  document.body.classList.toggle("anruf-open",anrufPanelOpen);
+  if(!anrufPanelOpen) return;
+  var inner=document.getElementById("anruf-inner");
+  var dl='<datalist id="an-people">'+anrufPeople().map(function(p){ return '<option value="'+esc(p.key)+'">'+esc(p.sub)+'</option>'; }).join("")+'</datalist>';
+  var sorted=open.slice().sort(function(a,b){ var da=a.due||"9999", db=b.due||"9999"; return da.localeCompare(db)||String(b.createdAt||"").localeCompare(String(a.createdAt||"")); });
+  var h='<div class="an-head"><b>📞 Anrufliste</b><span class="muted" style="font-size:12px;margin-left:8px">'+open.length+' offen'+(over?(' · <span style="color:#c0392b">'+over+' überfällig</span>'):'')+'</span><span style="flex:1"></span><button class="x" id="an-close" title="Schließen (Esc)">×</button></div>'+
+    '<div class="an-add">'+dl+'<input id="an-name" list="an-people" placeholder="Name (Adressen / Crew) oder frei …" autocomplete="off">'+
+    '<input id="an-note" placeholder="Worum geht es? (z. B. Angebot nachfassen)">'+
+    '<div style="display:flex;gap:6px;align-items:center"><label class="muted" style="font-size:11px;white-space:nowrap">bis</label><input id="an-due" type="date" style="flex:1"><button class="btn sm primary" id="an-add">+ Merken</button></div></div>';
+  h+='<div class="an-list">'+(sorted.length?sorted.map(function(a){ var tel=anrufTel(a), late=a.due&&a.due<t, isDue=a.due===t;
+      return '<div class="an-item'+(late?' late':'')+'" data-id="'+esc(a.id)+'"><div class="an-row1"><a href="#" class="an-open" title="'+(a.typ==="kunde"?"Im CRM öffnen":(a.typ==="crew"?"Mitarbeiter öffnen":"Kein Datensatz verknüpft"))+'"'+(a.typ?'':' style="pointer-events:none;color:inherit"')+'>'+esc(a.name)+'</a>'+(a.typ?('<span class="an-typ">'+(a.typ==="kunde"?"Kunde":"Crew")+'</span>'):'')+(tel?('<a class="an-tel" href="tel:'+esc(tel.replace(/[^\d+]/g,""))+'" title="Anrufen">'+esc(tel)+'</a>'):'')+'</div>'+
+        (a.note?('<div class="an-note">'+esc(a.note)+'</div>'):'')+
+        '<div class="an-row2"><span class="muted">notiert '+fmtDate(a.createdAt)+(a.due?(' · <span'+(late?' style="color:#c0392b;font-weight:700"':(isDue?' style="color:#b4632e;font-weight:700"':''))+'>bis '+fmtDate(a.due)+(late?' – überfällig':(isDue?' – heute':''))+'</span>'):'')+'</span><span style="flex:1"></span>'+
+        '<button class="btn sm an-done" title="Als erledigt markieren (mit heutigem Datum)">✓ Erledigt</button><button class="btn sm ghost an-del" title="Löschen">🗑</button></div></div>'; }).join(""):'<div class="muted" style="padding:14px 4px;font-size:12.5px">Keine offenen Anrufe. Oben einen Namen eintippen – Vorschläge kommen aus Adressen und Crew.</div>')+'</div>';
+  var done=anrufe().filter(function(a){ return a.doneAt; }).sort(function(a,b){ return String(b.doneAt).localeCompare(String(a.doneAt)); });
+  h+='<div class="an-donehead"><a href="#" id="an-donetoggle">'+(anrufShowDone?'▾':'▸')+' Erledigt ('+done.length+')</a></div>';
+  if(anrufShowDone) h+='<div class="an-list done">'+(done.slice(0,50).map(function(a){ return '<div class="an-item" data-id="'+esc(a.id)+'"><div class="an-row1"><span style="text-decoration:line-through;color:#777">'+esc(a.name)+'</span><span class="muted" style="font-size:11px;margin-left:auto">✓ '+fmtDate(a.doneAt)+'</span></div>'+((a.note||a.result)?('<div class="an-note">'+esc(a.note)+(a.result?(' <span class="muted">– '+esc(a.result)+'</span>'):'')+'</div>'):'')+'<div class="an-row2"><span style="flex:1"></span><button class="btn sm ghost an-undo" title="Wieder öffnen">↩</button><button class="btn sm ghost an-del" title="Löschen">🗑</button></div></div>'; }).join("")||'<div class="muted" style="padding:8px 4px;font-size:12px">Noch nichts erledigt.</div>')+'</div>';
+  inner.innerHTML=h;
+  var q=function(id){ return document.getElementById(id); };
+  q("an-close").onclick=function(){ anrufToggle(false); };
+  var addFn=function(){ var nm=q("an-name").value; if(!nm.trim()){ q("an-name").focus(); toast("Name fehlt"); return; } anrufAdd(nm,q("an-note").value,q("an-due").value); setTimeout(function(){ var i=q("an-name"); if(i) i.focus(); },30); };
+  q("an-add").onclick=addFn;
+  ["an-name","an-note","an-due"].forEach(function(id){ q(id).addEventListener("keydown",function(e){ if(e.key==="Enter"){ e.preventDefault(); addFn(); } }); });
+  q("an-donetoggle").onclick=function(e){ e.preventDefault(); anrufShowDone=!anrufShowDone; renderAnrufe(); };
+  inner.querySelectorAll(".an-item").forEach(function(it){
+    var a=anrufe().find(function(x){ return x.id===it.dataset.id; }); if(!a) return;
+    var b;
+    if((b=it.querySelector(".an-open"))) b.onclick=function(e){ e.preventDefault(); anrufOpenTarget(a); };
+    if((b=it.querySelector(".an-done"))) b.onclick=function(){ var r=prompt("Anruf mit "+a.name+" als erledigt markieren ("+fmtDate(today())+").\nKurzes Ergebnis (optional):",""); if(r===null) return; anrufDone(a,r); toast("Erledigt: "+a.name); };
+    if((b=it.querySelector(".an-undo"))) b.onclick=function(){ a.doneAt=""; a.result=""; save(); renderAnrufe(); };
+    if((b=it.querySelector(".an-del"))) b.onclick=function(){ if(!confirm("Eintrag „"+a.name+"“ löschen?")) return; var L=anrufe(); L.splice(L.indexOf(a),1); save(); renderAnrufe(); };
+  });
+}
+/* Aus dem CRM heraus: Anruf für den gewählten Kunden merken */
+function anrufFromCustomer(c){ if(!c) return; var lbl=c.firma+(c.ap?(" – "+c.ap):""); anrufToggle(true); var i=document.getElementById("an-name"), n=document.getElementById("an-note"); if(i){ i.value=lbl; } if(n){ n.value=""; setTimeout(function(){ n.focus(); },60); } }
 /* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
    iPhone/Mac exportieren. Teilen-Dialog (AirDrop, Nachrichten, Mail) über
@@ -9403,7 +9505,7 @@ function bootCloud(){
 }
 function showLogin(msg){ document.getElementById("login-overlay").style.display="flex";
   document.getElementById("login-msg").textContent=msg||""; }
-function hideLogin(){ document.getElementById("login-overlay").style.display="none"; }
+function hideLogin(){ document.getElementById("login-overlay").style.display="none"; if(typeof renderAnrufe==="function"){ try{ renderAnrufe(); }catch(e){} } }
 async function doLogin(){
   var email=document.getElementById("login-email").value.trim();
   if(email&&email.indexOf("@")<0) email=email.toLowerCase()+"@"+TEAM_DOMAIN;
@@ -9881,7 +9983,7 @@ function crmDetailHtml(){
     (c.zusatz?'<span class="muted" style="font-size:12px">'+esc(c.zusatz)+'</span>':'')+
     '<span style="flex:1"></span>'+
     '<select id="crm-status" style="width:140px"><option value="">Status …</option>'+CRM_STATI.map(function(s){return '<option value="'+s[0]+'"'+(crm.status===s[0]?" selected":"")+'>'+s[1]+'</option>';}).join("")+'</select>'+
-    '<button class="btn sm" id="crm-edit">Adresse bearbeiten</button></div>'+
+    '<button class="btn sm" id="crm-edit">Adresse bearbeiten</button> <button class="btn sm" id="crm-anruf" title="Auf die Anrufliste setzen">📞 Anruf merken</button></div>'+
     '<div class="muted" style="font-size:12.5px;margin-top:6px">'+
     [esc(c.ap||""),(c.geburtstag?('🎂 '+esc(crewGebDE(c.geburtstag))+(crewAge(c.geburtstag)!=null?(' ('+crewAge(c.geburtstag)+')'):'')):""),(c.email?'<a href="mailto:'+esc(c.email)+'">'+esc(c.email)+'</a>':""),(c.tel?'<a href="tel:'+esc(c.tel)+'">'+esc(c.tel)+'</a>':""),esc([c.plz,c.ort].filter(Boolean).join(" "))].filter(Boolean).join(" · ")+'</div>'+
     '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">'+
@@ -9961,6 +10063,7 @@ function crmWireDetail(){
   var el=function(id){ return document.getElementById(id); };
   if(el("crm-status")) el("crm-status").onchange=function(){ crm.status=this.value; save(); renderCrm(); };
   if(el("crm-edit")) el("crm-edit").onclick=function(){ openCust(c.id,"crm"); };
+  if(el("crm-anruf")) el("crm-anruf").onclick=function(){ anrufFromCustomer(c); };
   if(el("crm-next-date")) el("crm-next-date").onchange=function(){ crm.next=crm.next||{}; crm.next.date=this.value; save(); renderCrm(); };
   if(el("crm-next-note")) el("crm-next-note").onchange=function(){ crm.next=crm.next||{}; crm.next.note=this.value; save(); };
   if(el("crm-next-clear")) el("crm-next-clear").onclick=function(){ crm.next=null; save(); renderCrm(); };
