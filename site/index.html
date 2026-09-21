@@ -685,14 +685,23 @@
 
         <article class="ref" data-reveal>
           <div class="ref__media">
-            <!-- Zu diesem Projekt liegt noch kein Foto vor. Sobald eines da
-                 ist: diesen Block ersetzen durch den Schalter mit
-                 <img class="ref__foto"> und die Liste <ul class="ref__bilder">
-                 darunter - genau wie bei den Projekten weiter oben. -->
-            <p class="ref__bild ref__bild--offen">
-              <strong>Foto folgt</strong>
-              Zu diesem Projekt liegt noch kein Bild vor.
-            </p>
+            <button class="ref__bild" type="button" data-lupe-auf>
+              <img class="ref__foto" src="assets/img/newpop.jpg" alt=""
+                   loading="lazy" decoding="async">
+              <span class="ref__zeichen" aria-hidden="true"></span>
+              <span class="visually-hidden">Bilder zu „SWR3 New Pop Festival“ ansehen</span>
+            </button>
+
+            <!-- Die Galerie zu diesem Projekt: hoechstens drei Bilder, ein
+                 <li> je Bild, das erste ist das sichtbare im Rahmen.
+                 Die drei Bilder zeigen drei verschiedene Saele - welcher
+                 welcher ist, steht bewusst nicht dabei: Die Zuordnung ist
+                 nicht belegt. -->
+            <ul class="ref__bilder" data-lupe-titel="SWR3 New Pop Festival">
+              <li><a href="assets/img/newpop.jpg">Weite Bühne in Blau, Lichtstrahlen über dem vollen Saal, auf der Bühne eine Big Band, seitlich die SWR3-New-Pop-Schilder</a></li>
+              <li><a href="assets/img/newpop-2.jpg">Blick vom Rang in den historischen Theatersaal: Stuck, Logen und Kronleuchter in Rot, auf der Bühne LED-Türme und Band</a></li>
+              <li><a href="assets/img/newpop-3.jpg">Wand aus senkrechten Leuchtröhren, links in Blau, rechts in Orange, davor der Sänger allein auf der Bühne</a></li>
+            </ul>
           </div>
           <div class="ref__text">
             <p class="eyebrow">Baden-Baden</p>
