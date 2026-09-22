@@ -1,71 +1,71 @@
 {
-  "stand": "18.09.2026",
+  "stand": "22.09.2026",
   "gesamt": {
-    "stand": "18.09.2026",
+    "stand": "22.09.2026",
     "projekte": 19,
-    "angebot": 1704056.7,
-    "bestaetigt": 1814726.7,
-    "erloeseIst": 1572556.4,
-    "kostenIst": 1530114.52,
-    "eingangsrechnungen": 1536144.2,
-    "margeSoll": -123644.25,
-    "margeIst": 281412.18
+    "angebot": 1703216.7,
+    "bestaetigt": 1813886.7,
+    "erloeseIst": 1752916.7,
+    "kostenIst": 1642786.64,
+    "eingangsrechnungen": 1648816.32,
+    "margeSoll": -124484.25,
+    "margeIst": 167900.06
   },
   "angeboten": {
-    "projekte": 12,
-    "angebot": 1277745
+    "projekte": 10,
+    "angebot": 1128955
   },
   "forecast": {
     "zwoelf": {
       "rangeLbl": "nächste 12 Monate",
       "periodLbl": "Sep 2026 – Aug 2027",
       "T": {
-        "conf": 300966.4,
-        "open": 1707495,
-        "wc": 300966.4,
-        "wo": 957135,
-        "erl": 45738.4,
-        "soll": 978951.695,
-        "personal": 364380.125,
-        "transport": 83718,
-        "miete": 530853.5700000001,
+        "conf": 300126.4,
+        "open": 1558705,
+        "wc": 300126.4,
+        "wo": 882740,
+        "erl": 226098.69999999998,
+        "soll": 920826.695,
+        "personal": 351755.125,
+        "transport": 77718,
+        "miete": 491353.56999999995,
         "fix": 98113.68000000001,
-        "marge": 279149.70499999996,
-        "erg": 181036.02499999997
+        "marge": 262039.70499999996,
+        "erg": 163926.02499999997
       },
       "planIn": 4,
-      "projekte": 19,
+      "projekte": 17,
       "monate": [
         {
           "label": "Sep 26",
-          "bestaetigt": 254446.4,
+          "bestaetigt": 253606.4,
           "offen": 0,
-          "abgerechnet": 45738.4,
+          "abgerechnet": 226098.69999999998,
           "soll": 235249.00999999998,
           "fix": 8051.14
         },
         {
           "label": "Okt 26",
           "bestaetigt": 0,
-          "offen": 130448.76383480216,
+          "offen": 70161.99912891984,
           "abgerechnet": 0,
-          "soll": 128678.14869850376,
+          "soll": 75773.73693379789,
           "fix": 8051.14
         },
         {
           "label": "Nov 26",
           "bestaetigt": 46520,
-          "offen": 141174.2612728018,
+          "offen": 131966.12891986064,
           "abgerechnet": 0,
-          "soll": 153721.98968026237,
+          "soll": 150207.28379790942,
           "fix": 8051.14
         },
         {
           "label": "Dez 26",
           "bestaetigt": 0,
-          "offen": 57216.974892396,
+          "offen": 52316.87195121953,
           "abgerechnet": 0,
-          "soll": 48743.111621233875,
+          "soll": 47037.2292682927,
           "fix": 8051.14
         },
         {
@@ -138,21 +138,21 @@
       "rangeLbl": "Kalenderjahr 2026",
       "periodLbl": "Jan 2026 – Dez 2026",
       "T": {
-        "conf": 1425431.6999999997,
-        "open": 657680,
-        "wc": 1425431.6999999997,
-        "wo": 328840,
-        "erl": 1572556.4,
-        "soll": 1781049.39,
-        "personal": 931589.49,
-        "transport": 148859.99999999997,
-        "miete": 700599.8999999999,
+        "conf": 1424591.6999999997,
+        "open": 508890,
+        "wc": 1424591.6999999997,
+        "wo": 254445.00000000003,
+        "erl": 1752916.7,
+        "soll": 1722924.39,
+        "personal": 918964.49,
+        "transport": 142859.99999999997,
+        "miete": 661099.8999999999,
         "fix": 88267.2,
-        "marge": -26777.690000000177,
-        "erg": -115044.89000000017
+        "marge": -43887.69000000018,
+        "erg": -132154.8900000002
       },
       "planIn": 0,
-      "projekte": 23,
+      "projekte": 21,
       "monate": [
         {
           "label": "Jan 26",
@@ -220,34 +220,34 @@
         },
         {
           "label": "Sep 26",
-          "bestaetigt": 254446.4,
+          "bestaetigt": 253606.4,
           "offen": 0,
-          "abgerechnet": 45738.4,
+          "abgerechnet": 226098.69999999998,
           "soll": 235249.00999999998,
           "fix": 8051.14
         },
         {
           "label": "Okt 26",
           "bestaetigt": 0,
-          "offen": 130448.76383480216,
+          "offen": 70161.99912891984,
           "abgerechnet": 0,
-          "soll": 128678.14869850376,
+          "soll": 75773.73693379789,
           "fix": 8051.14
         },
         {
           "label": "Nov 26",
           "bestaetigt": 46520,
-          "offen": 141174.2612728018,
+          "offen": 131966.12891986064,
           "abgerechnet": 0,
-          "soll": 153721.98968026237,
+          "soll": 150207.28379790942,
           "fix": 8051.14
         },
         {
           "label": "Dez 26",
           "bestaetigt": 0,
-          "offen": 57216.974892396,
+          "offen": 52316.87195121953,
           "abgerechnet": 0,
-          "soll": 48743.111621233875,
+          "soll": 47037.2292682927,
           "fix": 8051.14
         }
       ]
@@ -372,7 +372,7 @@
     }
   },
   "deal": {
-    "stand": "18.09.2026",
+    "stand": "22.09.2026",
     "name": "ProEvent 2026",
     "parteien": [
       "Nova Works",
@@ -388,7 +388,7 @@
           235000,
           245000
         ],
-        "kosten": 458040.23000000004
+        "kosten": 541384.75
       },
       {
         "nr": "26-0008",
@@ -402,7 +402,7 @@
       }
     ],
     "umsatz": 1156766,
-    "kosten": 615154.14,
+    "kosten": 698498.6599999999,
     "auszahlungen": 350000,
     "auszahlungenJePartner": {
       "CGS": 225000,
