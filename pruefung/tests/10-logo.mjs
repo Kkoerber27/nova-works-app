@@ -52,7 +52,7 @@ export default async function ({ ort, browser, ok }) {
   for (const [breite, dichte] of [[390, 3], [390, 2], [1440, 2], [1920, 1]]) {
     const p = await seite(browser, ok,
       { viewport: { width: breite, height: 844 }, deviceScaleFactor: dichte });
-    await p.goto(ort + '/index.html');
+    await p.goto(ort + '/index.php');
     await p.waitForTimeout(700);
     for (const zustand of ['oben', 'gescrollt']) {
       if (zustand === 'gescrollt') {

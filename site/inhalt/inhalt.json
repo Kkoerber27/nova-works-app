@@ -1,0 +1,479 @@
+{
+    "meta": {
+        "sprache": "de",
+        "titel": "NOVA WORKS - systems creating moments",
+        "beschreibung": "Nova Works steht für professionelle Veranstaltungstechnik und Eventdienstleistungen – präzise geplant, sauber umgesetzt und mit modernstem Equipment auf der Bühne. Ettlingen, Baden-Württemberg.",
+        "kanonisch": "https://nova-works.de/",
+        "themenfarbe": "#0b0b0c",
+        "og": {
+            "titel": "NOVA WORKS - systems creating moments",
+            "beschreibung": "Veranstaltungstechnik und Eventdienstleistungen – präzise geplant, sauber umgesetzt.",
+            "seitenname": "Nova Works",
+            "url": "https://nova-works.de/"
+        },
+        "organisation": {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "NovaWorks GmbH",
+            "alternateName": "Nova Works",
+            "slogan": "systems creating moments",
+            "url": "https://nova-works.de/",
+            "logo": "https://nova-works.de/assets/img/logo-weiss.svg",
+            "email": "info@nova-works.de",
+            "telephone": "+49 7243 93 83 100",
+            "foundingDate": "2026",
+            "address": {
+                "@type": "PostalAddress",
+                "streetAddress": "Am Buschbach 59",
+                "postalCode": "76275",
+                "addressLocality": "Ettlingen",
+                "addressCountry": "DE"
+            }
+        }
+    },
+    "nav": {
+        "punkte": [
+            {
+                "text": "Home",
+                "ziel": "#main"
+            },
+            {
+                "text": "Über uns",
+                "ziel": "#ueber-uns"
+            },
+            {
+                "text": "Services",
+                "ziel": "#services"
+            },
+            {
+                "text": "Referenzen",
+                "ziel": "#referenzen"
+            },
+            {
+                "text": "Kontakt",
+                "ziel": "#kontakt"
+            }
+        ],
+        "knopf": {
+            "text": "Projekt starten",
+            "ziel": "#kontakt"
+        }
+    },
+    "hero": {
+        "bild": "header",
+        "zeilen": [
+            "Momente, die bleiben,",
+            "weil alles passt."
+        ],
+        "vorspann": "Nova Works steht für professionelle Veranstaltungstechnik und Eventdienstleistungen – präzise geplant, sauber umgesetzt und mit modernstem Equipment auf der Bühne.",
+        "knopf": {
+            "text": "Projekt starten",
+            "ziel": "#kontakt"
+        }
+    },
+    "ueberUns": {
+        "titel": "Start-up auf dem Papier. Profis im Einsatz.",
+        "absaetze": [
+            "Auf dem Papier sind wir ein Start-Up – auf der Bühne aber alte Hasen. Nova Works ist aus der Idee entstanden, gebündelte Erfahrung in der Veranstaltungstechnik genau so einzusetzen, wie wir es für richtig halten: professionell, präzise und ohne Umwege.",
+            "Hinter Nova Works stehen Köpfe, die die Branche seit Jahren kennen. Wir verbinden die Energie und Flexibilität eines neu formierten Unternehmens mit der Routine aus unzähligen erfolgreich realisierten Produktionen. Das Ergebnis: frische Ideen, klare Abläufe – und garantiert keine Anfängerfehler."
+        ],
+        "knopf": {
+            "text": "Projekt starten",
+            "ziel": "#kontakt"
+        },
+        "gewerke": {
+            "titel": "Gewerke",
+            "leistungen": "Technische Leitung, Licht, Ton, Rigging, AV / Video, Logistik"
+        }
+    },
+    "leistungen": {
+        "titel": "Unsere Spielplätze. Ihre Bühne.",
+        "karten": [
+            {
+                "bild": "live",
+                "titel": "Festival & Touring",
+                "text": "Von Clubshow bis Festivalbühne: Wir liefern zuverlässige Technik, eingespielte Abläufe und Lösungen, die auch unter Druck funktionieren."
+            },
+            {
+                "bild": "corporate",
+                "titel": "Industrie & Business",
+                "text": "Produktlaunch, Konferenz oder Gala – wir sorgen dafür, dass Technik unterstützt, nicht ablenkt. Präzise geplant, souverän umgesetzt."
+            },
+            {
+                "bild": "tv",
+                "titel": "TV-Shows & Produktionen",
+                "text": "Kamerataugliche Lösungen, sauberes Timing und höchste technische Standards für anspruchsvolle TV-Formate."
+            }
+        ]
+    },
+    "referenzen": {
+        "titel": "Ausgewählte Produktionen.",
+        "projekte": [
+            {
+                "ort": "Hamburg, Gelsenkirchen und Frankfurt am Main",
+                "titel": "DIE 80er live",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "live",
+                        "beschreibung": "Konfettischuss über der Bühne, volles Rund der Arena",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "live-2",
+                        "beschreibung": "Blick vom Regieplatz mit Nova-Works-Pult über das Publikum zur Bühne, Flammen und LED-Wände im Einsatz",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "live-3",
+                        "beschreibung": "Blick aus dem Publikum auf die Bühne, Laser über dem vollen Rund, LED-Wände und vier Bildschirme",
+                        "nachweis": "Foto: Julian Huke Photography"
+                    }
+                ],
+                "worum": [
+                    "Die Reihe brachte die Stars des Jahrzehnts 1980 bis 1989 als Stadiontour in drei Städte: Volksparkstadion Hamburg am 18. Juli, VELTINS-Arena Gelsenkirchen am 25. Juli, Deutsche Bank Park Frankfurt am 8. August. Auf der Bühne standen unter anderem Boy George, Kim Wilde, Alphaville, Holly Johnson, Nik Kershaw, Sandra und Samantha Fox. Die Veranstalter führen die Reihe als größte 80er-Party der Welt."
+                ],
+                "unser": [
+                    "Nova Works verantwortete die Technik über alle drei Stationen: von Licht, Ton, Rigging, LED und AV über das Trucking bis zum Licht- und Content-Design samt Operating. Dazu kamen das technische Künstler-Advancing mit Stagemanagement und das komplette Personal-Handling.",
+                    "Das Besondere an dieser Reihe: Die Künstler wechseln über den Abend hinweg, und jeder spielt live – mit seiner eigenen Band. Jeder Wechsel will vorbereitet, abgestimmt und im Takt der Show gefahren sein. Genau dafür greifen Advancing, Stagemanagement und Personalplanung bei uns ineinander."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Ton, Rigging, LED, AV, Trucking, Licht- und Content-Design samt Operating, technisches Künstler-Advancing und Stagemanagement, komplettes Personal-Handling"
+                }
+            },
+            {
+                "ort": "Deutsche Bank Park, Frankfurt am Main",
+                "titel": "Ehrlich Brothers — NO LIMITS",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "header",
+                        "beschreibung": "Sternbühne in der Arena, Ränge und Innenraum voll besetzt",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "ehrlich-2",
+                        "beschreibung": "Verzögerungsturm mit Lichtring und Line-Array im Innenraum, Dach und Ränge in Blau, auf den Banden EHRLICH BROTHERS NO LIMITS",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "ehrlich-3",
+                        "beschreibung": "Reihe von Moving Lights entlang der Bühnenkante während des Aufbaus, dahinter die noch leeren Ränge",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "NO LIMITS lief im Deutsche Bank Park in Frankfurt an zwei Abenden: am 12. Juni 2026 als Generalprobe unter realen Bedingungen vor rund 20.000 Zuschauern, am 13. Juni dann die Hauptshow. Mit 41.326 Zuschauern war sie die größte Zaubershow aller Zeiten. Andreas und Chris Ehrlich zeigten dort mehrere Weltpremieren und stellten Weltrekorde auf. Kernstück war Titan: ein Sportwagen, der sich vor dem Publikum in einen 8,17 Meter hohen und 17,7 Tonnen schweren Roboter verwandelte – das größte je für eine Bühnenillusion gebaute Requisit. In einer zweiten Illusion standen die Brüder gefesselt vor dem Sog einer Flugzeugturbine mit 50.000 PS."
+                ],
+                "unser": [
+                    "Von Nova Works kamen das komplette Licht, das Rigging und die Beschallung – und dazu der Anspruch einer Fernsehproduktion: Licht, das vor der Kamera trägt, und eine Beschallung, die das Stadion füllt, ohne sich in den Vordergrund zu spielen. Über 2.000 Scheinwerfer waren im Einsatz, Auf- und Abbau liefen in Tag- und Nachtschichten."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Rigging, Beschallung"
+                }
+            },
+            {
+                "ort": "Schwarzwaldhalle Karlsruhe, für SWR3",
+                "titel": "Public Viewing zum Eurovision Song Contest 2026",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "tv",
+                        "beschreibung": "Blick vom Regieplatz auf die LED-Wand mit der Übertragung, der Saal in Rot getaucht",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "tv-2",
+                        "beschreibung": "Der volle Saal mit Deutschland- und SWR3-Fahnen, blaue Strahlen über den Köpfen, auf der LED-Wand die Übertragung",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "tv-3",
+                        "beschreibung": "Der Eingang der Schwarzwaldhalle in der Dämmerung, Vordach und Schriftzug in Pink angestrahlt, SWR3-Banner davor",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Am 16. Mai 2026 lud SWR3 in die Schwarzwaldhalle Karlsruhe zum offiziellen Public Viewing des Eurovision Song Contest – dem 70. seiner Geschichte. Bis zu 3.500 Fans verfolgten das Finale aus Wien auf einer großen LED-Wand. Vor der Übertragung spielten Michael Schulte sowie Abor &amp; Tynna live auf der Bühne. Durch den Abend führten SWR3-Moderator Sebastian „Basti“ Müller und DJ Josh Kochhann. Ab 20:15 Uhr lief die ARD-Countdown-Show mit Barbara Schöneberger, danach das Finale."
+                ],
+                "unser": [
+                    "Von Nova Works kamen das Licht und der LED-Screen – also die Fläche, auf die sich der ganze Saal ausrichtete, und das Licht darum herum."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, LED-Screen"
+                }
+            },
+            {
+                "ort": "Fühlinger See, Köln",
+                "titel": "Rainbow Festival",
+                "ausschnitt": "center 28%",
+                "bilder": [
+                    {
+                        "bild": "rainbow",
+                        "beschreibung": "Hauptbühne in der Abenddämmerung, Funkenfontänen vor der LED-Wand, Publikum bis zum Bildrand",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "rainbow-2",
+                        "beschreibung": "Die Bühne am Tag, über dem Dach das Banner des Rainbow Festivals, auf den seitlichen LED-Wänden der Auftritt, Publikum davor",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Das Rainbow Festival ist Kölns große queere Open-Air-Party und fand 2026 am 27. Juni am Fühlinger See statt. Erwartet wurden bis zu 30.000 Besucherinnen und Besucher. Auf zwei Bühnen spielten über 20 Acts: die Sunshine Stage mit Pop und Kölsch, die Aqua Stage mit EDM. Auf der Sunshine Stage standen unter anderem die No Angels, Boney M., Alphaville, die Vengaboys, Kasalla, Kamrad und Omar Rudberg, auf der Aqua Stage Felix Jaehn, Gestört aber Geil, HBz und David Puentez. Durch den Tag führte Olivia Jones."
+                ],
+                "unser": [
+                    "Nova Works war auf beiden Bühnen im Einsatz: LED, Kamera-AV und das technische Künstler-Advancing – für die Sunshine Stage wie für die Aqua Stage.",
+                    "Am Fühlinger See blieb es nicht bei diesem einen Tag: Zwei Tage zuvor, am 25. Juni, spielte dort Nina Chuba ihr ausverkauftes Open Air, eine Woche später lief vom 3. bis 5. Juli das Summerjam mit Red Stage und Green Stage. Beide Produktionen arbeiteten ebenfalls mit LED-Wänden von Nova Works."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "LED, Kamera-AV, technisches Künstler-Advancing"
+                }
+            },
+            {
+                "ort": "Allgäu Airport, Memmingerberg",
+                "titel": "Ikarus Festival — Mainstage",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "ikarus",
+                        "beschreibung": "Die Olymp Stage bei Nacht, Laser über dem Gelände, Flammen vor der geflügelten Bühnenfront, Publikum bis zum Bildrand",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "ikarus-2",
+                        "beschreibung": "Dieselbe Bühne bei Tag, Line-Arrays an den Türmen links und rechts, Tribünen an beiden Seiten, das Feld bis zum Bildrand voll",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "ikarus-3",
+                        "beschreibung": "Blick von der Bühnenseite während des Aufbaus: Moving Lights unter dem Vordach, weitere Scheinwerfer auf Podesten, im Hintergrund das Riesenrad",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Das Ikarus Festival läuft auf dem Gelände des Allgäu Airport in Memmingerberg, einem früheren Militärflugplatz. 2026 kamen vom 22. bis 25. Mai rund 120.000 Besucher zu einem ausverkauften Wochenende. Auf acht Bühnen spielten über 150 Acts – von House und Techno über Hardstyle und Psytrance bis Bounce. Die Olymp Stage ist die Hauptbühne; dort standen unter anderem Paul Kalkbrenner, Scooter, Deborah De Luca, Reinier Zonneveld, Brutalismus 3000 und Ski Aggu. Zum Gelände gehören außerdem Campingflächen, Street-Food-Bereiche und Workshops."
+                ],
+                "unser": [
+                    "Nova Works verantwortete auf der Olymp Stage Licht, Rigging, Ton und AV-Technik."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Rigging, Ton, AV-Technik"
+                }
+            },
+            {
+                "ort": "Ludwigstraße, München",
+                "titel": "CSD München 2026",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "csd",
+                        "beschreibung": "Blick aus dem Publikum auf die Bühne bei Nacht, Strahlen und Nebel in Pink über den erhobenen Händen der ersten Reihen",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Der Christopher Street Day München stand 2026 unter dem Motto „Unsere Vielfalt. Unsere Stärke.“; das Pride-Wochenende lief vom 26. bis 28. Juni. Das Straßenfest zog vom Marienplatz auf die Ludwigstraße: Zwischen Odeonsplatz und Siegestor entstand die neue PrideMeile mit fünf Bühnen, 93 Infoständen und eigenen Bereichen für Community, Politik, Sport und Party. Die Hauptbühne stand auf dem Platz vor der Feldherrnhalle. Die QueerStage zog vom Wittelsbacherplatz an die Rheinbergerstraße und zeigte dort DJs, Drag-Auftritte und Poetry Slam; die Karaoke-Bühne am Oskar-von-Miller-Ring war eine Premiere. Am Samstag führte die drei Kilometer lange PolitParade rund 20.000 Teilnehmende durch die Innenstadt – über das Wochenende zählte der CSD etwa 350.000 Besucherinnen und Besucher, davon rund 120.000 auf der PrideMeile."
+                ],
+                "unser": [
+                    "Von Nova Works kamen Licht, Ton und Bühne für zwei dieser Flächen: die neue Karaoke-Bühne und die QueerStage mit ihren DJ-, Drag- und Poetry-Slam-Auftritten."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Ton, Bühne"
+                }
+            },
+            {
+                "ort": "Grüner Hügel, Bayreuth",
+                "titel": "Alle Farben im Festspielhaus",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "bayreuth",
+                        "beschreibung": "Der überdachte Vorplatz voller Publikum, Muster in Rot und Weiß auf den Deckenbalken, dahinter die geöffnete Hauptbühne im Gegenlicht",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "bayreuth-2",
+                        "beschreibung": "Laserfächer über den tanzenden Gästen, davor das DJ-Pult, Line-Arrays links und rechts",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "bayreuth-3",
+                        "beschreibung": "Blick von der Bühne in den Zuschauerraum des Festspielhauses, Moving Lights an der Bühnenkante, die Ränge in Blau, die Leuchter in Warmweiß",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Zum 150. Jubiläum der Bayreuther Festspiele lief am 2. August 2026 auf dem Grünen Hügel ein Abend, den es dort so noch nie gegeben hatte: „FABRIK präsentiert – 150 Jahre Bayreuther Festspiele“ mit dem Berliner DJ und Produzenten Alle Farben. Bis dahin war im Festspielhaus ausschließlich Musik von Richard Wagner erklungen. Gefeiert wurde auf dem überdachten Vorplatz, als Kulisse diente die eigens geöffnete Hauptbühne des Festspielhauses. Patrickhero eröffnete um 20 Uhr, Alle Farben übernahm von 22 bis 24 Uhr, danach ging es bis 1 Uhr weiter. Die 1.700 Karten waren im Vorverkauf ausverkauft."
+                ],
+                "unser": [
+                    "Von Nova Works kamen Licht, Laser und Beschallung. Ein einziger Abend, mitten im laufenden Festspielbetrieb: Aufbau, Show und Abbau mussten in einen Spielplan passen, der am nächsten Tag ganz normal weiterlief."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Laser, Beschallung"
+                }
+            },
+            {
+                "ort": "Hockenheimring, Hockenheim",
+                "titel": "Glücksgefühle Festival",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "gluecks",
+                        "beschreibung": "Blick von der VIP-Terrasse über das nächtliche Gelände, links die Hauptbühne, rechts das Feuerwerk",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "gluecks-2",
+                        "beschreibung": "DJ am Pult in der Red-Bull-Boxengasse, Gegenlicht und Nebel, dahinter das Publikum",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "gluecks-3",
+                        "beschreibung": "Die LP10-VIP-Area von innen, Grün und Pink an Decke und Wänden, volle Stehtische",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Das Glücksgefühle Festival auf dem Hockenheimring gilt als größtes Musikfestival Deutschlands. Die vierte Ausgabe lief vom 3. bis 6. September 2026 und brachte rund 250.000 Besucher auf ein Gelände von etwa einer Million Quadratmetern. Auf drei Bühnen – Euphoria, Cloud 9 und Dopamin – spielten über 50 Acts, dazu kam ein Technobus. Im Line-up standen unter anderem David Guetta, Ayliva, Mark Forster, Hardwell, Boris Brejcha, Scooter, Dimitri Vegas &amp; Like Mike, Lost Frequencies und Timmy Trumpet. Gemischt werden Pop, Hip-Hop, Elektro und Party."
+                ],
+                "unser": [
+                    "Nova Works lieferte Licht und Ton für die LP10-VIP-Area und die Red-Bull-Boxengasse, dazu die komplette Ambiente-Beleuchtung auf dem Areal und die Notbeschallungsanlagen. Die Notbeschallung gehört zur Sicherheitstechnik: Auf einer Fläche dieser Größe muss sie jederzeit durchdringen – auch dann, wenn nebenan eine Hauptbühne läuft."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Ton, Ambiente-Beleuchtung, Notbeschallung"
+                }
+            },
+            {
+                "ort": "Kreuzsteinbad, Bayreuth",
+                "titel": "Kreuzer Open Air mit Sven Väth",
+                "ausschnitt": "center 76%",
+                "bilder": [
+                    {
+                        "bild": "sven",
+                        "beschreibung": "Die Muschelbühne bei Nacht in Rot, auf der LED-Fläche der Schriftzug SVEN VÄTH, davor das Publikum",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "sven-2",
+                        "beschreibung": "Blick über das DJ-Pult hinweg auf die Menge unter dem Bühnendach",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "sven-3",
+                        "beschreibung": "Dasselbe Gelände am Nachmittag: volle Liegewiese vor der Bühne, Sonne über den Bäumen",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Am 5. September 2026 wurde das Kreuzsteinbad in Bayreuth zur Tanzfläche: Das Kreuzer Open Air lief von 12 bis 22 Uhr im Freibad – eine Premiere für das Bad. Aus Sicherheitsgründen war die Zahl der Gäste auf 5.000 begrenzt. Durch den Tag führten wechselnde DJs, darunter Marek Hemmann live, Cinthie, Chez Marie, Fever Dream und Noel Holler. Den Abschluss machte Sven Väth mit einem rund dreistündigen Set."
+                ],
+                "unser": [
+                    "Von Nova Works kamen Licht, Ton und LED-Technik. Ein Tagesevent mit wechselnden DJs heißt: Die Anlage muss vom Nachmittag in der Sonne bis in die Dunkelheit tragen – und bei jedem Wechsel sofort wieder sitzen."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Ton, LED"
+                }
+            },
+            {
+                "ort": "Baden-Baden",
+                "titel": "SWR3 New Pop Festival",
+                "ausschnitt": "",
+                "bilder": [
+                    {
+                        "bild": "newpop",
+                        "beschreibung": "Festspielhaus: weite Bühne in Blau, Lichtstrahlen über dem vollen Saal, auf der Bühne eine Big Band",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "newpop-2",
+                        "beschreibung": "Theater am Goetheplatz: Blick vom Rang in den historischen Saal mit Stuck, Logen und Kronleuchtern, auf der Bühne LED-Türme und Band",
+                        "nachweis": ""
+                    },
+                    {
+                        "bild": "newpop-3",
+                        "beschreibung": "Kurhaus: eine Wand aus senkrechten Leuchtröhren, links in Blau, rechts in Orange, davor der Sänger allein auf der Bühne",
+                        "nachweis": ""
+                    }
+                ],
+                "worum": [
+                    "Das SWR3 New Pop Festival macht Baden-Baden einmal im Jahr zur „New Pop City“ – 2026 vom 17. bis 19. September. Gespielt wird an drei Orten in der Innenstadt: im Kurhaus, im Festspielhaus und im Theater am Goetheplatz. Das Festival stellt Künstlerinnen und Künstler vor, die gerade erst durchstarten; 2026 standen unter anderem Charlotte Cardin, Clueso, Gentleman, Giant Rooks, Holly Humberstone, Topic und ADMT auf dem Programm. Den Auftakt machten am 17. September Gentleman im Kurhaus, Clueso mit der SWR Big Band im Festspielhaus und Charlotte Cardin im Theater. Die Karten begannen bei 19 Euro, die Anreise mit dem Nahverkehr in Baden-Württemberg, Rheinland-Pfalz und dem Saarland war darin enthalten."
+                ],
+                "unser": [
+                    "Nova Works verantwortete Licht, Rigging und LED in allen drei Konzerthäusern: im Festspielhaus, im Theater am Goetheplatz und im Kurhaus. Drei Säle, die unterschiedlicher kaum sein könnten – und in jedem musste die Technik über drei Abende sitzen."
+                ],
+                "gewerke": {
+                    "titel": "Gewerke",
+                    "leistungen": "Licht, Rigging, LED"
+                }
+            }
+        ]
+    },
+    "kontakt": {
+        "titel": "Keine Show ohne Substanz.",
+        "felder": {
+            "vorname": "Vorname",
+            "nachname": "Nachname",
+            "unternehmen": "Unternehmen",
+            "email": "E-Mail Adresse",
+            "telefon": "Telefonnummer",
+            "nachricht": "Nachricht"
+        },
+        "platzhalter": "Worum geht es? Termin, Ort, Rahmen – ein paar Sätze genügen.",
+        "kategorien": [
+            "Live",
+            "Corporate Events",
+            "TV"
+        ],
+        "einwilligung": "Ich habe die <a href=\"datenschutz.html\">Datenschutzbedingungen</a> gelesen und bin mit der Verarbeitung meiner personenbezogenen Daten einverstanden. Sie können diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen.",
+        "knopf": "Absenden",
+        "pflichthinweis": "",
+        "angaben": [
+            {
+                "bezeichnung": "E-Mail",
+                "wert": "<a href=\"mailto:info@nova-works.de\">info@nova-works.de</a>"
+            },
+            {
+                "bezeichnung": "Telefon",
+                "wert": "<a href=\"tel:+4972439383100\">+49 7243 93 83 100</a>"
+            },
+            {
+                "bezeichnung": "Adresse",
+                "wert": "Am Buschbach 59<br>76275 Ettlingen"
+            }
+        ]
+    },
+    "fuss": {
+        "copyright": "© 2026 Nova Works.",
+        "links": [
+            {
+                "text": "Impressum",
+                "ziel": "impressum.html"
+            },
+            {
+                "text": "Datenschutzerklärung",
+                "ziel": "datenschutz.html"
+            },
+            {
+                "text": "AGB",
+                "ziel": "agb.html"
+            }
+        ]
+    },
+    "einwilligung": {
+        "titel": "Ihre Entscheidung",
+        "text": "Diese Seite kommt ohne Cookies, ohne Analyse und ohne Inhalte von fremden Servern aus. Es gibt zurzeit also nichts zu messen und nichts nachzuladen. Sie können das hier trotzdem festlegen – nachzulesen in der {datenschutz}.",
+        "zustimmen": "Zustimmen",
+        "ablehnen": "Ablehnen",
+        "einstellungen": "Einstellungen ansehen"
+    }
+}

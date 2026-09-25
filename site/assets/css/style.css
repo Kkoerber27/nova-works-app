@@ -95,6 +95,12 @@ body {
 
 img, svg { max-width: 100%; height: auto; display: block; }
 
+/* <picture> ist nur eine Klammer um das <img> und seine WebP-Quellen. Es
+   soll selbst keinen Kasten aufspannen - sonst stünde zwischen einem
+   Rahmen und seinem Bild plötzlich ein weiteres Element, und alles, was
+   sich auf "das direkte Kind" verlässt, ginge daneben. */
+picture { display: contents; }
+
 h1, h2, h3, h4 {
   margin: 0;
   font-weight: 400;
@@ -408,13 +414,16 @@ a { color: inherit; }
 
 /* Foto als Hintergrundbild, nicht als <img>: fehlt die Datei, rendert der
    Browser schlicht nichts - statt eines kaputten Bildsymbols. */
+/* Das Kopfbild ist ein <img>, kein Hintergrundbild. Als Hintergrundbild
+   lud der Browser auf jedem Gerät dieselbe Datei; über srcset holt er
+   jetzt 640 Pixel ans Handy und 2560 an den Retina-Schirm. */
 .hero__media {
   position: absolute;
   inset: 0;
   z-index: -2;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
   opacity: .5;
 }
 
@@ -698,9 +707,9 @@ a { color: inherit; }
 .card__media {
   position: absolute;
   inset: 0;
-  background-position: center;
-  background-size: cover;
-  background-repeat: no-repeat;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .card__title {

@@ -7,7 +7,7 @@ import { seite } from '../hilfe.mjs';
 export const NAME = 'Einwilligung';
 
 const SCHLUESSEL = 'nova-einwilligung';
-const SEITEN = ['/index.html', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
+const SEITEN = ['/index.php', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
 
 const gespeichert = (p) => p.evaluate((k) => {
   try { return JSON.parse(window.localStorage.getItem(k) || 'null'); } catch (e) { return 'FEHLER'; }
@@ -43,7 +43,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Keiner der Wege sticht hervor --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(500);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(500);
     const stil = (e) => { const r = e.getBoundingClientRect(), c = getComputedStyle(e);
       return { text: e.textContent.trim(), klasse: e.className,
                masse: `${Math.round(r.width)}x${Math.round(r.height)}`,
@@ -68,7 +68,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Zustimmen speichert und bleibt gespeichert --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(500);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(500);
     await p.click('[data-zustimmung="alle"]'); await p.waitForTimeout(350);
     ok(await p.$$eval('.zustimmung', (e) => e.length) === 0, 'nach Zustimmen ist der Hinweis weg');
     const w = await gespeichert(p);
@@ -85,7 +85,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Ablehnen lässt nur das Notwendige stehen --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(500);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(500);
     await p.click('[data-zustimmung="keine"]'); await p.waitForTimeout(350);
     const w = await gespeichert(p);
     ok(w.wahl.notwendig === true, 'das Notwendige bleibt');
@@ -99,7 +99,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Wegklicken ist keine Zustimmung --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(500);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(500);
     await p.click('[data-zustimmung="einstellungen"]'); await p.waitForTimeout(400);
     ok(await p.$$eval('dialog.einstellungen[open]', (e) => e.length) === 1,
        'die Einstellungen gehen auf');
@@ -113,7 +113,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Einstellungen: Gruppen, gemischte Auswahl, Rückweg --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(500);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(500);
     await p.click('[data-zustimmung="einstellungen"]'); await p.waitForTimeout(400);
     const gruppen = await p.$$eval('.einstellungen .gruppe', (el) => el.map((g) => ({
       name: g.querySelector('.gruppe__name').textContent.trim(),
@@ -163,7 +163,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Ein neuer Stand fragt neu --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(500);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(500);
     await p.evaluate((k) => window.localStorage.setItem(k, JSON.stringify(
       { stand: 0, zeit: '2020-01-01T00:00:00.000Z', wahl: { notwendig: true, statistik: true } })), SCHLUESSEL);
     await p.reload(); await p.waitForTimeout(600);
@@ -178,7 +178,7 @@ export default async function ({ ort, browser, ok }) {
     const p = await ctx.newPage();
     const fremd = [];
     p.on('request', (r) => { const h = new URL(r.url()).hostname; if (h !== '127.0.0.1') fremd.push(h); });
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(600);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(600);
     await p.click('[data-zustimmung="alle"]'); await p.waitForTimeout(500);
     ok(fremd.length === 0, 'auch nach der Zustimmung geht nichts nach draußen',
        fremd.join(', ') || 'keine Verbindung');
@@ -190,7 +190,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Ohne JavaScript entsteht nichts, und es fehlt nichts --- */
   {
     const q = await seite(browser, ok, { javaScriptEnabled: false });
-    await q.goto(ort + '/index.html', { waitUntil: 'networkidle' });
+    await q.goto(ort + '/index.php', { waitUntil: 'networkidle' });
     ok(await q.$$eval('.zustimmung', (e) => e.length) === 0, 'ohne JavaScript kein Hinweis');
     ok(await q.$$eval('.footer__knopf', (e) => e.length) === 0,
        'und kein Knopf, der ins Leere führte');
@@ -200,7 +200,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Am Handy verdeckt er die Pflichtangaben nicht --- */
   {
     const p = await seite(browser, ok, { viewport: { width: 390, height: 844 } });
-    await p.goto(ort + '/index.html'); await p.waitForTimeout(700);
+    await p.goto(ort + '/index.php'); await p.waitForTimeout(700);
     const k = await p.$eval('.zustimmung', (e) => Math.round(e.getBoundingClientRect().bottom));
     ok(k <= 844, 'der Hinweis steht vollständig im Bild', `Unterkante ${k} von 844`);
     for (let i = 0; i < 12; i++) {

@@ -1,0 +1,12 @@
+
+# --- Backend der Homepage ------------------------------------------------
+# Die Zugangsdatei enthält die Prüfsumme des Backend-Passworts. Sie gehört
+# auf den Server, nicht ins Repository - sonst stünde in der Historie, was
+# irgendwann einmal gesetzt war.
+site/inhalt/zugang.php
+
+# Sicherungen entstehen beim Arbeiten und sind auf jedem Server andere.
+site/inhalt/sicherungen/
+
+# Zwischendatei des Inhalt-Extraktors
+site/inhalt/inhalt.json.vorher

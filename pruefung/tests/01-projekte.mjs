@@ -14,7 +14,7 @@ export default async function ({ ort, browser, ok }) {
     const d = r.url().split('/').pop();
     if (/\.(jpe?g|png|webp|svg)$/i.test(d)) geholt.push(d);
   });
-  await p.goto(ort + '/index.html');
+  await p.goto(ort + '/index.php');
   await p.waitForTimeout(900);
 
   const stand = await p.evaluate(() => {
@@ -66,16 +66,28 @@ export default async function ({ ort, browser, ok }) {
      'jedes Projekt hat ein Foto oder den roten Platzhalter',
      `${mitFoto} Fotos + ${stand.offen} offen = ${stand.projekte}`);
 
-  /* --- Nachladen: das unterste Foto darf beim Aufruf noch fehlen --- */
-  const unten = stand.liste.filter((r) => r.foto).pop()?.foto.split('/').pop();
+  /* --- Nachladen: das unterste Foto darf beim Aufruf noch fehlen ---
+     Geprüft wird der Stamm des Dateinamens, nicht die genaue Datei:
+     Jedes Bild liegt in mehreren Breiten vor (live-640.webp bis
+     live-2560.webp), und welche davon der Browser wählt, hängt an
+     Fenstergröße und Pixeldichte. Fest auf eine Datei zu prüfen hieße,
+     die Prüfung an den Zufall der Testumgebung zu binden. */
+  const stamm = (d) => d.replace(/-\d+\.(webp|jpe?g)$/i, '').replace(/\.(webp|jpe?g)$/i, '');
+  const wurdeGeholt = (name) => geholt.some((d) => stamm(d) === name);
+
+  const untenPfad = stand.liste.filter((r) => r.foto).pop()?.foto.split('/').pop();
+  const unten = untenPfad ? stamm(untenPfad) : null;
+  const kopfbild = await p.evaluate(() =>
+    document.querySelector('.hero__media')?.getAttribute('src')?.split('/').pop() || '');
+
   if (unten) {
-    ok(!geholt.includes(unten), 'das unterste Projektfoto wird nicht mitgeladen', unten);
-    ok(geholt.includes('header.jpg'),
-       'das Kopfbild dagegen schon - es ist das Erste, was man sieht');
+    ok(!wurdeGeholt(unten), 'das unterste Projektfoto wird nicht mitgeladen', unten);
+    ok(wurdeGeholt(stamm(kopfbild)),
+       'das Kopfbild dagegen schon - es ist das Erste, was man sieht', stamm(kopfbild));
 
     await p.evaluate(() => [...document.querySelectorAll('.ref__foto')].pop().scrollIntoView());
     await p.waitForTimeout(1500);
-    ok(geholt.includes(unten), 'beim Heranscrollen kommt es nach');
+    ok(wurdeGeholt(unten), 'beim Heranscrollen kommt es nach');
     const fertig = await p.evaluate(() => {
       const i = [...document.querySelectorAll('.ref__foto')].pop();
       return { da: i.complete && i.naturalWidth > 0, breite: i.naturalWidth };
@@ -83,9 +95,32 @@ export default async function ({ ort, browser, ok }) {
     ok(fertig.da && fertig.breite > 100, 'und steht dann im Rahmen', `${fertig.breite} px`);
   }
 
+  /* --- Die Bildstaffel: der Grund für den ganzen Umbau ---
+     Jedes Foto muss in mehreren Breiten als WebP angeboten werden, und
+     die größte muss reichen, um es auf einem Retina-Schirm ohne
+     Hochrechnen zu zeigen. Genau daran krankte die alte Fassung. */
+  const staffel = await p.evaluate(() => [...document.querySelectorAll('.ref__media picture')]
+    .map((b) => {
+      const q = b.querySelector('source[type="image/webp"]');
+      const breiten = (q?.getAttribute('srcset') || '').split(',')
+        .map((t) => parseInt((t.trim().split(/\s+/)[1] || '').replace('w', ''), 10))
+        .filter(Boolean);
+      return { breiten, sizes: q?.getAttribute('sizes') || '' };
+    }));
+  ok(staffel.length > 0, 'die Projektbilder stehen in einem <picture>', `${staffel.length} Stück`);
+  ok(staffel.every((b) => b.breiten.length >= 2),
+     'jedes bietet mehrere Breiten an',
+     `mindestens ${Math.min(...staffel.map((b) => b.breiten.length))}`);
+  ok(staffel.every((b) => b.sizes.includes('px') || b.sizes.includes('vw')),
+     'und sagt dem Browser, wie breit es gezeigt wird');
+  const groesste = staffel.map((b) => Math.max(...b.breiten));
+  ok(groesste.filter((g) => g >= 1920).length >= staffel.length - 3,
+     'fast alle reichen bis mindestens 1920 px',
+     `${groesste.filter((g) => g >= 1920).length} von ${staffel.length}`);
+
   /* --- Ohne JavaScript muss alles im Quelltext stehen --- */
   const q = await seite(browser, ok, { javaScriptEnabled: false });
-  await q.goto(ort + '/index.html', { waitUntil: 'networkidle' });
+  await q.goto(ort + '/index.php', { waitUntil: 'networkidle' });
   const ohne = await q.evaluate(() => ({
     projekte: document.querySelectorAll('.refs .ref').length,
     pfade: [...document.querySelectorAll('.ref__foto')]

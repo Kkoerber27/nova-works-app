@@ -53,7 +53,9 @@ export default async function ({ browser, ok }) {
     gewicht: getComputedStyle(document.querySelector('.hero__title')).fontWeight,
     logo: (() => { const i = document.querySelector('.masthead__logo img');
       return i && i.complete && i.naturalWidth > 0; })(),
-    kopfbild: getComputedStyle(document.querySelector('.hero__media')).backgroundImage.slice(0, 20),
+    /* Das Kopfbild ist seit dem Umbau ein <img>, kein Hintergrundbild.
+       In der Vorschau steckt es als data:-Adresse im src. */
+    kopfbild: (document.querySelector('.hero__media')?.getAttribute('src') || '').slice(0, 20),
     lupe: !!document.querySelector('[data-lupe]'),
     zustimmung: !!document.querySelector('.zustimmung'),
     fussknopf: !!document.querySelector('.footer__knopf'),
@@ -66,7 +68,7 @@ export default async function ({ browser, ok }) {
      'und am Ende steht jede Zeile', z.versatz.join(', '));
   ok(Number(z.gewicht) >= 800, 'im kräftigen Schnitt', z.gewicht);
   ok(z.logo, 'das Logo lädt aus der Datei');
-  ok(z.kopfbild.startsWith('url("data:'), 'das Kopfbild ebenso', z.kopfbild + '…');
+  ok(z.kopfbild.startsWith('data:image/'), 'das Kopfbild ebenso', z.kopfbild + '…');
   ok(z.lupe && z.zustimmung && z.fussknopf,
      'Großansicht, Einwilligungs-Hinweis und Fußzeilen-Knopf sind da');
 

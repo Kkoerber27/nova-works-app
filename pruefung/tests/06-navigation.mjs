@@ -6,7 +6,7 @@
 import { seite } from '../hilfe.mjs';
 export const NAME = 'Navigation und Laufband';
 
-const SEITEN = ['/index.html', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
+const SEITEN = ['/index.php', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
 
 export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);
@@ -32,7 +32,7 @@ export default async function ({ ort, browser, ok }) {
   }
 
   /* --- Kopfzeile klebt beim Scrollen --- */
-  await p.goto(ort + '/index.html');
+  await p.goto(ort + '/index.php');
   await p.waitForTimeout(600);
   ok(!(await p.evaluate(() => document.getElementById('masthead').classList.contains('is-stuck'))),
      'die Kopfzeile ist oben noch nicht angeheftet');
@@ -100,7 +100,7 @@ export default async function ({ ort, browser, ok }) {
 
   /* --- Mobile Navigation --- */
   const h = await seite(browser, ok, { viewport: { width: 390, height: 844 } });
-  await h.goto(ort + '/index.html');
+  await h.goto(ort + '/index.php');
   await h.waitForTimeout(600);
   const taste = await h.$('.nav-toggle');
   ok(!!taste, 'am Handy gibt es die Menütaste');

@@ -92,12 +92,64 @@ function bild_lesbar(string $pfad): array {
         return ['ok' => false, 'fehler' => 'Dieses Bildformat kann der Server nicht lesen.'];
     }
 
+    $speicher = bild_speicher_pruefen($groesse[0], $groesse[1]);
+    if ($speicher !== null) return ['ok' => false, 'fehler' => $speicher];
+
     return [
         'ok'     => true,
         'breite' => $groesse[0],
         'hoehe'  => $groesse[1],
         'typ'    => $typen[$groesse[2]],
     ];
+}
+
+/* Passt das Bild überhaupt in den Arbeitsspeicher?
+
+   GD legt jedes Bild unkomprimiert ab: Breite mal Höhe mal 4 Byte. Ein
+   Foto mit 8640 x 5760 Pixeln belegt damit 199 MB - und beim
+   schrittweisen Verkleinern liegt kurzzeitig noch eine halbierte
+   Fassung daneben. Reicht der Speicher nicht, bricht PHP den Vorgang
+   ohne jede Meldung ab: Der Browser bekommt eine leere Seite, und
+   niemand weiß, warum.
+
+   Deshalb wird vorher gerechnet. Lieber eine klare Ansage als ein
+   stummer Abbruch.
+
+   Faktor 1,4 statt 1,0: Quelle plus Zwischenfassung plus etwas Luft für
+   PHP selbst. */
+function bild_speicher_pruefen(int $breite, int $hoehe): ?string {
+    $grenze = bild_speichergrenze();
+    if ($grenze <= 0) return null;            // unbegrenzt
+
+    $noetig = (int) ($breite * $hoehe * 4 * 1.4);
+    $frei   = $grenze - memory_get_usage(true);
+
+    if ($noetig < $frei) return null;
+
+    return sprintf(
+        'Das Bild ist mit %d × %d Pixeln zu groß für den Arbeitsspeicher des '
+      . 'Servers (%s frei, gebraucht werden %s). Entweder in der Datei '
+      . '.user.ini memory_limit erhöhen, oder das Foto vorher auf etwa '
+      . '%d Pixel Breite verkleinern.',
+        $breite, $hoehe,
+        bild_lesbar_bytes($frei), bild_lesbar_bytes($noetig),
+        max(1600, (int) (sqrt($frei / (4 * 1.4) * ($breite / max(1, $hoehe))) / 100) * 100));
+}
+
+function bild_speichergrenze(): int {
+    $roh = trim((string) ini_get('memory_limit'));
+    if ($roh === '' || $roh === '-1') return 0;
+    $zahl = (int) $roh;
+    return match (strtolower(substr($roh, -1))) {
+        'g' => $zahl * 1024 * 1024 * 1024,
+        'm' => $zahl * 1024 * 1024,
+        'k' => $zahl * 1024,
+        default => $zahl,
+    };
+}
+
+function bild_lesbar_bytes(int $b): string {
+    return $b >= 1048576 ? round($b / 1048576) . ' MB' : round($b / 1024) . ' kB';
 }
 
 /* Lädt das Bild und dreht es gerade. Das Drehen ist der Grund, warum hier

@@ -703,6 +703,40 @@
   var EINWILLIGUNG_SCHLUESSEL = 'nova-einwilligung';
   var EINWILLIGUNG_STAND = 1;
 
+  /* Die Texte des Fensters kommen aus der Inhaltsdatei und stehen als
+     JSON im Markup - so sind auch sie im Backend bearbeitbar. Fehlt der
+     Block (etwa weil die Seite ohne PHP ausgeliefert wird), greifen die
+     Vorgaben hier, und das Fenster erscheint trotzdem. */
+  var TEXTE = (function () {
+    var vorgabe = {
+      titel: 'Ihre Entscheidung',
+      text: 'Diese Seite kommt ohne Cookies, ohne Analyse und ohne Inhalte von ' +
+            'fremden Servern aus. Es gibt zurzeit also nichts zu messen und nichts ' +
+            'nachzuladen. Sie können das hier trotzdem festlegen – nachzulesen in ' +
+            'der {datenschutz}.',
+      zustimmen: 'Zustimmen',
+      ablehnen: 'Ablehnen',
+      einstellungen: 'Einstellungen ansehen'
+    };
+    var block = document.getElementById('einwilligung-texte');
+    if (!block) return vorgabe;
+    try {
+      var gelesen = JSON.parse(block.textContent);
+      for (var k in gelesen) if (gelesen[k]) vorgabe[k] = gelesen[k];
+    } catch (e) { /* kaputtes JSON - dann eben die Vorgaben */ }
+    return vorgabe;
+  })();
+
+  /* Texte aus der Inhaltsdatei sind Text, kein Markup. Sie werden deshalb
+     maskiert, bevor sie ins innerHTML gehen. Die eine Ausnahme ist der
+     Platzhalter {datenschutz} - der wird danach durch den Verweis
+     ersetzt, dessen Ziel aus der Fusszeile der Seite stammt. */
+  var sicher = function (t) {
+    return String(t == null ? '' : t)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  };
+
   var GRUPPEN = [
     {
       schluessel: 'notwendig',
@@ -767,22 +801,22 @@
       balken.setAttribute('aria-modal', 'false');
       balken.setAttribute('aria-labelledby', 'zustimmung-titel');
       balken.innerHTML =
-        '<h2 class="zustimmung__titel" id="zustimmung-titel">Ihre Entscheidung</h2>' +
-        '<p class="zustimmung__text">Diese Seite kommt ohne Cookies, ohne Analyse ' +
-        'und ohne Inhalte von fremden Servern aus. Es gibt zurzeit also nichts zu ' +
-        'messen und nichts nachzuladen. Sie können das hier trotzdem festlegen – ' +
-        'nachzulesen in der <a href="' + DATENSCHUTZ_URL + '">Datenschutz&shy;erklärung</a>.</p>' +
+        '<h2 class="zustimmung__titel" id="zustimmung-titel">' + sicher(TEXTE.titel) + '</h2>' +
+        '<p class="zustimmung__text">' +
+          sicher(TEXTE.text).replace('{datenschutz}',
+            '<a href="' + sicher(DATENSCHUTZ_URL) + '">Datenschutz&shy;erklärung</a>') +
+        '</p>' +
         '<div class="zustimmung__wahl">' +
           /* Beide gleich: nicht nur gleich gross, sondern auch gleich
              gestaltet. Ein gelb gefuelltes "Zustimmen" neben einem
              blassen "Ablehnen" lenkt die Wahl, und genau das soll es
              hier nicht. Die Faerbung uebernimmt erst der Hover - fuer
              beide gleich. */
-          '<button class="btn" type="button" data-zustimmung="alle">Zustimmen</button>' +
-          '<button class="btn" type="button" data-zustimmung="keine">Ablehnen</button>' +
+          '<button class="btn" type="button" data-zustimmung="alle">' + sicher(TEXTE.zustimmen) + '</button>' +
+          '<button class="btn" type="button" data-zustimmung="keine">' + sicher(TEXTE.ablehnen) + '</button>' +
         '</div>' +
         '<button class="zustimmung__mehr" type="button" data-zustimmung="einstellungen">' +
-        'Einstellungen ansehen</button>';
+        sicher(TEXTE.einstellungen) + '</button>';
 
       /* Ganz vorn im Dokument, damit Tastatur und Vorleseprogramm die Frage
          gleich erreichen - angezeigt wird sie trotzdem unten. Die

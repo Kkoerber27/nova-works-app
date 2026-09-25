@@ -4,7 +4,23 @@
 # =========================================================================
 
 Options -Indexes
-DirectoryIndex index.html index.php
+DirectoryIndex index.php
+
+# Die Startseite ist seit dem Umbau auf das Backend index.php. Wer noch
+# einen Verweis auf index.html hat - aus einer Mail, einem Lesezeichen
+# oder einem Suchergebnis -, landet auf der Wurzel statt auf 404.
+<IfModule mod_alias.c>
+  RedirectMatch 301 ^/index\.html$  /
+</IfModule>
+
+# Das Backend, die Inhaltsdatei und die Vorlagen gehen niemanden etwas an,
+# der sie nicht bearbeitet. Die Ordner selbst schuetzt jeweils eine eigene
+# .htaccess; hier steht der Riegel fuer den Fall, dass eine davon beim
+# Hochladen vergessen wurde - Punkt-Dateien blenden viele FTP-Programme aus.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^(inhalt|vorlage)/ - [F,L]
+</IfModule>
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
@@ -61,9 +77,16 @@ ErrorDocument 404 /404.html
 # =========================================================================
 #  Caching
 #  CSS/JS/Bilder/Schriften ein Jahr, HTML nie.
-#  ACHTUNG: Nach Aenderungen an CSS oder JS die Versionsnummer in den
-#  HTML-Dateien hochzaehlen (style.css?v=2), sonst sehen wiederkehrende
-#  Besucher die alte Datei.
+#
+#  Die Versionsnummer hinter style.css und main.js setzt index.php selbst
+#  aus dem Aenderungsdatum der Dateien (siehe fassung() in
+#  vorlage/helfer.php). Sie muss also nicht mehr von Hand hochgezaehlt
+#  werden - genau das wurde frueher regelmaessig vergessen.
+#
+#  Bilder tragen ihre Breite im Namen (header-1280.webp). Eine neue
+#  Fassung bekommt einen neuen Namen, sobald sich die Breite aendert;
+#  wird ein Foto unter gleichem Namen ersetzt, leert die Mediathek den
+#  Zwischenspeicher ueber einen angehaengten Zeitstempel.
 # =========================================================================
 <IfModule mod_expires.c>
   ExpiresActive On

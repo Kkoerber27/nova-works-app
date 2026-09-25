@@ -12,7 +12,7 @@
 
 import { readFile, writeFile } from 'node:fs/promises';
 import { join, extname, basename } from 'node:path';
-import { SEITE, WURZEL } from './hilfe.mjs';
+import { SEITE, WURZEL, server } from './hilfe.mjs';
 
 const ZIEL = process.argv[2] || join(WURZEL, 'vorschau.html');
 
@@ -44,13 +44,64 @@ async function einbetten(text) {
   return text;
 }
 
+/* Die Staffel fliegt vor dem Einbetten heraus.
+
+   Auf der echten Seite bietet jedes Bild bis zu fünf Breiten als WebP an,
+   dazu ein JPEG als Rückfall. In eine einzelne Datei eingebettet wären
+   das 27 Motive in sechs Fassungen - beim ersten Versuch 20,6 MB, von
+   denen der Browser je Bild genau eine anzeigt.
+
+   Deshalb wird alles auf eine Breite je Motiv gezogen: 1280 Pixel, die
+   Fassung, die ein Laptop ohnehin lädt. Gibt es die für ein Motiv nicht,
+   nimmt die Vorschau die nächstliegende vorhandene.
+
+   Das ist der eine Punkt, an dem die Vorschau bewusst nicht die Seite
+   ist: Sie zeigt Aufbau, Text und Verhalten, nicht die Bildschärfe auf
+   einem Retina-Schirm.                                                  */
+const VORSCHAU_BREITE = 1280;
+
+let verzeichnis = {};
+try {
+  verzeichnis = JSON.parse(await readFile(join(SEITE, 'assets/img/bilder.json'), 'utf8'));
+} catch (e) { /* ohne Verzeichnis bleibt alles, wie es ist */ }
+
+function eineBreite(name) {
+  const f = verzeichnis[name]?.fassungen;
+  if (!f || !f.length) return null;
+  return f.reduce((a, b) =>
+    Math.abs(b.breite - VORSCHAU_BREITE) < Math.abs(a.breite - VORSCHAU_BREITE) ? b : a).breite;
+}
+
+function fuerVorschauEindampfen(html) {
+  return html
+    /* Die <source>-Elemente und ihre Listen sind in einer Datei ohne
+       Nutzen - ein <img> genügt. */
+    .replace(/<source[^>]*>/g, '')
+    .replace(/\s+srcset="[^"]*"/g, '')
+    .replace(/\s+sizes="[^"]*"/g, '')
+    /* Jede Bildadresse auf die eine Breite ziehen - die aus der Staffel
+       ebenso wie den JPEG-Rückfall ohne Zahl im Namen. Danach zeigt
+       alles auf dieselbe Datei, und sie wird genau einmal eingebettet. */
+    .replace(/assets\/img\/([A-Za-z0-9_-]+?)(?:-\d+)?\.(?:webp|jpg)/g, (ganz, name) => {
+      const b = eineBreite(name);
+      return b ? `assets/img/${name}-${b}.webp` : ganz;
+    });
+}
+
 const stueck = (quelle, muster, name) => {
   const t = quelle.match(muster);
   if (!t) throw new Error(`Im Quelltext fehlt: ${name}`);
   return t[1];
 };
 
-const idx = await readFile(join(SEITE, 'index.html'), 'utf8');
+/* Die Startseite entsteht aus inhalt/inhalt.json und vorlage/startseite.php.
+   Für die Vorschau wird sie deshalb einmal wirklich gebaut - über denselben
+   PHP-Server, den auch die Prüfungen benutzen. Den fertigen Quelltext
+   auseinanderzunehmen ist derselbe Schritt wie vorher; nur die Quelle ist
+   jetzt der Server statt der Datei. */
+const srv = await server();
+const idx = fuerVorschauEindampfen(await (await fetch(srv.ort + '/index.php')).text());
+await srv.zu();
 
 let css = await readFile(join(SEITE, 'assets/css/style.css'), 'utf8');
 css = css.replace(/url\(['"]?\.\.\/fonts\/([A-Za-z0-9._-]+)['"]?\)/g, (_, datei) => `url(SCHRIFT:${datei})`);

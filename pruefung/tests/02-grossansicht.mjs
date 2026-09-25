@@ -9,7 +9,7 @@ export const NAME = 'Großansicht';
 
 export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);
-  await p.goto(ort + '/index.html');
+  await p.goto(ort + '/index.php');
   await p.waitForTimeout(800);
 
   const vorher = await p.evaluate(() => ({
@@ -99,7 +99,7 @@ export default async function ({ ort, browser, ok }) {
 
   /* Ohne JavaScript bleibt die Liste ein normaler Weg zu den Bildern. */
   const q = await seite(browser, ok, { javaScriptEnabled: false });
-  await q.goto(ort + '/index.html', { waitUntil: 'networkidle' });
+  await q.goto(ort + '/index.php', { waitUntil: 'networkidle' });
   const roh = await q.evaluate(() => {
     const l = document.querySelector('.ref__bilder');
     return { sichtbar: !l.hidden, verweise: l.querySelectorAll('a[href]').length,

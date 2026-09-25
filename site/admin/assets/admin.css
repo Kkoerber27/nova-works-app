@@ -1,0 +1,304 @@
+/* =========================================================================
+   NOVA WORKS - Backend
+   Eigenes Stylesheet, nicht das der Website. Das Backend ist ein Werkzeug,
+   keine Visitenkarte: Es soll dicht, lesbar und schnell zu bedienen sein.
+   Geteilt wird nur die Farbfamilie, damit man sieht, wozu es gehört.
+   ========================================================================= */
+
+:root {
+  --grund:      #0f0f11;
+  --flaeche:    #16161a;
+  --flaeche-2:  #1d1d22;
+  --linie:      #2b2b32;
+  --linie-hell: #3d3d46;
+  --schrift:    #ececee;
+  --schrift-2:  rgba(236, 236, 238, .62);
+  --schrift-3:  rgba(236, 236, 238, .42);
+  --signal:     #f8f808;
+  --gut:        #5fd08a;
+  --warn:       #ffb454;
+  --fehler:     #ff6b5e;
+  --radius:     6px;
+  --schmal:     920px;
+  --breit:      1180px;
+}
+
+* , *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--grund);
+  color: var(--schrift);
+  font: 15px/1.6 -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; }
+h1, h2, h3 { margin: 0; line-height: 1.25; letter-spacing: -.01em; }
+
+:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; border-radius: 3px; }
+
+.nur-vorlesen {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap;
+}
+
+/* --- Kopfzeile -------------------------------------------------------- */
+
+.kopf {
+  position: sticky; top: 0; z-index: 20;
+  border-bottom: 1px solid var(--linie);
+  background: rgba(15, 15, 17, .92);
+  backdrop-filter: blur(8px);
+}
+.kopf__innen {
+  display: flex; align-items: center; gap: 1.5rem;
+  max-width: var(--breit); margin-inline: auto;
+  padding: .85rem 1.5rem;
+}
+.kopf__marke { display: flex; align-items: center; gap: .75rem; text-decoration: none; }
+.kopf__marke img { height: 22px; width: auto; display: block; }
+.kopf__marke span {
+  padding-left: .75rem; border-left: 1px solid var(--linie-hell);
+  color: var(--schrift-2); font-size: .85rem;
+}
+.kopf__nav { display: flex; gap: .25rem; margin-left: auto; flex-wrap: wrap; }
+.kopf__nav a {
+  padding: .4rem .7rem; border-radius: var(--radius);
+  color: var(--schrift-2); text-decoration: none; font-size: .9rem;
+}
+.kopf__nav a:hover { background: var(--flaeche-2); color: var(--schrift); }
+.kopf__nav a[aria-current] { color: var(--schrift); box-shadow: inset 0 -2px 0 var(--signal); }
+
+/* --- Gerüst ----------------------------------------------------------- */
+
+.seite { max-width: var(--breit); margin-inline: auto; padding: 2.5rem 1.5rem 5rem; }
+.seite--schmal { max-width: var(--schmal); }
+
+.titelzeile {
+  display: flex; align-items: flex-end; gap: 1.5rem; flex-wrap: wrap;
+  padding-bottom: 1.5rem; margin-bottom: 2rem;
+  border-bottom: 1px solid var(--linie);
+}
+.titelzeile h1 { font-size: 1.9rem; font-weight: 700; }
+.titelzeile p { margin: .4rem 0 0; color: var(--schrift-2); max-width: 62ch; }
+.titelzeile__tasten { margin-left: auto; display: flex; gap: .5rem; }
+
+.zurueck {
+  display: inline-block; margin-bottom: 1rem;
+  color: var(--schrift-2); text-decoration: none; font-size: .9rem;
+}
+.zurueck:hover { color: var(--schrift); }
+
+h2.gruppentitel {
+  margin: 2.5rem 0 1rem; font-size: 1.05rem; font-weight: 600;
+}
+h2.gruppentitel:first-of-type { margin-top: 0; }
+
+/* --- Kacheln ---------------------------------------------------------- */
+
+.kacheln {
+  display: grid; gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(238px, 1fr));
+}
+.kachel {
+  display: flex; flex-direction: column;
+  padding: 1.15rem 1.25rem 1.1rem;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--flaeche);
+  text-decoration: none;
+}
+a.kachel:hover { border-color: var(--linie-hell); background: var(--flaeche-2); }
+.kachel__kennung {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: .75rem; color: var(--schrift-3); margin-bottom: .5rem;
+}
+.kachel h3 { font-size: 1.05rem; font-weight: 600; margin-bottom: .3rem; }
+.kachel p { margin: 0; color: var(--schrift-2); font-size: .88rem; }
+.kachel__fuss { margin-top: auto; padding-top: .9rem; color: var(--signal); font-size: .88rem; }
+
+/* --- Block mit Rahmen ------------------------------------------------- */
+
+.block {
+  padding: 1.5rem; margin-bottom: 1.25rem;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--flaeche);
+}
+.block > h2 { font-size: 1.1rem; font-weight: 600; }
+.block > p  { margin: .4rem 0 1.25rem; color: var(--schrift-2); max-width: 70ch; }
+
+/* --- Knöpfe ----------------------------------------------------------- */
+
+.taste {
+  display: inline-flex; align-items: center; gap: .45rem;
+  padding: .6rem 1.1rem;
+  border: 1px solid var(--linie-hell); border-radius: var(--radius);
+  background: var(--flaeche-2); color: var(--schrift);
+  font: inherit; font-size: .92rem; text-decoration: none;
+  cursor: pointer;
+}
+.taste:hover { border-color: var(--schrift-3); background: #26262c; }
+.taste--stark { border-color: var(--signal); background: var(--signal); color: #111; font-weight: 600; }
+.taste--stark:hover { background: #ffff3a; border-color: #ffff3a; }
+.taste--still { border-color: transparent; background: transparent; color: var(--schrift-2); }
+.taste--still:hover { background: var(--flaeche-2); color: var(--schrift); }
+.taste--gefahr { border-color: rgba(255,107,94,.45); color: var(--fehler); background: transparent; }
+.taste--gefahr:hover { background: rgba(255,107,94,.12); border-color: var(--fehler); }
+.taste--klein { padding: .35rem .65rem; font-size: .82rem; }
+
+/* --- Formularfelder --------------------------------------------------- */
+
+.feld { margin-bottom: 1.35rem; }
+.feld > label, .feld__name {
+  display: block; margin-bottom: .35rem;
+  font-size: .88rem; font-weight: 600;
+}
+.feld__hinweis {
+  margin: -.15rem 0 .45rem;
+  color: var(--schrift-3); font-size: .82rem; line-height: 1.5; max-width: 72ch;
+}
+.eingabe {
+  display: block; width: 100%;
+  padding: .6rem .75rem;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--grund); color: var(--schrift);
+  font: inherit; font-size: .94rem;
+}
+.eingabe:focus { border-color: var(--linie-hell); outline-offset: 0; }
+textarea.eingabe { resize: vertical; min-height: 4.5rem; line-height: 1.55; }
+
+.feldpaar { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.25rem; }
+
+/* --- Untergliederung und Listen --------------------------------------- */
+
+.unterblock {
+  padding: 1.15rem 1.25rem .2rem;
+  margin-bottom: 1.35rem;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--grund);
+}
+.unterblock > .feld__name { margin-bottom: .9rem; }
+
+.reihe {
+  position: relative;
+  padding: 1.15rem 1.25rem .2rem;
+  margin-bottom: .85rem;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--flaeche-2);
+}
+.reihe__kopf {
+  display: flex; align-items: center; gap: .75rem;
+  margin: -.25rem 0 .9rem;
+}
+.reihe__nr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .78rem; color: var(--schrift-3);
+}
+.reihe__titel { font-weight: 600; font-size: .95rem; color: var(--schrift-2); }
+.reihe__werkzeug { margin-left: auto; display: flex; gap: .3rem; }
+
+.liste__zufuegen { margin: .25rem 0 1.5rem; }
+
+/* --- Bildauswahl ------------------------------------------------------ */
+
+.bildwahl { display: flex; gap: 1rem; align-items: flex-start; }
+.bildwahl__schau {
+  flex: 0 0 132px; height: 88px;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--grund) center / cover no-repeat;
+  display: grid; place-items: center;
+  color: var(--schrift-3); font-size: .78rem; text-align: center;
+}
+.bildwahl__rest { flex: 1; min-width: 0; }
+
+/* --- Meldungen -------------------------------------------------------- */
+
+.meldung {
+  display: flex; gap: .65rem; align-items: flex-start;
+  padding: .85rem 1.1rem; margin-bottom: 1.5rem;
+  border: 1px solid var(--linie); border-left-width: 3px; border-radius: var(--radius);
+  background: var(--flaeche);
+  font-size: .92rem;
+}
+.meldung--gut    { border-left-color: var(--gut); }
+.meldung--fehler { border-left-color: var(--fehler); }
+.meldung--warn   { border-left-color: var(--warn); }
+
+/* --- Tabellen --------------------------------------------------------- */
+
+.tabelle { width: 100%; border-collapse: collapse; font-size: .9rem; }
+.tabelle th {
+  text-align: left; font-weight: 600; color: var(--schrift-2);
+  padding: .55rem .75rem; border-bottom: 1px solid var(--linie);
+  white-space: nowrap;
+}
+.tabelle td { padding: .6rem .75rem; border-bottom: 1px solid var(--linie); vertical-align: middle; }
+.tabelle tr:last-child td { border-bottom: 0; }
+.tabelle .zahl {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums; color: var(--schrift-2);
+}
+
+/* --- Mediathek -------------------------------------------------------- */
+
+.galerie {
+  display: grid; gap: .85rem;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+}
+.bildkachel {
+  display: flex; flex-direction: column;
+  border: 1px solid var(--linie); border-radius: var(--radius);
+  background: var(--flaeche); overflow: hidden;
+}
+.bildkachel__schau {
+  display: block; aspect-ratio: 4 / 3; width: 100%;
+  object-fit: cover; background: var(--grund);
+  border-bottom: 1px solid var(--linie);
+}
+.bildkachel__text { display: flex; flex-direction: column; flex: 1; padding: .6rem .7rem .7rem; }
+.bildkachel__name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: .8rem; word-break: break-all;
+}
+.bildkachel__zahl { color: var(--schrift-3); font-size: .78rem; margin-top: .15rem; }
+/* umbrechen: Bei drei Knöpfen und schmalen Kacheln stand "Löschen" sonst
+   halb außerhalb der Kachel. */
+.bildkachel__tasten { display: flex; flex-wrap: wrap; gap: .3rem; margin-top: auto; padding-top: .55rem; }
+
+.ablage {
+  padding: 2rem 1.5rem; margin-bottom: 1.5rem;
+  border: 1px dashed var(--linie-hell); border-radius: var(--radius);
+  background: var(--flaeche);
+  text-align: center;
+}
+.ablage[data-ueber] { border-color: var(--signal); background: rgba(248,248,8,.05); }
+.ablage p { margin: .5rem 0 0; color: var(--schrift-2); font-size: .9rem; }
+
+/* --- Anmeldung -------------------------------------------------------- */
+
+.anmelden {
+  max-width: 380px; margin: 14vh auto 0; padding: 0 1.5rem;
+}
+.anmelden__marke { text-align: center; margin-bottom: 2rem; }
+.anmelden__marke img { height: 30px; width: auto; margin: 0 auto .75rem; display: block; }
+.anmelden__marke p { margin: 0; color: var(--schrift-2); font-size: .9rem; }
+
+/* --- Leiste beim Speichern -------------------------------------------- */
+
+.speicherleiste {
+  position: sticky; bottom: 0; z-index: 10;
+  display: flex; align-items: center; gap: 1rem;
+  margin: 2rem -1.5rem -5rem; padding: 1rem 1.5rem;
+  border-top: 1px solid var(--linie);
+  background: rgba(15, 15, 17, .94);
+  backdrop-filter: blur(8px);
+}
+.speicherleiste p { margin: 0; color: var(--schrift-3); font-size: .85rem; }
+
+@media (max-width: 680px) {
+  .feldpaar { grid-template-columns: 1fr; }
+  .kopf__innen { flex-wrap: wrap; gap: .75rem 1rem; }
+  .kopf__nav { margin-left: 0; width: 100%; }
+  .bildwahl { flex-direction: column; }
+  .bildwahl__schau { flex: none; width: 100%; height: 120px; }
+}

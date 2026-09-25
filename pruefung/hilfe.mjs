@@ -2,9 +2,8 @@
    Kein npm, keine Abhängigkeiten im Repo: Playwright bringt die Umgebung
    mit, alles andere steht hier. */
 
-import http from 'node:http';
-import { readFile, stat } from 'node:fs/promises';
-import { join, extname, normalize } from 'node:path';
+import { spawn, execFileSync } from 'node:child_process';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 export const WURZEL = join(fileURLToPath(new URL('.', import.meta.url)), '..');
@@ -28,41 +27,76 @@ export async function chromium() {
     'Playwright nicht gefunden. Erwartet global oder unter einem der Pfade in hilfe.mjs.');
 }
 
-/* --- Kleiner Dateiserver -------------------------------------------------
-   Die Seite braucht keinen Build. Sie muss aber über http laufen: über
-   file:// greifen weder Module noch fetch, und loading="lazy" verhält
-   sich anders. */
-const TYPEN = {
-  '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8',
-  '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
-  '.svg': 'image/svg+xml', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
-  '.png': 'image/png', '.webp': 'image/webp', '.woff2': 'font/woff2',
-  '.xml': 'application/xml', '.txt': 'text/plain; charset=utf-8',
-  '.json': 'application/json',
-};
+/* --- Server ---------------------------------------------------------------
+   Seit dem Umbau auf das Backend ist die Startseite index.php - ein
+   eigener Dateiserver in Node könnte sie nicht ausführen und lieferte
+   den Quelltext aus. Deshalb übernimmt der eingebaute Server von PHP;
+   der kann beides, PHP und statische Dateien.
+
+   Gestartet wird auf Port 0 - das Betriebssystem sucht einen freien aus.
+   Welcher es wurde, steht danach in der Ausgabe des Prozesses; darauf
+   wartet warteAufOrt(). Feste Portnummern haben sich gerächt, sobald
+   zwei Läufe gleichzeitig liefen.                                       */
+
+function phpBefehl() {
+  /* php in der PATH-Variable, sonst die üblichen Orte. Ein fest
+     eingetragener Pfad stimmte hier schon einmal nicht mehr. */
+  for (const ort of ['php', '/usr/bin/php', '/usr/local/bin/php']) {
+    try {
+      execFileSync(ort, ['-v'], { stdio: 'ignore' });
+      return ort;
+    } catch (e) { /* weiter */ }
+  }
+  throw new Error('PHP nicht gefunden. Die Seite braucht seit dem Umbau PHP.');
+}
 
 export function server(wurzel = SEITE) {
-  const s = http.createServer(async (req, res) => {
-    let pfad = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-    if (pfad.endsWith('/')) pfad += 'index.html';
-    /* normalize + führende Schrägstriche weg: sonst käme man mit ../
-       aus dem Verzeichnis heraus. */
-    const ziel = join(wurzel, normalize(pfad).replace(/^(\.\.[/\\])+/, ''));
-    try {
-      const st = await stat(ziel);
-      if (!st.isFile()) throw new Error('kein File');
-      res.writeHead(200, { 'Content-Type': TYPEN[extname(ziel).toLowerCase()] || 'application/octet-stream' });
-      res.end(await readFile(ziel));
-    } catch (e) {
-      res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      res.end('nicht gefunden');
-    }
-  });
-  return new Promise((ok) => {
-    s.listen(0, '127.0.0.1', () => ok({
-      ort: `http://127.0.0.1:${s.address().port}`,
-      zu: () => new Promise((f) => s.close(f)),
-    }));
+  const php = phpBefehl();
+
+  return new Promise((fertig, schiefgegangen) => {
+    /* -t setzt das Wurzelverzeichnis. Der Router davor fängt nichts ab -
+       PHP liefert vorhandene Dateien selbst aus und führt .php aus. */
+    /* Dieselben Grenzen, die site/.user.ini auf dem Server setzt. Der
+       eingebaute Server von PHP liest .user.ini nicht - ohne diese Zeilen
+       liefe die Prüfung gegen 2 MB Uploadgrenze, während auf dem Server
+       32 MB gelten. Eine Prüfung, die andere Grenzen hat als der Ernstfall,
+       prüft den falschen Ernstfall. */
+    const kind = spawn(php, [
+      '-d', 'upload_max_filesize=32M',
+      '-d', 'post_max_size=160M',
+      '-d', 'memory_limit=512M',
+      '-S', '127.0.0.1:0', '-t', wurzel], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let gesammelt = '';
+    let schonFertig = false;
+
+    const pruefen = (stueck) => {
+      gesammelt += stueck;
+      const treffer = gesammelt.match(/127\.0\.0\.1:(\d+)/);
+      if (treffer && !schonFertig) {
+        schonFertig = true;
+        fertig({
+          ort: `http://127.0.0.1:${treffer[1]}`,
+          zu: () => new Promise((f) => {
+            kind.once('close', () => f());
+            kind.kill('SIGTERM');
+          }),
+        });
+      }
+    };
+
+    kind.stderr.on('data', (d) => pruefen(String(d)));
+    kind.stdout.on('data', (d) => pruefen(String(d)));
+    kind.on('error', schiefgegangen);
+
+    setTimeout(() => {
+      if (!schonFertig) {
+        kind.kill('SIGTERM');
+        schiefgegangen(new Error('PHP-Server kam nicht hoch:\n' + gesammelt));
+      }
+    }, 10000);
   });
 }
 

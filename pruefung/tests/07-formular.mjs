@@ -9,7 +9,7 @@ export const NAME = 'Kontaktformular';
 
 export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);
-  await p.goto(ort + '/index.html');
+  await p.goto(ort + '/index.php');
   await p.waitForTimeout(600);
   await p.evaluate(() => document.getElementById('kontakt').scrollIntoView());
   await p.waitForTimeout(500);
@@ -116,7 +116,7 @@ export default async function ({ ort, browser, ok }) {
 
   /* --- Ohne JavaScript: die Pflichtfelder hält der Browser selbst --- */
   const q = await seite(browser, ok, { javaScriptEnabled: false });
-  await q.goto(ort + '/index.html', { waitUntil: 'networkidle' });
+  await q.goto(ort + '/index.php', { waitUntil: 'networkidle' });
   const roh = await q.evaluate(() => {
     const f = document.getElementById('kontaktformular');
     return { ziel: f.getAttribute('action'),

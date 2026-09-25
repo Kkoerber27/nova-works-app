@@ -109,7 +109,11 @@ export default async function ({ ort, browser, ok }) {
 
     const js = await readFile(join(SEITE, 'assets/js/main.js'), 'utf8');
     const css = await readFile(join(SEITE, 'assets/css/style.css'), 'utf8');
-    const html = await readFile(join(SEITE, 'index.html'), 'utf8');
+    /* Die Startseite wird gebaut, nicht gelesen: Seit dem Umbau steht in
+       index.php nur der Aufruf der Vorlage. Geprüft gehört das, was der
+       Browser bekommt - über den Server geholt ist das genau dasselbe,
+       was ein Besucher sieht. */
+    const html = await (await fetch(ort + '/index.php')).text();
 
     /* Keine Cookies, kein sessionStorage - und im localStorage genau
        ein Eintrag, der in der Erklärung beim Namen stehen muss. */

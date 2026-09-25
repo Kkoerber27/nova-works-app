@@ -12,8 +12,16 @@ node pruefung/lauf.mjs              alle Prüfungen
 node pruefung/lauf.mjs breite hero  nur diese
 ```
 
-Der Lauf beendet sich mit 1, sobald etwas fehlschlägt. Er braucht
-nichts weiter als Node und Playwright; beides bringt die Umgebung mit.
+Der Lauf beendet sich mit 1, sobald etwas fehlschlägt. Er braucht Node,
+Playwright und **PHP** – seit dem Umbau ist die Startseite `index.php`,
+und der Server der Prüfmappe ist deshalb der eingebaute von PHP. Er wird
+mit denselben Grenzen gestartet, die `site/.user.ini` auf dem Server
+setzt; eine Prüfung mit anderen Grenzen als der Ernstfall prüft den
+falschen Ernstfall.
+
+`13-backend.mjs` verändert echte Dateien – Inhalte, Zugangsdatei, Bilder.
+Alles, was er anfasst, legt er vorher weg und stellt es am Ende zurück,
+auch wenn eine Prüfung mittendrin fehlschlägt.
 
 **Vor jedem Commit an `site/` einmal laufen lassen.**
 
@@ -33,6 +41,7 @@ nichts weiter als Node und Playwright; beides bringt die Umgebung mit.
 | `10-logo.mjs` | Der Trennstrich im Logo ist überall mindestens ein Pixel hoch und hebt sich messbar ab. |
 | `11-druck.mjs` | Rechtstexte drucken schwarz auf weiß, ohne Kopf und Fuß. |
 | `12-vorschau.mjs` | Die Vorschau ist eine zweite Umgebung und wird auch so geprüft. |
+| `13-backend.mjs` | Der ganze Weg durch `/admin`: einrichten, anmelden, ändern, auf der Website wiederfinden, zurückholen, Foto hochladen, löschen. Dazu die Riegel: kein Zugang ohne Anmeldung, kein Formular ohne Merkmal, kein Löschen eines benutzten Bildes, kein `<script>` im Rechtstext. |
 
 Die Prüfungen kommen bewusst ohne feste Zahlen aus: Projekte kommen
 dazu, Fotos werden nachgereicht. Geprüft wird die Regel, nicht der

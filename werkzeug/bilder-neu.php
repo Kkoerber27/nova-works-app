@@ -1,8 +1,13 @@
 <?php
 /* =========================================================================
    NOVA WORKS - Bilder neu erzeugen
-   Liest alles aus bilder-original/ und schreibt die fertigen Fassungen
-   nach site/assets/img/ - WebP in mehreren Breiten, JPEG als Rückfall.
+   Liest alles aus site/inhalt/originale/ und schreibt die fertigen
+   Fassungen nach site/assets/img/ - WebP in mehreren Breiten, JPEG als
+   Rückfall.
+
+   Denselben Weg geht die Mediathek im Backend beim Hochladen; dieses
+   Werkzeug ist für den Stapel gedacht - etwa nachdem in
+   admin/kern/bild.php an den Reglern gedreht wurde.
 
        php werkzeug/bilder-neu.php              alle
        php werkzeug/bilder-neu.php live header  nur diese
@@ -15,12 +20,12 @@
 require __DIR__ . '/../site/admin/kern/bild.php';
 
 $wurzel   = dirname(__DIR__);
-$quellen  = "$wurzel/bilder-original";
+$quellen  = "$wurzel/site/inhalt/originale";
 $ziel     = "$wurzel/site/assets/img";
 $filter   = array_slice($argv, 1);
 
 if (!is_dir($quellen)) {
-    fwrite(STDERR, "Ordner bilder-original/ fehlt.\n");
+    fwrite(STDERR, "Ordner site/inhalt/originale/ fehlt.\n");
     exit(1);
 }
 

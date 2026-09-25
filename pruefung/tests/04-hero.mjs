@@ -13,7 +13,7 @@ export const NAME = 'Hero-Auftritt';
 
 export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);
-  await p.goto(ort + '/index.html');
+  await p.goto(ort + '/index.php');
 
   /* Gleich nach dem Laden: die Zeilen müssen unterhalb ihres Kastens
      stehen, sonst gibt es nichts zu sehen. */
@@ -58,7 +58,7 @@ export default async function ({ ort, browser, ok }) {
 
   /* Am Handy bricht er anders um - er muss trotzdem vollständig sein. */
   const h = await seite(browser, ok, { viewport: { width: 390, height: 844 } });
-  await h.goto(ort + '/index.html');
+  await h.goto(ort + '/index.php');
   await h.waitForTimeout(2000);
   const handy = await h.evaluate(() => ({
     zeilen: document.querySelectorAll('.hero__zeile-innen').length,
@@ -71,7 +71,7 @@ export default async function ({ ort, browser, ok }) {
 
   /* Ohne JavaScript steht er einfach da - ohne Auftritt, aber lesbar. */
   const q = await seite(browser, ok, { javaScriptEnabled: false });
-  await q.goto(ort + '/index.html', { waitUntil: 'networkidle' });
+  await q.goto(ort + '/index.php', { waitUntil: 'networkidle' });
   const roh = await q.evaluate(() => {
     const t = document.querySelector('.hero__title');
     return { text: t.textContent.replace(/\s+/g, ' ').trim(),

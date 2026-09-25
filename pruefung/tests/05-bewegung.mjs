@@ -25,7 +25,7 @@ const tiefe = (p) => p.evaluate(() => {
 
 export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);
-  await p.goto(ort + '/index.html');
+  await p.goto(ort + '/index.php');
   await p.waitForTimeout(900);
 
   const kann = await p.evaluate(() =>
@@ -86,7 +86,7 @@ export default async function ({ ort, browser, ok }) {
 
   /* --- Ruhe-Modus: nichts fährt, nichts wechselt --- */
   const r = await seite(browser, ok, { reducedMotion: 'reduce' });
-  await r.goto(ort + '/index.html');
+  await r.goto(ort + '/index.php');
   await r.waitForTimeout(900);
   await r.evaluate(() => document.querySelectorAll('.ref')[0].scrollIntoView({ block: 'end' }));
   await r.waitForTimeout(600);

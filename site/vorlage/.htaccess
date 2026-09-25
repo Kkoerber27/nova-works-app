@@ -1,0 +1,4 @@
+# Dieser Ordner wird nie direkt abgerufen. Er enthält Inhalte und Programm-
+# teile, die andere Dateien einbinden - aufrufbar sein muss davon nichts.
+# Ohne diesen Riegel könnte jeder inhalt.json herunterladen.
+Require all denied

@@ -12,21 +12,44 @@ Wurzelverzeichnis, die Homepage lebt vollständig in `site/`.
 
 ```
 site/                      ← das, was auf den Server kommt
-├─ index.html              Startseite
-├─ impressum.html          Rechtstext, 1:1 aus der alten Seite
-├─ datenschutz.html        Rechtstext, 1:1 aus der alten Seite
+├─ index.php               Startseite, baut sich aus inhalt/ und vorlage/
+├─ impressum.html          Rechtstext
+├─ datenschutz.html        Rechtstext
 ├─ agb.html                Allgemeine Geschäftsbedingungen, §§ 1–36
 ├─ 404.html
 ├─ kontakt.php             Formular-Handler (verschickt die E-Mail)
 ├─ .htaccess               Weiterleitungen, Caching, Sicherheits-Header
+├─ .user.ini               PHP-Grenzen (Upload 32 MB, Speicher 512 MB)
 ├─ robots.txt · sitemap.xml
+├─ admin/                  das Backend
+│  ├─ index.php            Übersicht
+│  ├─ abschnitt.php        Editor für alle neun Abschnitte
+│  ├─ mediathek.php        Upload und WebP-Umwandlung
+│  ├─ rechtsseiten.php     HTML-Editor für die drei Rechtstexte
+│  ├─ sicherungen.php      ansehen, herunterladen, zurückholen
+│  ├─ passwort.php · anmelden.php · abmelden.php
+│  └─ kern/                bild.php · inhalt.php · felder.php · start.php
+├─ inhalt/                 GESPERRT für den Abruf
+│  ├─ inhalt.json          alle Texte der Startseite
+│  ├─ zugang.php           Passwort-Prüfsumme des Backends
+│  ├─ sicherungen/         vor jedem Speichern eine Kopie
+│  └─ originale/           die Kamerafotos, Quelle aller Fassungen
+├─ vorlage/                GESPERRT – startseite.php und helfer.php
 └─ assets/                 css · js · img · fonts
 
+werkzeug/bilder-neu.php    alle Bilder neu erzeugen
+werkzeug/inhalt-ziehen.php einmaliger Umbau von HTML auf inhalt.json
+pruefung/                  Prüfmappe, siehe unten
 deploy/netlify.toml        Alternative zu .htaccess, falls Netlify
 docs/inhalt.md             Inhaltsinventar der alten Seite
 docs/hosting.md            Strato oder Netlify – beide Wege beschrieben
 reference/                 Spiegelung der alten Seite + Extraktionsskript
 ```
+
+**`site/inhalt/originale/` ist 74 MB groß und wird nie ausgeliefert.** Die
+Seite läuft auch ohne den Ordner; gebraucht wird er nur, um Bildfassungen
+neu zu erzeugen. Wer beim ersten Hochladen per FTP Zeit sparen will, kann
+ihn weglassen und später nachreichen.
 
 ## Lokal ansehen
 
@@ -34,69 +57,142 @@ reference/                 Spiegelung der alten Seite + Extraktionsskript
 cd site && php -S 127.0.0.1:4174
 ```
 
-Dann <http://127.0.0.1:4174> öffnen. `php -S` statt eines reinen Dateiservers,
-weil sonst `kontakt.php` nicht läuft.
+Dann <http://127.0.0.1:4174> öffnen, das Backend unter
+<http://127.0.0.1:4174/admin/>. `php -S` ist zwingend: Die Startseite ist
+`index.php`, ein reiner Dateiserver lieferte den Quelltext aus.
+
+Der eingebaute Server von PHP liest `.user.ini` **nicht**. Für Uploads
+größerer Fotos deshalb lokal:
+
+```bash
+cd site && php -d upload_max_filesize=32M -d post_max_size=160M \
+                -d memory_limit=512M -S 127.0.0.1:4174
+```
 
 ## Hochladen
 
-Zwei Wege, beide vorbereitet – die Entscheidung steht noch aus. Beschrieben in
-[`docs/hosting.md`](docs/hosting.md).
+Die Seite braucht **PHP** – das Backend und `index.php` laufen auf Netlify
+nicht. Der Weg über Strato ist in [`docs/hosting.md`](docs/hosting.md)
+beschrieben.
+
+Nach dem ersten Hochladen: <https://nova-works.de/admin/> aufrufen und ein
+Passwort vergeben. Solange das nicht geschehen ist, kann es jeder tun, der
+die Adresse kennt.
 
 ## Etwas ändern
 
-Alles ist Handarbeit an drei Dateien – kein Build, kein npm:
+Seit dem Umbau gibt es dafür ein Backend: **`/admin`** auf der eigenen
+Domain. Dort lassen sich alle Texte, alle Bilder und die drei Rechtsseiten
+bearbeiten, ohne eine Datei anzufassen.
+
+Beim ersten Aufruf ist noch kein Passwort vergeben – wer die Adresse kennt,
+kann dann eines setzen. **Das gehört als Erstes erledigt, sobald die Seite
+online ist.**
+
+Von Hand geht weiterhin alles:
 
 | Was | Wo |
 |---|---|
-| Texte, Struktur | `site/index.html` |
-| Farben, Abstände, Schriftgrößen | `site/assets/css/style.css`, Block `:root` ganz oben |
-| Verhalten (Menü, Reveals, Farbwechsel, Formular) | `site/assets/js/main.js` |
-| Bilder | `site/assets/img/` |
+| Texte der Startseite | `site/inhalt/inhalt.json` – oder im Backend |
+| Markup der Startseite | `site/vorlage/startseite.php` |
+| Farben, Abstände, Schriftgrößen | `site/assets/css/style.css`, Block `:root` |
+| Verhalten (Menü, Laufband, Einwilligung, Formular) | `site/assets/js/main.js` |
+| Rechtsseiten | `site/impressum.html`, `datenschutz.html`, `agb.html` |
+| Bilder | Backend → Mediathek, oder `werkzeug/bilder-neu.php` |
 
-**Wichtig beim Ändern von CSS oder JS:** `.htaccess` setzt für diese Dateien
-ein Jahr Cache-Zeit. Wiederkehrende Besucher sehen sonst die alte Version.
-Nach einer Änderung deshalb in allen vier HTML-Dateien die Versionsnummer
-hochzählen:
+Die Versionsnummer hinter `style.css` und `main.js` muss **nicht mehr** von
+Hand hochgezählt werden – `index.php` setzt sie aus dem Änderungsdatum der
+Dateien. Genau das wurde vorher regelmäßig vergessen.
 
-```html
-<link rel="stylesheet" href="assets/css/style.css?v=2">
-<script src="assets/js/main.js?v=2" defer></script>
+### Wie die Startseite entsteht
+
+```
+site/inhalt/inhalt.json   die Texte
+        +
+site/vorlage/startseite.php   das Markup
+        +
+site/assets/img/bilder.json   welche Bildbreiten es gibt
+        ↓
+site/index.php   gibt die fertige Seite aus
 ```
 
-### Bilder einbauen
+`inhalt.json` ist die einzige Wahrheit. Das Backend schreibt hinein, die
+Vorlage liest daraus. Vor jedem Schreiben entsteht eine Sicherung unter
+`site/inhalt/sicherungen/`.
 
-Fünf Fotos fehlen noch. Die Seite läuft ohne sie – wo ein Bild fehlt, trägt
-ein Verlauf die Fläche, es entsteht kein kaputtes Bildsymbol. Sobald die
-Dateien unter diesen Namen in `site/assets/img/` liegen, erscheinen sie von
-selbst:
+Zwei Ordner sind gegen Abruf gesperrt (`inhalt/`, `vorlage/`, dazu
+`admin/kern/`), jeder über eine eigene `.htaccess` plus eine Regel in der
+`.htaccess` im Wurzelverzeichnis. Doppelt, weil viele FTP-Programme
+Punkt-Dateien ausblenden und eine davon beim Hochladen leicht fehlt.
 
-| Datei | Wo | Motiv | Stand |
-|---|---|---|---|
-| `header.jpg` | Hero, Vollbild | Ehrlich Brothers „NO LIMITS", volle Arena | **eingebaut** |
-| `live.jpg` | Karte 1 | „DIE 80er live", Veltins-Arena | **eingebaut** |
-| `corporate.jpg` | Karte 2 | offen – bislang kein passendes Motiv | offen |
-| `tv.jpg` | Karte 3 | SWR3-Produktion, Regieplatz | **eingebaut** |
-| `messe.jpg` | Karte 4 | offen – bislang kein Motiv | offen |
+## Bilder
 
-Die eingebauten Fotos wurden aus den Originalen verkleinert – Hero auf 1680 px
-Breite bei Qualität 0,62, die Karten auf 800 px kurze Seite bei 0,72 bis 0,74.
-Zusammen 673 kB. Das Hero-Motiv zeigt sehr viel Detail (eine volle Arena) und
-komprimiert deshalb schlecht; die niedrige Qualitätsstufe fällt nicht auf, weil
-das Bild bei 50 % Deckkraft unter einem Verlauf liegt. Die Originale liegen nicht im Repository.
+### Warum die Fotos vorher unscharf waren
 
-Das Foto vom Open-Air-Festival, das vorher im Hero stand, ist damit frei. Es
-steckt noch in der Historie (Commit `4ea472a`, `Live0.jpeg`) und lässt sich
-jederzeit wieder hervorholen.
+Alle Bilder lagen auf höchstens 1600 px Breite. Das Projektfoto wird aber
+bis 1192 CSS-Pixel breit gezeigt – auf einem Retina-Schirm sind das 2384
+echte Pixel. Der Browser musste also um das Anderthalbfache hochrechnen,
+und genau das sieht man: Konfetti wird zum Schleier, ein Traversengitter
+zu Grieß.
 
-Der Hero braucht mindestens 1600 px Breite, besser 2400. Die vier Karten sind
-kleiner, dort reichen 900 px. Alle Motive werden dunkel überblendet, helle
-Fotos sind also kein Problem.
+### Wie es jetzt läuft
 
-Querformat, vor dem Hochladen verkleinern:
+Jedes Bild liegt in bis zu fünf Breiten als WebP vor – 640, 960, 1280, 1920
+und 2560 – dazu ein einziges JPEG als Rückfall für sehr alte Browser. Die
+Vorlage schreibt daraus ein `<picture>` mit `srcset` und `sizes`; der
+Browser lädt am Handy die 640er und am großen Schirm die 2560er Fassung.
+
+Im Schnitt lädt ein Besucher 102 kB am Handy, 243 kB am Laptop und 501 kB
+auf einem Retina-Schirm.
+
+### Ein neues Foto einbauen
+
+Im Backend unter **Mediathek** hochladen. Die Umwandlung in WebP passiert
+dabei automatisch. Danach im passenden Abschnitt (Hero, Leistungen,
+Referenzen) aus der Liste auswählen.
+
+Vier Dinge sind zu wissen:
+
+1. **Je größer das Original, desto besser.** Die Datei direkt aus der
+   Kamera, nicht die aus WhatsApp – die hat meist nur 1200 px.
+2. **HEIC vom iPhone geht nicht.** Der Server kann das Format nicht lesen.
+   Am iPhone unter *Einstellungen → Kamera → Formate* auf „Maximale
+   Kompatibilität" stellen, dann kommen JPEGs heraus.
+3. **Das Original bleibt liegen**, unter `site/inhalt/originale/`. Dadurch
+   lässt sich jede Fassung später neu erzeugen – etwa wenn eine Breite
+   dazukommt. Der Ordner wird nie ausgeliefert.
+4. **Hochkant aufgenommene Fotos** werden anhand ihres EXIF-Vermerks
+   geradegedreht. Sitzt der Ausschnitt im 16:9-Rahmen trotzdem falsch,
+   hilft das Feld *Bildausschnitt* beim Projekt (`center 28%`).
+
+### Alle Bilder auf einmal neu erzeugen
 
 ```bash
-magick original.jpg -resize "2400x>" -strip -quality 82 site/assets/img/header.jpg
+php werkzeug/bilder-neu.php              # alle
+php werkzeug/bilder-neu.php live header  # nur diese
 ```
+
+Nötig, wenn in `site/admin/kern/bild.php` an den Reglern gedreht wurde –
+etwa an den Breiten oder an der Güte.
+
+### Was noch fehlt
+
+Von fünf Bildern gibt es kein hochauflösendes Original mehr; sie bleiben
+auf großen Schirmen weich. Die Mediathek markiert sie orange:
+
+| Bild | hat | Projekt |
+|---|---|---|
+| `rainbow` | 900 px | Rainbow Festival, Titelbild |
+| `csd` | 1206 px | CSD München 2026, Titelbild |
+| `sven` | 1080 px | Kreuzer Open Air, Titelbild |
+| `sven-2` | 1536 px | Kreuzer Open Air, Bild 2 |
+| `live-2` | 900 px | DIE 80er live, Bild 2 |
+
+Wer die Originale noch hat: in der Mediathek hochladen, Haken bei
+*gleichnamiges Bild ersetzen*. Alles andere passiert von selbst.
+
+Außerdem fehlt `corporate.jpg` ganz – die mittlere Karte unter „Services"
+zeigt deshalb einen leeren Rahmen.
 
 ## Bewegung im Hero
 

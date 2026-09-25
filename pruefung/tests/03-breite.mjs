@@ -10,7 +10,7 @@
 import { seite } from '../hilfe.mjs';
 export const NAME = 'Breite';
 
-const SEITEN = ['/index.html', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
+const SEITEN = ['/index.php', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
 const BREITEN = [320, 390, 430, 768, 1024, 1440, 1920];
 
 export default async function ({ ort, browser, ok }) {
@@ -55,7 +55,7 @@ export default async function ({ ort, browser, ok }) {
      Deshalb wird er hier eingesetzt, auch wenn keiner gebraucht wird. */
   for (const breite of [320, 390]) {
     const p = await seite(browser, ok, { viewport: { width: breite, height: 900 } });
-    await p.goto(ort + '/index.html');
+    await p.goto(ort + '/index.php');
     await p.waitForTimeout(500);
     const gesetzt = await p.evaluate(() => {
       const m = document.querySelector('.ref__media');
