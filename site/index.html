@@ -21,7 +21,7 @@
 <link rel="apple-touch-icon" href="assets/img/favicon.svg">
 
 <link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=30">
+<link rel="stylesheet" href="assets/css/style.css?v=31">
 
 
 <script type="application/ld+json">
@@ -54,7 +54,7 @@
 <header class="masthead" id="masthead">
   <div class="shell masthead__inner">
     <a class="masthead__logo" href="index.html" aria-label="Nova Works, zur Startseite">
-      <img src="assets/img/logo-weiss.svg?v=30" alt="Nova Works" width="170" height="57">
+      <img src="assets/img/logo-weiss.svg?v=31" alt="Nova Works" width="170" height="57">
     </a>
 
     <nav class="nav" aria-label="Hauptnavigation">
@@ -92,14 +92,9 @@
     <div class="hero__media" style="background-image:url('assets/img/header.jpg')" aria-hidden="true"></div>
 
     <div class="shell hero__inner">
-      <div class="hero__meta">
-        <p class="eyebrow">Based in Germany</p>
-        <p class="eyebrow">Established 2026</p>
-      </div>
-
       <h1 class="hero__title">
         <span>Momente, die bleiben,</span>
-        <span>weil <em>alles passt.</em></span>
+        <span>weil alles passt.</span>
       </h1>
 
       <div class="hero__foot">
@@ -117,12 +112,11 @@
   <section class="section" id="ueber-uns">
     <div class="shell">
       <div class="about__grid">
-        <div data-reveal>
-          <p class="eyebrow eyebrow--signal">Über uns</p>
-          <h2 class="section__title">Start-up auf dem Papier. <em>Profis im Einsatz.</em></h2>
+        <div>
+          <h2 class="section__title">Start-up auf dem Papier. Profis im Einsatz.</h2>
         </div>
 
-        <div class="about__body" data-reveal data-reveal-delay="1">
+        <div class="about__body">
           <p>
             Auf dem Papier sind wir ein Start-Up – auf der Bühne aber alte Hasen.
             Nova Works ist aus der Idee entstanden, gebündelte Erfahrung in der
@@ -143,23 +137,18 @@
       </div>
 
       <!-- Gewerke: dieselbe Einteilung wie in der internen Crewplanung -->
-      <ul class="trades" data-reveal aria-label="Unsere Gewerke">
-        <li class="trades__item"><span class="trades__dot" style="--dot:#8a8a8a" aria-hidden="true"></span>Technische Leitung</li>
-        <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-        <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Ton</li>
-        <li class="trades__item"><span class="trades__dot" style="--dot:#c0713a" aria-hidden="true"></span>Rigging</li>
-        <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>AV / Video</li>
-        <li class="trades__item"><span class="trades__dot" style="--dot:#b5862a" aria-hidden="true"></span>Logistik</li>
-      </ul>
+      <dl class="gewerke gewerke--gross">
+        <dt>Gewerke</dt>
+        <dd>Technische Leitung, Licht, Ton, Rigging, AV&nbsp;/&nbsp;Video, Logistik</dd>
+      </dl>
     </div>
   </section>
 
   <!-- ================= Services ================= -->
   <section class="section section--raised" id="services">
     <div class="shell">
-      <div class="section__head" data-reveal>
-        <p class="eyebrow eyebrow--signal">Services</p>
-        <h2 class="section__title">Unsere Spielplätze. <em>Ihre Bühne.</em></h2>
+      <div class="section__head">
+        <h2 class="section__title">Unsere Spielplätze. Ihre Bühne.</h2>
       </div>
 
       <!-- Laufband: die Felder wandern langsam durchs Bild und lassen sich
@@ -167,15 +156,15 @@
 
            Ein Feld kommt dazu, indem man ein weiteres <article class="card">
            einhaengt - main.js zaehlt sie selbst und legt die Kopien fuer den
-           Endloslauf danach an. Die Nummer im card__index laeuft mit. -->
-      <div class="slider" data-slider data-richtung="rechts" data-reveal
+           Endloslauf danach an. -->
+      <div class="slider" data-slider data-richtung="rechts"
            role="region" aria-label="Unsere Leistungsfelder" tabindex="0">
         <div class="slider__spur">
 
         <article class="card">
-          <div class="card__media" style="background-image:url('assets/img/live.jpg')" aria-hidden="true"></div>
-          <span class="card__index" aria-hidden="true">01</span>
-          <p class="card__kicker">Live</p>
+          <div class="card__rahmen">
+            <div class="card__media" style="background-image:url('assets/img/live.jpg')" aria-hidden="true"></div>
+          </div>
           <h3 class="card__title">Festival &amp; Touring</h3>
           <p class="card__text">
             Von Clubshow bis Festivalbühne: Wir liefern zuverlässige Technik,
@@ -184,9 +173,9 @@
         </article>
 
         <article class="card">
-          <div class="card__media" style="background-image:url('assets/img/corporate.jpg')" aria-hidden="true"></div>
-          <span class="card__index" aria-hidden="true">02</span>
-          <p class="card__kicker">Corporate Events</p>
+          <div class="card__rahmen">
+            <div class="card__media" style="background-image:url('assets/img/corporate.jpg')" aria-hidden="true"></div>
+          </div>
           <h3 class="card__title">Industrie &amp; Business</h3>
           <p class="card__text">
             Produktlaunch, Konferenz oder Gala – wir sorgen dafür, dass Technik
@@ -195,10 +184,10 @@
         </article>
 
         <article class="card">
-          <div class="card__media" style="background-image:url('assets/img/tv.jpg')" aria-hidden="true"></div>
-          <span class="card__index" aria-hidden="true">03</span>
-          <p class="card__kicker">TV</p>
-          <h3 class="card__title">Shows &amp; Produktionen</h3>
+          <div class="card__rahmen">
+            <div class="card__media" style="background-image:url('assets/img/tv.jpg')" aria-hidden="true"></div>
+          </div>
+          <h3 class="card__title">TV-Shows &amp; Produktionen</h3>
           <p class="card__text">
             Kamerataugliche Lösungen, sauberes Timing und höchste technische
             Standards für anspruchsvolle TV-Formate.
@@ -234,25 +223,27 @@
        und die Bildbeschreibungen stehen in der Liste darunter. Zweimal
        dasselbe vorgelesen zu bekommen hilft niemandem.
 
-       Die Gewerke-Listen sind noch Platzhalter. Was Nova Works auf welchem
-       Projekt gemacht hat, steht nirgends in den Unterlagen - deshalb hier
-       bewusst offen gelassen statt geraten. Zum Ausfuellen: die Zeile
-       <li class="trades__item offen"> ersetzen durch je ein <li> pro Gewerk,
-       Farben wie im Abschnitt "Ueber uns":
-         Technische Leitung #8a8a8a · Licht #4a7fb5 · Ton #5a9e6f
+       Die Gewerke stehen als Definitionsliste: links, worum es geht,
+       rechts die Leistungen, durch Komma getrennt. Vorher waren es
+       gleichfoermige Pillen mit farbigen Punkten davor - die Punkte
+       verschluesselten eine Einteilung, die nirgends erklaert war, und
+       zehn Reihen davon sahen aus wie ein Baukasten statt wie ein
+       Leistungsverzeichnis.
+
+       Ist fuer ein Projekt noch nichts bekannt, statt zu raten:
+         <dd class="offen">noch offen</dd>
          Rigging #c0713a · AV / Video #7c5cbf · Logistik #b5862a          -->
   <section class="section" id="referenzen">
     <div class="shell">
-      <div class="section__head" data-reveal>
-        <p class="eyebrow eyebrow--signal">Referenzen</p>
-        <h2 class="section__title">Ausgewählte <em>Produktionen.</em></h2>
+      <div class="section__head">
+        <h2 class="section__title">Ausgewählte Produktionen.</h2>
       </div>
 
       <div class="refs">
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
-            <p class="eyebrow">Hamburg · Gelsenkirchen · Frankfurt&nbsp;am&nbsp;Main</p>
+            <p class="eyebrow">Hamburg, Gelsenkirchen und Frankfurt&nbsp;am&nbsp;Main</p>
             <h3 class="ref__titel">DIE 80er live</h3>
           </header>
 
@@ -311,21 +302,14 @@
             <!-- Geschuetzte Leerzeichen im Stadtnamen: Sonst bricht die Zeile am
                  Handy mitten hindurch ("Frankfurt / am Main"). Umbrochen wird
                  jetzt nur noch zwischen den Staedten. -->
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke bei diesem Projekt">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Ton</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#c0713a" aria-hidden="true"></span>Rigging</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>LED</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>AV</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#b5862a" aria-hidden="true"></span>Trucking</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht-/Content-Design und Operating</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#8a8a8a" aria-hidden="true"></span>Technisches Künstler-Advancing und Stagemanagement</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#8a8a8a" aria-hidden="true"></span>Komplettes Personal-Handling</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Ton, Rigging, LED, AV, Trucking, Licht- und Content-Design samt Operating, technisches Künstler-Advancing und Stagemanagement, komplettes Personal-Handling</dd>
+            </dl>
           </div>
         </article>
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Deutsche Bank Park, Frankfurt&nbsp;am&nbsp;Main</p>
             <h3 class="ref__titel">Ehrlich Brothers — NO LIMITS</h3>
@@ -378,17 +362,16 @@
                 Nachtschichten.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke bei diesem Projekt">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#c0713a" aria-hidden="true"></span>Rigging</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Beschallung / Ton</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Rigging, Beschallung</dd>
+            </dl>
           </div>
         </article>
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
-            <p class="eyebrow">SWR3 · Schwarzwaldhalle Karlsruhe</p>
+            <p class="eyebrow">Schwarzwaldhalle Karlsruhe, für SWR3</p>
             <h3 class="ref__titel">Public Viewing zum Eurovision Song Contest 2026</h3>
           </header>
 
@@ -433,15 +416,15 @@
                 darum herum.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke bei diesem Projekt">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>LED-Screen</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, LED-Screen</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Fühlinger See, Köln</p>
             <h3 class="ref__titel">Rainbow Festival</h3>
@@ -492,16 +475,15 @@
                 mit LED-Wänden von Nova Works.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke auf beiden Bühnen">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>LED</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>Kamera AV</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#8a8a8a" aria-hidden="true"></span>Technisches Künstler-Advancing</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>LED, Kamera-AV, technisches Künstler-Advancing</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Allgäu Airport, Memmingerberg</p>
             <h3 class="ref__titel">Ikarus Festival — Mainstage</h3>
@@ -541,17 +523,15 @@
                 und AV-Technik.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke auf der Olymp Stage">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#c0713a" aria-hidden="true"></span>Rigging</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Ton</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>AV-Technik</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Rigging, Ton, AV-Technik</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Ludwigstraße, München</p>
             <h3 class="ref__titel">CSD München 2026</h3>
@@ -595,16 +575,15 @@
                 Poetry-Slam-Auftritten.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke auf beiden Bühnen">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Ton</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#c0713a" aria-hidden="true"></span>Bühne</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Ton, Bühne</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Grüner Hügel, Bayreuth</p>
             <h3 class="ref__titel">Alle Farben im Festspielhaus</h3>
@@ -647,16 +626,15 @@
                 weiterlief.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke bei diesem Projekt">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#3f9aa8" aria-hidden="true"></span>Laser</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Beschallung</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Laser, Beschallung</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Hockenheimring, Hockenheim</p>
             <h3 class="ref__titel">Glücksgefühle Festival</h3>
@@ -700,17 +678,15 @@
                 Hauptbühne läuft.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke bei diesem Projekt">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Ton</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Ambiente-Beleuchtung</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Notbeschallung</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Ton, Ambiente-Beleuchtung, Notbeschallung</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Kreuzsteinbad, Bayreuth</p>
             <h3 class="ref__titel">Kreuzer Open Air mit Sven Väth</h3>
@@ -755,16 +731,15 @@
                 wieder sitzen.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke bei diesem Projekt">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#5a9e6f" aria-hidden="true"></span>Ton</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>LED</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Ton, LED</dd>
+            </dl>
           </div>
         </article>
 
 
-        <article class="ref" data-reveal>
+        <article class="ref">
           <header class="ref__kopf">
             <p class="eyebrow">Baden-Baden</p>
             <h3 class="ref__titel">SWR3 New Pop Festival</h3>
@@ -810,11 +785,10 @@
                 jedem musste die Technik über drei Abende sitzen.</p>
             </div>
 
-            <ul class="trades trades--eng" aria-label="Unsere Gewerke in allen drei Häusern">
-              <li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#c0713a" aria-hidden="true"></span>Rigging</li>
-              <li class="trades__item"><span class="trades__dot" style="--dot:#7c5cbf" aria-hidden="true"></span>LED</li>
-            </ul>
+            <dl class="gewerke">
+              <dt>Gewerke</dt>
+              <dd>Licht, Rigging, LED</dd>
+            </dl>
           </div>
         </article>
 
@@ -824,17 +798,15 @@
 
   <!-- ================= Kontakt ================= -->
   <section class="section" id="kontakt">
-    <div class="kontakt__schein" data-reveal aria-hidden="true"></div>
     <div class="shell">
-      <div class="section__head" data-reveal>
-        <p class="eyebrow eyebrow--signal">Kontakt</p>
-        <h2 class="section__title">Keine Show <em>ohne Substanz.</em></h2>
+      <div class="section__head">
+        <h2 class="section__title">Keine Show ohne Substanz.</h2>
       </div>
 
       <div class="contact__grid">
 
         <!-- Formular. Ohne JavaScript postet es ganz normal an kontakt.php. -->
-        <form id="kontaktformular" action="kontakt.php" method="post" novalidate data-reveal>
+        <form id="kontaktformular" action="kontakt.php" method="post" novalidate>
 
           <div class="form__row">
             <div class="field">
@@ -914,7 +886,7 @@
         </form>
 
         <!-- Kontaktdaten -->
-        <div class="contact__details" data-reveal data-reveal-delay="1">
+        <div class="contact__details">
           <div class="detail">
             <p class="detail__label">E-Mail</p>
             <p class="detail__value"><a href="mailto:info@nova-works.de">info@nova-works.de</a></p>
@@ -971,7 +943,7 @@
 <footer class="footer">
   <div class="shell footer__grid">
     <a class="footer__logo" href="index.html" aria-label="Nova Works, zur Startseite">
-      <img src="assets/img/logo-weiss.svg?v=30" alt="Nova Works" width="140" height="47" loading="lazy">
+      <img src="assets/img/logo-weiss.svg?v=31" alt="Nova Works" width="140" height="47" loading="lazy">
     </a>
     <p class="footer__meta">
       <span>© 2026 Nova Works.</span>
@@ -982,6 +954,6 @@
   </div>
 </footer>
 
-<script src="assets/js/main.js?v=30" defer></script>
+<script src="assets/js/main.js?v=31" defer></script>
 </body>
 </html>

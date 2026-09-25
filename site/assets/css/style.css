@@ -37,14 +37,18 @@
   --fs-lead:   clamp(1.05rem, 1.35vw, 1.3rem);
   --fs-body:   1.0625rem;
   --fs-small:  0.875rem;
-  --fs-eyebrow: 0.75rem;
 
   /* --- Raster & Rhythmus -------------------------------------------- */
   --shell:      1320px;
   --gutter:     clamp(1.25rem, 5vw, 4rem);
   --section-y:  clamp(5rem, 12vh, 10rem);
-  --radius:     10px;
-  --radius-lg:  14px;
+  /* Zwei Radien mit zwei Bedeutungen, nicht einer fuer alles: Der kleine
+     gehoert allem, was auf der Seite liegt - Bildrahmen, Eingabefelder,
+     Hinweise. Der grosse gehoert dem, was ueber der Seite schwebt: dem
+     Einwilligungsfenster und seinen Einstellungen. So sagt die Rundung
+     etwas ueber die Ebene, statt nur ueberall gleich weich zu sein. */
+  --radius:      4px;   /* auf der Seite                                 */
+  --radius-lg:  10px;   /* ueber der Seite                               */
 
   /* --- Bewegung ------------------------------------------------------ */
   --ease:      cubic-bezier(.22, .61, .36, 1);
@@ -158,12 +162,18 @@ a { color: inherit; }
 }
 
 /* Eyebrow: kleine Auszeichnungszeile --------------------------------- */
+/* Die Meta-Zeile ueber einem Titel nennt den Ort - sie ist Inhalt, kein
+   Etikett. Deshalb steht sie in Satzschreibung: Eine gesperrte
+   Grossbuchstabenzeile ueber jeder Ueberschrift ist die haeufigste
+   Vorlagen-Zutat ueberhaupt, und sie macht den Ort schwerer lesbar,
+   statt ihn hervorzuheben.
+
+   Zeilen, die nur den Abschnittsnamen wiederholten - "Services",
+   "Kontakt" -, sind ganz entfallen. */
 .eyebrow {
   margin: 0;
-  font-size: var(--fs-eyebrow);
-  font-weight: 500;
-  letter-spacing: .22em;
-  text-transform: uppercase;
+  font-size: var(--fs-small);
+  font-weight: 400;
   color: var(--text-faint);
 }
 .eyebrow--signal { color: var(--signal); }
@@ -189,8 +199,7 @@ a { color: inherit; }
   font: inherit;
   font-size: var(--fs-small);
   font-weight: 500;
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  letter-spacing: .01em;
   text-decoration: none;
   cursor: pointer;
   overflow: hidden;
@@ -211,22 +220,20 @@ a { color: inherit; }
   transition: transform .45s var(--ease-out);
 }
 
-.btn::after {
-  content: '';
-  width: 1.15rem; height: 1px;
-  background: currentColor;
-  transition: width .35s var(--ease);
-}
+/* Frueher hing an jedem Knopf ein Strich, der beim Ueberfahren
+   wuchs - dieselbe Geste wie der Pfeil, den man an jeder zweiten Seite
+   sieht. Ein Knopf sagt mit seinem Wort, was er tut; der Strich sagte
+   nichts dazu. Geblieben ist er nur am Ladezeiger. */
 
 .btn:hover, .btn:focus-visible {
   color: var(--ink);
   border-color: var(--signal);
 }
 .btn:hover::before, .btn:focus-visible::before { transform: scaleY(1); }
-.btn:hover::after,  .btn:focus-visible::after  { width: 1.9rem; }
 
 .btn[data-loading] { pointer-events: none; opacity: .6; }
 .btn[data-loading]::after {
+  content: '';
   width: .8rem; height: .8rem;
   border: 1px solid currentColor;
   border-top-color: transparent;
@@ -396,10 +403,7 @@ a { color: inherit; }
 /* Der Verlauf liegt auf dem Abschnitt selbst. Fehlt spaeter das Foto,
    bleibt die Flaeche trotzdem gestaltet - kein leeres Schwarz. */
 .hero {
-  background:
-    radial-gradient(120% 85% at 78% 8%, rgba(248, 248, 8, .16) 0%, transparent 58%),
-    radial-gradient(90% 70% at 12% 100%, rgba(248, 248, 8, .07) 0%, transparent 60%),
-    linear-gradient(178deg, #17170c 0%, var(--ink) 62%);
+  background: linear-gradient(178deg, #141416 0%, var(--ink) 62%);
 }
 
 /* Foto als Hintergrundbild, nicht als <img>: fehlt die Datei, rendert der
@@ -429,14 +433,11 @@ a { color: inherit; }
 
 .hero__inner { width: 100%; }
 
-.hero__meta {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: clamp(1.5rem, 4vh, 3rem);
-  padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--line);
-}
+/* Hier stand eine Zeile mit "Based in Germany" und "Established 2026" in
+   den beiden oberen Ecken - auf einer deutschsprachigen Seite zwei
+   englische Etiketten, die nichts sagen, was nicht ohnehin im Impressum,
+   im Kontaktteil und in der Fusszeile steht. Sie sind entfallen; der
+   Claim bekommt die Luft. */
 
 /* Der Claim traegt die Seite: mittig, im schwersten brauchbaren Schnitt
    und dicht gesetzt. Die Schrift ist ein variabler Schnitt von 100 bis
@@ -561,13 +562,11 @@ a { color: inherit; }
    Der Ausgangszustand haengt an .hero--auftritt, gesetzt von main.js.
    Ohne JavaScript kaeme weder die noch is-ready, und der Kopfbereich
    bliebe dauerhaft unsichtbar. So steht er dann einfach sofort da. */
-.hero--auftritt .hero__meta,
 .hero--auftritt .hero__foot {
   opacity: 0;
   transform: translateY(1.4rem);
   transition: opacity .9s var(--ease-out), transform .9s var(--ease-out);
 }
-.hero--auftritt.is-ready .hero__meta { opacity: 1; transform: none; transition-delay: .05s; }
 /* Der Fuss kommt nach den Zeilen, nicht mit ihnen. */
 .hero--auftritt.is-ready .hero__foot { opacity: 1; transform: none; transition-delay: .62s; }
 
@@ -580,102 +579,43 @@ a { color: inherit; }
 
 .section__head { margin-bottom: clamp(2.5rem, 6vh, 4.5rem); }
 
+/* Kein Abstand nach oben mehr: Darueber stand frueher eine Etikettzeile
+   ("Services", "Kontakt"), die den Abschnittsnamen wiederholte. Die ist
+   entfallen, der Abstand mit ihr. */
 .section__title {
   max-width: 20ch;
-  margin-top: 1.25rem;
   font-size: var(--fs-h2);
   font-weight: 300;
   letter-spacing: -.03em;
 }
-.section__title em { font-style: normal; color: var(--signal); }
+/* --- Warum hier kein Farbtausch mehr steht ------------------------------
+   Jede Abschnitts-Ueberschrift war zweigeteilt: ein weisser und ein
+   gelber Halbsatz, die beim Vorbeiscrollen die Farbe tauschten. Zwei
+   Dinge stimmten daran nicht.
 
-/* --- Farbtausch der Ueberschriften -------------------------------------
-   Jede Abschnitts-Ueberschrift ist zweigeteilt: ein weisser und ein gelber
-   Halbsatz. Waehrend sie durchs Bild wandert, tauschen die beiden ihre
-   Farbe und nehmen sie wieder zurueck.
+   Erstens sagte die Teilung nichts. "Ausgewaehlte / Produktionen." ist
+   ein Begriff, kein Gegensatz - die Farbe trennte Woerter, die
+   zusammengehoeren. Ein einzelnes farbig gesetztes Wort in einer
+   Ueberschrift ist die haeufigste Zutat aus dem Baukasten.
 
-   Die beiden Haelften wechseln NACHEINANDER, nicht gleichzeitig. Das ist
-   der Kern: Bei einer gemeinsamen Blende waeren auf halbem Weg beide
-   gleich blass, die Ueberschrift verlore genau in der Bewegung ihre
-   Zweiteilung. So gibt stattdessen die eine Haelfte das Gelb ab, und erst
-   danach nimmt die andere es auf - dazwischen steht die Zeile kurz ganz
-   in Weiss. Nebenbei liegt damit nie mehr Gelb auf der Seite als im
-   Entwurf, nur an anderer Stelle.
+   Zweitens war es die dritte Bewegung ohne Zutun auf derselben Seite.
+   Geblieben sind zwei, und beide haben einen Grund: der Auftritt des
+   Claims beim Ankommen, und die Bilder, die beim Scrollen heranfahren -
+   die tragen den Beweis, um den es auf dieser Seite geht.
 
-   Getrieben wird das von zwei Zahlen, die beide auf der Ueberschrift
-   laufen und an die Haelften vererbt werden: 0 ist der Entwurfszustand,
-   1 der getauschte. Vererbung statt zweier eigener Animationen, damit die
-   Haelften zwangslaeufig im selben Takt bleiben - eine eigene Zeitachse
-   im em liefe bei zweizeiligen Ueberschriften messbar hinterher, weil das
-   em eine Zeile tiefer sitzt.
-
-   @property ist dafuer Pflicht: Ohne die Anmeldung als Zahl kennt der
-   Browser nur Zeichenketten und wuerde springen statt zu blenden.
-
-   Der Entwurfszustand liegt in der Mitte des Wegs: von 42 bis 68 Prozent
-   steht die Ueberschrift im Lesebereich des Schirms. Getauscht wird beim
-   Herein- und beim Hinauswandern. */
-
-@property --tausch-eins {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0;
-}
-@property --tausch-zwei {
-  syntax: '<number>';
-  inherits: true;
-  initial-value: 0;
-}
-
-@keyframes titel-tausch {
-  0%   { --tausch-eins: 1; --tausch-zwei: 1; }
-  22%  { --tausch-eins: 1; --tausch-zwei: 1; }
-  32%  { --tausch-eins: 0; --tausch-zwei: 1; }
-  42%  { --tausch-eins: 0; --tausch-zwei: 0; }
-  68%  { --tausch-eins: 0; --tausch-zwei: 0; }
-  78%  { --tausch-eins: 0; --tausch-zwei: 1; }
-  88%  { --tausch-eins: 1; --tausch-zwei: 1; }
-  100% { --tausch-eins: 1; --tausch-zwei: 1; }
-}
-
-/* Dieselbe Bedingung wie bei der Bildtiefe, Wort fuer Wort - und dieselbe,
-   die main.js abfragt. So laeuft immer genau einer der beiden Wege: Liefe
-   beides, ueberschriebe die Animation ohnehin den von main.js gesetzten
-   Wert, und niemand wuesste beim Suchen, welcher Weg gerade greift. */
-@media (prefers-reduced-motion: no-preference) {
-  @supports (animation-timeline: view()) and (timeline-scope: --pruefung) {
-    .section__title {
-      animation: titel-tausch linear both;
-      animation-timeline: view(block);
-      animation-range: cover 0% cover 100%;
-    }
-  }
-}
-
-/* Das Mischen selbst steht ausserhalb: Es gilt fuer beide Wege. Der eine
-   laesst die beiden Zahlen vom Browser laufen, der andere setzt sie aus
-   main.js - gerechnet wird hier. */
-@supports (color: color-mix(in oklab, #000, #fff)) {
-  .section__title {
-    color: color-mix(in oklab, var(--text),
-                     var(--signal) calc(var(--tausch-eins, 0) * 100%));
-  }
-  .section__title em {
-    color: color-mix(in oklab, var(--signal),
-                     var(--text) calc(var(--tausch-zwei, 0) * 100%));
-  }
-}
+   Gelb steht jetzt nur noch dort, wo es etwas bedeutet: auf dem
+   Schalter, im Fokusrahmen, in der Auswahlmarkierung, am Geltungshinweis
+   der AGB und am Zaehler der Grossansicht.                              */
 
 /* Reveal beim Scrollen ------------------------------------------------ */
-[data-reveal] {
-  opacity: 0;
-  transform: translateY(1.75rem);
-  transition: opacity .8s var(--ease-out), transform .8s var(--ease-out);
-}
-[data-reveal].is-visible { opacity: 1; transform: none; }
-[data-reveal][data-reveal-delay="1"] { transition-delay: .09s; }
-[data-reveal][data-reveal-delay="2"] { transition-delay: .18s; }
-[data-reveal][data-reveal-delay="3"] { transition-delay: .27s; }
+/* Hier stand das Einblenden: Jeder Abschnitt verblasste herein und fuhr
+   dabei ein Stueck nach oben - auf zwanzig Stellen der Seite.
+
+   Das ist die verbreitetste Bewegung ueberhaupt und sagt nichts ueber
+   den Inhalt. Sie ist ersatzlos entfallen. Bewegung ohne Zutun bleibt
+   an zwei Stellen, und beide haben einen Grund: der Auftritt des Claims
+   beim Ankommen auf der Seite, und die Bilder, die beim Scrollen
+   langsam heranfahren. */
 
 /* --- Ueber uns ------------------------------------------------------- */
 
@@ -706,7 +646,7 @@ a { color: inherit; }
 }
 .slider::-webkit-scrollbar { display: none; }
 .slider[data-greift] { cursor: grabbing; }
-.slider:focus-visible { outline: 2px solid var(--signal); outline-offset: 6px; border-radius: var(--radius-lg); }
+.slider:focus-visible { outline: 2px solid var(--signal); outline-offset: 6px; border-radius: var(--radius); }
 
 .slider__spur {
   display: flex;
@@ -721,71 +661,56 @@ a { color: inherit; }
   min-width: 240px;
 }
 
-.card {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  min-height: clamp(340px, 42vh, 460px);
-  padding: 1.75rem;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  isolation: isolate;
-  transition: border-color .4s var(--ease), transform .5s var(--ease-out);
-}
-.card:hover { border-color: var(--line-strong); transform: translateY(-5px); }
+/* Die Karte ist kein Kasten mehr.
 
-/* Grundflaeche - traegt die Karte auch ohne Foto */
-.card { background: linear-gradient(165deg, #1d1d1f 0%, #0d0d0e 100%); }
+   Vorher: eine gerahmte Flaeche mit abgerundeten Ecken, einem Verlauf
+   darunter, einem zweiten darueber, und beim Zeigen darauf hob sie sich
+   an und das Foto zoomte. Auf eine Karte, die man gar nicht anklicken
+   kann, antwortet eine Bewegung auf nichts - sie war reine Zierde, und
+   drei gleiche Kaesten nebeneinander sind der verbreitetste Baustein
+   ueberhaupt.
+
+   Jetzt steht das Foto im eigenen Rahmen und die Zeile darunter - genau
+   wie bei den Projekten weiter unten. Dieselbe Ordnung zweimal auf einer
+   Seite ist leichter zu lesen als zwei Erfindungen. */
+
+.card {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  gap: .9rem;
+  align-content: start;
+}
+
+/* Der Rahmen schneidet ab, das Foto darin faehrt (siehe "Bildtiefe").
+   Grundflaeche und Haarlinie tragen ihn auch, wenn eine Datei fehlt -
+   dann steht dort ein leerer Rahmen statt eines Lochs. Genau dieselbe
+   Vorsorge wie bei den Projektbildern weiter unten. */
+.card__rahmen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  min-width: 0;
+  overflow: clip;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #17171a;
+}
 
 .card__media {
   position: absolute;
   inset: 0;
-  z-index: -2;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  opacity: .62;
-  transition: opacity .6s var(--ease), transform .8s var(--ease-out);
-}
-.card:hover .card__media { opacity: .8; transform: scale(1.05); }
-
-.card::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(180deg,
-    rgba(11, 11, 12, .15) 0%,
-    rgba(11, 11, 12, .72) 58%,
-    rgba(11, 11, 12, .95) 100%);
 }
 
-.card__index {
-  position: absolute;
-  top: 1.5rem; right: 1.6rem;
-  font-size: var(--fs-small);
-  font-weight: 500;
-  letter-spacing: .12em;
-  color: var(--text-faint);
-}
-
-.card__kicker {
-  margin-bottom: .5rem;
-  font-size: var(--fs-eyebrow);
-  font-weight: 500;
-  letter-spacing: .2em;
-  text-transform: uppercase;
-  color: var(--signal);
-}
 .card__title {
-  margin-bottom: .9rem;
+  margin: 0;
   font-size: var(--fs-h3);
   font-weight: 400;
 }
 .card__text {
   margin: 0;
+  max-width: 38ch;
   font-size: var(--fs-small);
   line-height: 1.6;
   color: var(--text-dim);
@@ -855,7 +780,7 @@ a { color: inherit; }
   aspect-ratio: 16 / 9;
   max-height: min(76vh, 820px);
   border: 1px solid var(--line);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   /* Feste Flaeche, damit ein fehlendes Foto kein Loch hinterlaesst. */
   background-color: #17171a;
   /* overflow: clip, nicht hidden und nicht clip-path.
@@ -1041,7 +966,7 @@ a { color: inherit; }
 .ref__text p:last-child { margin-bottom: 0; }
 
 /* Die Gewerke laufen unter beiden Spalten durch. */
-.ref__text .trades { grid-column: 1 / -1; }
+.ref__text .gewerke { grid-column: 1 / -1; margin-top: clamp(.5rem, 1.5vw, 1.25rem); }
 
 /* --- Bildtiefe beim Scrollen -------------------------------------------
    Die Fotos stehen nicht still, solange sie im Bild sind: Sie fahren
@@ -1275,34 +1200,44 @@ a { color: inherit; }
   .lupe__vor { right: .75rem; }
 }
 
-/* --- Gewerke --------------------------------------------------------- */
+/* --- Gewerke ---------------------------------------------------------
+   Eine Definitionsliste, kein Baukasten: links, worum es geht, rechts
+   die Leistungen. Vorher standen sie als gleichfoermige Pillen mit
+   farbigen Punkten davor. Die Punkte verschluesselten eine Einteilung,
+   die nirgends erklaert war, und zehn Reihen davon sahen aus wie ein
+   Bausatz - nicht wie das Leistungsverzeichnis, das sie sind.
 
-.trades {
-  display: flex;
-  margin-inline: 0;
-  padding: 0;
-  list-style: none;
-  flex-wrap: wrap;
-  gap: .6rem;
-  margin-top: clamp(2.5rem, 6vh, 4rem);
-}
-.trades--eng { margin-top: 1.5rem; }
+   Der Begriff links steht in Satzschreibung, nicht in Versalien: Eine
+   gesperrte Grossbuchstabenzeile ueber dem Inhalt ist die haeufigste
+   Beschriftung, die man sieht, und sagt nichts, was der Inhalt nicht
+   schon sagt. */
 
-.trades__item {
-  display: inline-flex;
-  align-items: center;
-  gap: .6rem;
-  padding: .6rem 1.15rem;
-  border: 1px solid var(--line);
-  border-radius: 100px;
+.gewerke {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 9ch) minmax(0, 1fr);
+  gap: 0 clamp(1rem, 2vw, 2rem);
+  margin: 0;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
   font-size: var(--fs-small);
-  color: var(--text-dim);
+  line-height: 1.6;
 }
-.trades__dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  background: var(--dot, var(--signal));
-  flex: none;
+.gewerke dt {
+  color: var(--text-faint);
+  font-weight: 500;
+}
+.gewerke dd {
+  margin: 0;
+  max-width: 62ch;
+  color: var(--text);
+  /* Die Aufzaehlung soll als eine Zeile Satz lesbar bleiben, auch wenn
+     sie umbricht - deshalb kein hartes Trennen einzelner Begriffe. */
+  hyphens: none;
+}
+
+.gewerke--gross {
+  margin-top: clamp(2.5rem, 6vh, 4rem);
+  font-size: var(--fs-body);
 }
 
 /* Noch auszufuellen. Bewusst auffaellig, damit es niemand uebersieht. */
@@ -1311,7 +1246,7 @@ a { color: inherit; }
   border-color: var(--danger);
   color: var(--danger);
 }
-.offen .trades__dot { background: var(--danger); }
+
 
 /* Gleiche Kennzeichnung als Block, etwa fuer eine Seite ohne Inhalt. */
 .offen--block {
@@ -1332,46 +1267,19 @@ a { color: inherit; }
    Kontakt
    ========================================================================= */
 
-/* Ein warmer Schein hinter der Ueberschrift - der gelbe Akzent des
-   Abschnitts, ohne dass die Seite die Farbe wechselt. Er blendet ueber die
-   vorhandene Reveal-Mechanik ein, sobald der Abschnitt ins Bild kommt. */
-#kontakt { position: relative; overflow: hidden; }
-#kontakt > .shell { position: relative; z-index: 1; }
+/* Hier lag der einzige Schmuck des Abschnitts: ein gelber Schein hinter
+   der Ueberschrift und eine schmale gelbe Marke daneben. Beides ist
+   entfallen.
 
-/* Dieselbe Regel wie beim Lichtstrahl im Kopfbild: Der Schein muss
-   INNERHALB seines Kastens auf null gehen. Der Abschnitt schneidet mit
-   overflow: hidden ab - stuende der Kasten wie vorher mit negativem
-   Abstand links heraus oder reichte die Ellipse bis an eine Kante,
-   laege dort eine sichtbare gerade Kante. Radien 46 % ab Mitte heisst:
-   ringsum bleiben 4 % Rand uebrig. */
-.kontakt__schein {
-  position: absolute;
-  top: clamp(2rem, 8vh, 6rem);
-  left: clamp(1rem, 4vw, 5rem);
-  width: min(620px, 52%);
-  aspect-ratio: 1.45;
-  z-index: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse 46% 46% at 50% 50%,
-    rgba(248, 248, 8, .16)  0%,
-    rgba(248, 248, 8, .06) 44%,
-    rgba(248, 248, 8, 0)  100%);
-}
+   Der Schein war eine Farbwaesche ohne Aussage - der verbreitetste
+   Zierrat auf einer dunklen Seite. Und die Marke stand an genau einer
+   von fuenf Ueberschriften; wo ein Zeichen nur einmal vorkommt, liest
+   man es als Hinweis und sucht danach vergeblich einen Grund.
 
-/* Dazu eine schmale gelbe Marke an der Ueberschrift. */
-#kontakt .section__head { position: relative; padding-left: 1.5rem; }
-#kontakt .section__head::before {
-  content: '';
-  position: absolute;
-  left: 0; top: .15rem; bottom: .35rem;
-  width: 2px;
-  border-radius: 2px;
-  background: linear-gradient(to bottom, var(--signal), rgba(248, 248, 8, 0));
-}
-
-@media (max-width: 620px) {
-  #kontakt .section__head { padding-left: 1rem; }
-}
+   Gelb bleibt dort, wo es etwas heisst: auf dem Schalter, im
+   Fokusrahmen, an den Pflichtfeld-Sternchen, in der Auswahlmarkierung,
+   am Geltungshinweis der AGB und am Zaehler der Grossansicht. */
+#kontakt { position: relative; }
 
 .contact__grid {
   display: grid;
@@ -1523,10 +1431,8 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 
 .detail__label {
   margin: 0 0 .35rem;
-  font-size: var(--fs-eyebrow);
-  font-weight: 500;
-  letter-spacing: .2em;
-  text-transform: uppercase;
+  font-size: var(--fs-small);
+  font-weight: 400;
   color: var(--text-faint);
 }
 .detail__value {
@@ -1661,16 +1567,13 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .legal--agb { max-width: 78ch; }
 
 .legal--agb .agb__kopf {
-  margin: -1.5rem 0 2rem;
-  font-size: .82rem;
-  letter-spacing: .16em;
-  text-transform: uppercase;
+  margin: -1.25rem 0 2rem;
+  font-size: var(--fs-small);
   color: var(--text-faint);
 }
 .legal--agb .agb__kopf span {
   display: inline-block;
-  margin-top: .5rem;
-  letter-spacing: .1em;
+  margin-top: .35rem;
 }
 
 /* Der einzige gelbe Akzent auf dieser Seite. */
@@ -1920,9 +1823,7 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .gruppe__leer {
   display: block;
   margin-top: .45rem;
-  font-size: var(--fs-eyebrow);
-  letter-spacing: .06em;
-  text-transform: uppercase;
+  font-size: var(--fs-small);
   color: var(--text-faint);
 }
 
@@ -2040,7 +1941,6 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   .slider__spur > .card { flex-basis: calc(100vw - 2 * var(--gutter) - 2.5rem); }
 
   .form__row { grid-template-columns: 1fr; gap: 0; }
-  .hero__meta { flex-direction: column; gap: .35rem; }
   .detail { padding-left: 1.15rem; }
 }
 
@@ -2057,8 +1957,6 @@ textarea.field__input { min-height: 150px; resize: vertical; }
     transition-duration: .01ms !important;
   }
 
-  [data-reveal],
-  .hero__meta,
   .hero__title span,
   .hero__foot { opacity: 1; transform: none; }
 }
@@ -2072,7 +1970,6 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   .zustimmung, .einstellungen { display: none !important; }
   body { background: #fff; color: #000; }
   .legal__inner h3, .legal__inner a { color: #000; }
-  [data-reveal] { opacity: 1; transform: none; }
 
   /* Die AGB werden ausgedruckt und abgeheftet. Auf Weiss muss deshalb der
      ganze Satz schwarz stehen, nicht nur die Ueberschriften - der

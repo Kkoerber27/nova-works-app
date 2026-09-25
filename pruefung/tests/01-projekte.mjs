@@ -30,8 +30,9 @@ export default async function ({ ort, browser, ok }) {
         bilder: r.querySelectorAll('.ref__bilder li a').length,
         ohneBeschreibung: [...r.querySelectorAll('.ref__bilder li a')]
           .filter((a) => a.textContent.trim().length < 15).length,
-        gewerke: r.querySelectorAll('.trades__item').length,
-        gewerkeOffen: r.querySelectorAll('.trades__item.offen').length,
+        gewerkeTitel: r.querySelector('.gewerke dt')?.textContent.trim() || '',
+        gewerke: r.querySelector('.gewerke dd')?.textContent.trim() || '',
+        gewerkeOffen: r.querySelectorAll('.gewerke dd.offen').length,
         absaetze: r.querySelectorAll('.ref__text p:not(.eyebrow)').length,
       })),
     };
@@ -49,8 +50,12 @@ export default async function ({ ort, browser, ok }) {
       ok(r.bilder >= 1 && r.bilder <= 3, `${kurz} ein bis drei Galeriebilder`, String(r.bilder));
       ok(r.ohneBeschreibung === 0, `${kurz} jedes Bild hat eine Beschreibung`);
     }
-    ok(r.gewerke > 0, `${kurz} Gewerke eingetragen`,
-       r.gewerkeOffen ? 'noch offen (rot markiert)' : `${r.gewerke} Stück`);
+    /* Die Gewerke stehen als Definitionsliste - links das Wort, rechts
+       die Leistungen im Fliesstext. Geprüft wird die Regel, nicht eine
+       Zahl: Es muss ein benanntes Feld geben und darin etwas stehen. */
+    ok(/gewerke/i.test(r.gewerkeTitel), `${kurz} Gewerke sind benannt`, r.gewerkeTitel);
+    ok(r.gewerke.length > 3, `${kurz} Gewerke eingetragen`,
+       r.gewerkeOffen ? 'noch offen (rot markiert)' : r.gewerke.slice(0, 40));
     ok(r.absaetze >= 2, `${kurz} Veranstaltung und Aufgabe getrennt`, `${r.absaetze} Absätze`);
   }
 

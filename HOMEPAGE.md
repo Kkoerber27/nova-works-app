@@ -15,7 +15,7 @@ site/                      ← das, was auf den Server kommt
 ├─ index.html              Startseite
 ├─ impressum.html          Rechtstext, 1:1 aus der alten Seite
 ├─ datenschutz.html        Rechtstext, 1:1 aus der alten Seite
-├─ agb.html                Allgemeine Geschäftsbedingungen – Text fehlt noch
+├─ agb.html                Allgemeine Geschäftsbedingungen, §§ 1–36
 ├─ 404.html
 ├─ kontakt.php             Formular-Handler (verschickt die E-Mail)
 ├─ .htaccess               Weiterleitungen, Caching, Sicherheits-Header
@@ -167,11 +167,28 @@ Im Ruhe-Modus des Betriebssystems passiert nichts davon.
 
 ## Laufband der Leistungsfelder
 
-Die vier Felder unter „Services" stehen nicht mehr im Raster, sondern in einem
+Die drei Felder unter „Services" stehen nicht im Raster, sondern in einem
 Laufband: Sie wandern langsam durchs Bild und lassen sich mit Maus, Finger,
 Trackpad oder Pfeiltasten schieben. Das ersetzt Flickity von der alten Seite –
 dieselben Einstellungen, nur ohne Bibliothek: drei Karten nebeneinander,
-darunter zwei, auf dem Handy eine; Endlosschleife; Pause beim Überfahren.
+darunter zwei, auf dem Handy eine; Endlosschleife; Pause, sobald der
+Abschnitt aus dem Bild ist oder jemand mit dem Trackpad dagegenscrollt.
+
+Eine Karte ist ein Foto im Rahmen, darunter Titel und zwei Zeilen Text:
+
+```html
+<article class="card">
+  <div class="card__rahmen">
+    <div class="card__media" style="background-image:url('assets/img/live.jpg')" aria-hidden="true"></div>
+  </div>
+  <h3 class="card__title">Festival &amp; Touring</h3>
+  <p class="card__text">…</p>
+</article>
+```
+
+Fehlt die Bilddatei, bleibt der Rahmen als leere Fläche stehen – kein Loch
+und kein kaputtes Bildsymbol. Genau das ist bei `corporate.jpg` gerade der
+Fall.
 
 Stellschrauben in `main.js`, ganz oben im Block:
 
@@ -184,7 +201,7 @@ Drei Dinge, die dabei zu wissen sind:
 
 **Endlosschleife.** `main.js` hängt zwei Kopien der Karten an die Reihe und
 faltet die Position immer in den mittleren Satz zurück. Die Kopien sind für
-Screenreader ausgeblendet, dort erscheinen die vier Felder also genau einmal.
+Screenreader ausgeblendet, dort erscheinen die drei Felder also genau einmal.
 
 **Warum die Position im Skript liegt.** Browser runden `scrollLeft` auf ganze
 Pixel. Ein Schritt von 0,45 px pro Bild verschwindet dadurch spurlos und das
@@ -198,39 +215,67 @@ Ruhe-Modus des Betriebssystems läuft nichts von selbst, schieben geht weiter.
 ## Referenzen
 
 Der Abschnitt `#referenzen` liegt zwischen Services und Kontakt. Jedes Projekt
-ist ein `<article class="ref">` mit Bildspalte und Textspalte; jede zweite Zeile
-läuft seitenverkehrt. Unter 960 px stapelt sich alles, Bild immer über dem Text.
+steht gestapelt: Ort und Projektname sitzen unten links **im** Bild, darunter
+läuft der Text in zwei Spalten, darunter die Gewerke. So trägt das Foto die
+volle Breite – das ist der Beweis, um den es hier geht. Unter 960 px rutscht
+der Kopf über das Bild und die Textspalten werden zu einer.
 
-**Ein neues Projekt** ist ein kopierter Block. Darin zu ändern:
-
-| Was | Wo im Block |
-|---|---|
-| Ort, Jahr oder Anlass | `<p class="eyebrow">` |
-| Projektname | `<h3 class="ref__titel">` |
-| Beschreibung, zwei bis drei Sätze | das `<p>` darunter |
-| Gewerke | die `<li>` in der `<ul class="trades">` |
-| Bild | `background-image` im `style` des `.ref__bild` |
-
-**Zwei Bilder** statt einem: ein zweites `<div class="ref__bild">` daneben
-stellen, das Raster teilt die Spalte von selbst.
-
-**Die Gewerke** nutzen dieselben Farben wie die Liste unter „Über uns" und wie
-die interne Crewplanung:
-
-```
-Technische Leitung #8a8a8a   Licht #4a7fb5   Ton #5a9e6f
-Rigging #c0713a              AV / Video #7c5cbf   Logistik #b5862a
-```
-
-Ein Eintrag sieht so aus:
+**Ein neues Projekt** ist ein kopierter Block:
 
 ```html
-<li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
+<article class="ref">
+  <header class="ref__kopf">
+    <p class="eyebrow">Ort, Anlass oder Datum</p>
+    <h3 class="ref__titel">Projektname</h3>
+  </header>
+
+  <div class="ref__media">
+    <button class="ref__bild" type="button" data-lupe-auf>
+      <img class="ref__foto" src="assets/img/beispiel.jpg" alt="" loading="lazy" decoding="async">
+      <span class="ref__zeichen" aria-hidden="true"></span>
+      <span class="visually-hidden">Bilder zu „Projektname" ansehen</span>
+    </button>
+    <ul class="ref__bilder" data-lupe-titel="Projektname">
+      <li><a href="assets/img/beispiel.jpg">Beschreibung des Bildes, ein Satz</a></li>
+      <li><a href="assets/img/beispiel-2.jpg">…</a></li>
+    </ul>
+  </div>
+
+  <div class="ref__text">
+    <div class="ref__worum"><p>Worum ging es bei der Veranstaltung?</p></div>
+    <div class="ref__unser"><p>Was hat Nova Works gemacht?</p></div>
+    <dl class="gewerke">
+      <dt>Gewerke</dt>
+      <dd>Licht, Ton, Rigging</dd>
+    </dl>
+  </div>
+</article>
 ```
 
-Steht in einem Projekt noch `<li class="trades__item offen">`, ist die Liste
-nicht ausgefüllt. Solche Einträge erscheinen rot und gestrichelt – das ist
-Absicht, damit sie nicht versehentlich live gehen.
+Dazu drei Regeln:
+
+**Höchstens drei Bilder** pro Projekt. Das erste in der `<ul>` ist zugleich
+das sichtbare im Rahmen; die Großansicht blättert durch alle. Jedes `<li>`
+braucht eine Beschreibung – die liest der Screenreader vor, und ohne
+JavaScript ist die Liste eine ganz normale Linkliste.
+
+**`alt` bleibt leer.** Der Schalter drumherum sagt bereits, worum es geht.
+Zweimal dasselbe vorgelesen zu bekommen hilft niemandem.
+
+**Die Gewerke** stehen als Fließtext, durch Komma getrennt, in der Reihenfolge
+Licht, Ton, Rigging, LED/Video, Logistik, dann alles Weitere. Ist noch nicht
+bekannt, was Nova Works auf einer Produktion gemacht hat, wird nicht geraten:
+
+```html
+<dd class="offen">noch offen</dd>
+```
+
+Solche Einträge erscheinen rot und gestrichelt – das ist Absicht, damit sie
+nicht versehentlich live gehen.
+
+**Steht ein Foto hoch statt quer,** sitzt der Ausschnitt im 16:9-Rahmen oft
+falsch. Dafür gibt es `style="object-position:center 28%"` am `<img>`; der
+Wert verschiebt den Ausschnitt nach oben oder unten.
 
 ## AGB
 
@@ -262,149 +307,70 @@ Danach zwei Handgriffe, die leicht vergessen werden:
 Solange kein Text drinsteht, bleibt beides bewusst so: Eine leere Seite soll
 weder im Index noch in der Sitemap auftauchen.
 
-## Gelber Akzent im Kontaktbereich
+## Wo Gelb steht – und wo nicht mehr
 
 Ein früherer Entwurf ließ die ganze Seite im Kontaktbereich auf Signalgelb
-umschlagen – so wie es die alte Seite macht. Das war zu viel: Die Fläche
-dominierte alles andere. Jetzt bleibt die Seite durchgehend dunkel, und das
-Gelb setzt nur einen Akzent.
+umschlagen, so wie es die alte Seite macht. Das war zu viel: Die Fläche
+dominierte alles andere. Die Umschaltung über `data-schema` ist vollständig
+entfernt – aus dem Stylesheet, aus `main.js` und aus dem Markup. Wer sie
+zurückholen will, findet sie in der Historie bis Commit `c72dbac`.
 
-Zwei Bausteine, beide in `#kontakt`:
+Danach blieben vier Zierstücke in Gelb übrig, die alle vier inzwischen
+ebenfalls weg sind:
 
-- `.kontakt__schein` – ein warmer Schein hinter der Überschrift, der über die
-  vorhandene Reveal-Mechanik einblendet, sobald der Abschnitt ins Bild kommt.
-  Größe und Stärke stehen im Stylesheet als `min(620px, 58%)` und `.15` Alpha.
-- Eine schmale gelbe Marke links an der Überschrift, ein Verlauf von
-  Signalgelb nach durchsichtig.
+- der warme Schein hinter der Kontakt-Überschrift (`.kontakt__schein`),
+- die schmale gelbe Marke links daneben,
+- die beiden gelben Waschungen über dem Kopfbild,
+- der Farbtausch der Abschnitts-Überschriften beim Scrollen.
 
-Die frühere Umschaltung über `data-schema` ist damit vollständig entfernt –
-aus dem Stylesheet, aus `main.js` und aus dem Markup. Wer sie zurückholen
-will, findet sie in der Historie bis Commit `c72dbac`.
+Gelb steht jetzt nur noch dort, wo es etwas heißt: auf dem Schalter „Projekt
+starten", im Fokusrahmen, an den Pflichtfeld-Sternchen des Formulars, in der
+Auswahlmarkierung, am Geltungshinweis der AGB und am Zähler der Großansicht.
 
-## Laufband der Leistungsfelder
+## Überarbeitung des Entwurfs
 
-Die vier Felder unter „Services" stehen nicht mehr im Raster, sondern in einem
-Laufband: Sie wandern langsam durchs Bild und lassen sich mit Maus, Finger,
-Trackpad oder Pfeiltasten schieben. Das ersetzt Flickity von der alten Seite –
-dieselben Einstellungen, nur ohne Bibliothek: drei Karten nebeneinander,
-darunter zwei, auf dem Handy eine; Endlosschleife; Pause beim Überfahren.
+Ein Durchgang mit der Frage, was auf der Seite nach Baukasten aussieht statt
+nach dieser Firma. Geändert wurde:
 
-Stellschrauben in `main.js`, ganz oben im Block:
+- **Die Gewerke** standen als gleichförmige Pillen mit farbigen Punkten
+  davor – 44 Stück über zehn Projekte. Die Punkte verschlüsselten eine
+  Einteilung, die nirgends erklärt war. Jetzt steht eine
+  Definitionsliste `<dl class="gewerke">`: links das Wort „Gewerke", rechts
+  die Leistungen im Fließtext. Das liest sich wie ein Leistungsverzeichnis,
+  und ein neues Projekt braucht keine Farbwahl mehr.
+- **Das Einblenden beim Scrollen** lag auf 21 Stellen der Seite: Jeder
+  Abschnitt verblasste herein und fuhr ein Stück nach oben. Das ist die
+  verbreitetste Bewegung überhaupt und sagt nichts über den Inhalt.
+  Ersatzlos entfallen – `data-reveal`, die CSS-Regeln und der
+  IntersectionObserver in `main.js`.
+- **Bewegung ohne Zutun** gibt es jetzt noch an zwei Stellen, und beide
+  haben einen Grund: der Auftritt des Claims beim Ankommen auf der Seite,
+  und die Bilder, die beim Scrollen langsam heranfahren – die tragen den
+  Beweis, um den es auf dieser Seite geht. Dazu kommt das Laufband, das
+  aber die Bedienung des Abschnitts ist, nicht sein Schmuck.
+- **Die Karten unter „Services"** waren gerahmte Kästen mit runden Ecken,
+  einem Verlauf darunter, einem zweiten darüber, und beim Überfahren hoben
+  sie sich an und das Foto zoomte. Auf eine Karte, die man nicht anklicken
+  kann, antwortet eine Bewegung auf nichts. Jetzt steht das Foto im eigenen
+  Rahmen und die Zeile darunter – dieselbe Ordnung wie bei den Projekten.
+- **Die Etiketten über den Überschriften** („Services", „Kontakt", „Live",
+  „TV" …) sind weg, ebenso die gesperrte Großschrift und die Nummern
+  01/02/03. Genummert wird, was eine Reihenfolge hat; drei Leistungsfelder
+  haben keine.
+- **Das farbig abgesetzte Wort in jeder Überschrift** ist weg. „Ausgewählte /
+  Produktionen." ist ein Begriff, kein Gegensatz – die Farbe trennte
+  Wörter, die zusammengehören.
+- **Zwei Radien statt einem für alles:** `--radius` (4 px) für alles, was auf
+  der Seite liegt – Bildrahmen, Eingabefelder, Hinweise. `--radius-lg`
+  (10 px) für das, was über der Seite schwebt: das Einwilligungsfenster und
+  seine Einstellungen. Die Rundung sagt damit etwas über die Ebene.
+- **Die zwei englischen Eckzeilen im Kopfbild** („Based in Germany",
+  „Established 2026") sind weg. Auf einer deutschsprachigen Seite zwei
+  Etiketten, die nichts sagen, was nicht ohnehin im Impressum, im
+  Kontaktteil und in der Fußzeile steht.
 
-| Was | Wert |
-|---|---|
-| Tempo | `var TEMPO = 28;` Pixel je Sekunde |
-| Laufrichtung | `data-richtung="rechts"` am `.slider` in `index.html`, `"links"` dreht um |
-
-Drei Dinge, die dabei zu wissen sind:
-
-**Endlosschleife.** `main.js` hängt zwei Kopien der Karten an die Reihe und
-faltet die Position immer in den mittleren Satz zurück. Die Kopien sind für
-Screenreader ausgeblendet, dort erscheinen die vier Felder also genau einmal.
-
-**Warum die Position im Skript liegt.** Browser runden `scrollLeft` auf ganze
-Pixel. Ein Schritt von 0,45 px pro Bild verschwindet dadurch spurlos und das
-Band stünde still. Die maßgebliche Position wird deshalb als Fließkommazahl im
-Skript geführt und `scrollLeft` jedes Mal absolut gesetzt.
-
-**Ohne JavaScript** bleibt eine ganz normale, seitwärts scrollbare Reihe –
-Wischen und Trackpad funktionieren dann trotzdem. Bei eingeschaltetem
-Ruhe-Modus des Betriebssystems läuft nichts von selbst, schieben geht weiter.
-
-## Referenzen
-
-Der Abschnitt `#referenzen` liegt zwischen Services und Kontakt. Jedes Projekt
-ist ein `<article class="ref">` mit Bildspalte und Textspalte; jede zweite Zeile
-läuft seitenverkehrt. Unter 960 px stapelt sich alles, Bild immer über dem Text.
-
-**Ein neues Projekt** ist ein kopierter Block. Darin zu ändern:
-
-| Was | Wo im Block |
-|---|---|
-| Ort, Jahr oder Anlass | `<p class="eyebrow">` |
-| Projektname | `<h3 class="ref__titel">` |
-| Beschreibung, zwei bis drei Sätze | das `<p>` darunter |
-| Gewerke | die `<li>` in der `<ul class="trades">` |
-| Bild | `background-image` im `style` des `.ref__bild` |
-
-**Zwei Bilder** statt einem: ein zweites `<div class="ref__bild">` daneben
-stellen, das Raster teilt die Spalte von selbst.
-
-**Die Gewerke** nutzen dieselben Farben wie die Liste unter „Über uns" und wie
-die interne Crewplanung:
-
-```
-Technische Leitung #8a8a8a   Licht #4a7fb5   Ton #5a9e6f
-Rigging #c0713a              AV / Video #7c5cbf   Logistik #b5862a
-```
-
-Ein Eintrag sieht so aus:
-
-```html
-<li class="trades__item"><span class="trades__dot" style="--dot:#4a7fb5" aria-hidden="true"></span>Licht</li>
-```
-
-Steht in einem Projekt noch `<li class="trades__item offen">`, ist die Liste
-nicht ausgefüllt. Solche Einträge erscheinen rot und gestrichelt – das ist
-Absicht, damit sie nicht versehentlich live gehen.
-
-## AGB
-
-`site/agb.html` steht bereit, ist aber **noch ohne Inhalt**. Die Seite ist
-angelegt, gestaltet und aus der Fußzeile aller fünf Seiten verlinkt – es fehlt
-nur der Text.
-
-Zum Einsetzen: in `agb.html` den rot gestrichelten Block
-`<p class="offen offen--block">` durch den AGB-Text ersetzen. Die Auszeichnung
-ist dieselbe wie in Impressum und Datenschutz, mehr als diese fünf Elemente
-braucht es nicht:
-
-```html
-<h2>1. Geltungsbereich</h2>     <!-- Hauptabschnitte -->
-<h3>Unterpunkt</h3>
-<p>Absatz</p>
-<ul><li>Aufzählung</li></ul>
-<strong>Hervorhebung</strong>
-```
-
-Danach zwei Handgriffe, die leicht vergessen werden:
-
-- In `agb.html` `<meta name="robots" content="noindex, follow">` auf
-  `index, follow` ändern.
-- In `sitemap.xml` einen Eintrag für `https://nova-works.de/agb.html`
-  ergänzen, `changefreq yearly`, `priority 0.2` wie bei den anderen
-  Rechtstexten.
-
-Solange kein Text drinsteht, bleibt beides bewusst so: Eine leere Seite soll
-weder im Index noch in der Sitemap auftauchen.
-
-## Farbwechsel beim Scrollen
-
-Die Seite beginnt dunkel und wechselt im Kontaktbereich auf Signalgelb – Schrift,
-Rahmen, Formularfelder und das Logo drehen sich mit. Danach endet die Seite in
-Gelb. Das ist der Effekt der alten Seite, dort über Salients
-`nectar-color-change-bg.js` und Midnight.js gelöst; hier ohne beides.
-
-So funktioniert es:
-
-- Jeder Abschnitt in `index.html` trägt `data-schema="dunkel"` oder `"signal"`.
-- `main.js` beobachtet diese Abschnitte über ein schmales Band auf halber
-  Fensterhöhe und setzt den Wert auf `<body>`. Kein Scroll-Listener.
-- `style.css` definiert unter `body[data-schema="signal"]` dieselben Variablen
-  noch einmal mit den hellen Werten. Alle Bausteine greifen unverändert darauf
-  zu und invertieren dadurch von selbst.
-
-Ein neuer Abschnitt braucht also nur das Attribut – am Stylesheet ist nichts zu
-tun. Und wer die Farben ändern will, ändert die beiden Variablenblöcke, sonst
-nichts.
-
-Zwei Eigenheiten sind Absicht: In `body[data-schema="signal"]` trägt `--signal`
-nicht Gelb, sondern das Dunkel – auf gelbem Grund ist der Akzent das Gegenteil.
-Und das weiße Logo wird per `filter: brightness(0)` schwarz gerechnet, statt
-eine zweite Datei zu laden.
-
-Die Fußzeile hat bewusst kein eigenes Schema: Am Seitenende erreicht das
-Auslöseband sie nie, die Seite endet deshalb im Gelb des Kontaktbereichs.
+Großschrift steht jetzt an genau einer Stelle: im Claim über dem Kopfbild.
+Der soll wuchten, alles andere darf still sein.
 
 ## Marke
 
@@ -421,9 +387,12 @@ Auslöseband sie nie, die Seite endet deshalb im Gelb des Kontaktbereichs.
 
 ## Was bewusst weggefallen ist
 
-- **Cookie-Banner.** Die alte Seite lud Borlabs Cookie, hatte aber gar kein
+- **Borlabs Cookie.** Die alte Seite lud das Plugin, hatte aber gar kein
   Tracking. Der Neubau lädt nichts von fremden Servern – die Schrift liegt
-  lokal. Ohne einwilligungspflichtige Dienste braucht es kein Banner.
+  lokal. Die Einwilligung wird trotzdem abgefragt, aber selbst gebaut und
+  ohne Cookie: Die Entscheidung liegt unter `nova-einwilligung` im
+  localStorage. Siehe den Abschnitt „Ihre Entscheidung zur Einwilligung" in
+  `datenschutz.html`.
 - **Der Blogbeitrag `hallo-welt`.** War der unveränderte
   WordPress-Standardbeitrag.
 - **jQuery, Flickity, Fancybox, Superfish, Waypoints, WPBakery.** Zusammen
@@ -432,9 +401,20 @@ Auslöseband sie nie, die Seite endet deshalb im Gelb des Kontaktbereichs.
 
 ## Offene Punkte
 
-Zwei davon sind Rechtstexte. Beide wurden bewusst nicht angefasst – was darin
-steht, ist eine Entscheidung, keine Programmierarbeit.
-
+- **Datenschutzerklärung.** Zwei Stellen sind noch rot markiert: der Hoster
+  (hängt an der Entscheidung Strato oder Netlify) und die Profile in den
+  sozialen Netzwerken. Unabhängig davon: Der Text sollte vor dem Livegang
+  jemand mit juristischem Blick durchgehen – wer dafür haftet, sollte ihn
+  freigeben.
+- **`corporate.jpg` fehlt.** Die mittlere Karte unter „Services" zeigt
+  deshalb einen leeren Rahmen. Gesucht ist ein Foto aus dem Bereich
+  Industrie und Business.
+- **`Header1.jpeg` (6,6 MB)** liegt noch im Wurzelverzeichnis des Repos und
+  wird öffentlich ausgeliefert. Kann raus, sobald das jemand bestätigt.
+- **Die Projektbeschreibungen** stammen von mir und beschreiben, was auf den
+  Fotos zu sehen ist und was aus öffentlichen Quellen hervorgeht. Bitte
+  gegenlesen – besonders, welche Gewerke Nova Works auf welcher Produktion
+  tatsächlich verantwortet hat.
 - ~~Impressum, Absatz „Konzeption, Gestaltung & Betreuung".~~ Entfernt – die
   Seite wird neu aufgesetzt, die Agentur ist daran nicht beteiligt. Eine
   Pflichtangabe war der Absatz nie; § 5 DDG verlangt Betreiber, Vertretung,
@@ -442,19 +422,19 @@ steht, ist eine Entscheidung, keine Programmierarbeit.
 - ~~Impressum, Disclaimer.~~ Der stehengebliebene Textbaustein „Steuerungs-
   und Informationstechnologie für Logistik" ist raus, der Satz nennt jetzt
   die NovaWorks GmbH. Schreibweise im ganzen Dokument einheitlich.
-- **Datenschutzerklärung.** Der Abschnitt „Cookies" beschreibt Session- und
-  Wiedererkennungs-Cookies, die es auf der neuen Seite nicht mehr gibt.
-  Ebenso „Analyse-Tools und Tools von Drittanbietern". Beide Passagen
-  beschreiben jetzt mehr Datenverarbeitung als tatsächlich stattfindet. Sollte
-  jemand mit juristischem Blick durchgehen, bevor es live geht.
-- **Der AGB-Text.** Die Seite `agb.html` ist angelegt und verlinkt, der Rumpf
-  ist noch leer und rot markiert. Siehe Abschnitt „AGB".
-- **Fünf Fotos**, siehe oben.
-- **Die Gewerke in den Referenzen.** Bei allen drei Projekten steht dort noch
-  der rote Platzhalter. Was Nova Works auf welcher Produktion gemacht hat,
-  steht in keiner der Unterlagen – das war nicht zu erraten und wurde deshalb
-  offen gelassen. Muss vor dem Livegang ausgefüllt werden.
-- **Die Bilder in den Referenzen** sind vorerst dieselben wie im Hero und auf
-  den Karten. Sobald es projekteigene Fotos gibt, dort die Pfade tauschen.
-- **Die Projektbeschreibungen** stammen von mir und beschreiben nur, was auf
-  den Fotos zu sehen ist. Bitte gegenlesen.
+- ~~Der AGB-Text.~~ Steht vollständig in `agb.html`, Teil I bis VI, §§ 1–36.
+- ~~Die Gewerke in den Referenzen.~~ Alle zehn Projekte sind ausgefüllt.
+- ~~Die Bilder in den Referenzen.~~ Alle zehn Projekte haben eigene Fotos.
+
+## Prüfungen
+
+`pruefung/` enthält eine Prüfmappe ohne npm und ohne Abhängigkeiten im Repo –
+sie braucht nur Node und ein Playwright in der Umgebung:
+
+```bash
+node pruefung/lauf.mjs              # alles
+node pruefung/lauf.mjs projekte     # nur passende Dateien
+```
+
+Zwölf Dateien, zurzeit 431 Prüfungen. Was jede abdeckt, steht in
+`pruefung/README.md`.

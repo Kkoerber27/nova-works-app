@@ -207,36 +207,20 @@
     }, { threshold: 0 }).observe(hero);
   }
 
-  /* ---------- Scroll-Reveal ---------------------------------------------
-     Erzählt die Seite in der Reihenfolge, in der sie gelesen wird.       */
+  /* ---------- Kein Scroll-Reveal mehr -----------------------------------
+     Hier stand eine Beobachtung, die jeden Abschnitt beim Hereinkommen
+     einblendete: zwanzig Stellen auf der Seite, jede mit demselben
+     Verblassen und demselben Ruck nach oben.
 
-  var revealTargets = document.querySelectorAll('[data-reveal]');
+     Das ist die verbreitetste Bewegung im Netz und sagt nichts ueber
+     das, was da hereinkommt. Sie ist ersatzlos entfallen - mitsamt dem
+     Sicherheitsnetz, das noetig war, damit die Seite lesbar bleibt,
+     falls die Beobachtung nicht ausloest. Was nicht versteckt wird,
+     muss auch nicht wieder sichtbar gemacht werden.
 
-  if (reduceMotion || !('IntersectionObserver' in window)) {
-    Array.prototype.forEach.call(revealTargets, function (el) {
-      el.classList.add('is-visible');
-    });
-  } else {
-    var revealObserver = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (!entry.isIntersecting) return;
-        entry.target.classList.add('is-visible');
-        revealObserver.unobserve(entry.target);
-      });
-    }, { rootMargin: '0px 0px -12% 0px', threshold: 0.12 });
-
-    Array.prototype.forEach.call(revealTargets, function (el) {
-      revealObserver.observe(el);
-    });
-
-    // Sicherheitsnetz: sollte der Observer aus irgendeinem Grund nicht
-    // ausloesen, ist die Seite nach 3 Sekunden trotzdem vollstaendig lesbar.
-    window.setTimeout(function () {
-      Array.prototype.forEach.call(revealTargets, function (el) {
-        el.classList.add('is-visible');
-      });
-    }, 3000);
-  }
+     Bewegung ohne Zutun gibt es noch an zwei Stellen, und beide haben
+     einen Grund: der Auftritt des Claims beim Ankommen, und die Bilder,
+     die beim Scrollen langsam heranfahren.                              */
 
   /* ---------- Header-Zustand --------------------------------------------
      Sentinel statt Scroll-Listener: der Header bekommt seinen Hintergrund
@@ -423,16 +407,15 @@
      Weg - jede einzelne haette im waagerecht laufenden Band ihren eigenen,
      staendig wechselnden Stand.
 
-     An derselben Schleife haengt der Farbtausch der Ueberschriften. Der
-     Rechenweg ist fuer beides derselbe - wie weit ist dieser Kasten durchs
-     Bild gewandert - nur was am Ende damit geschieht, unterscheidet sich.
-     Deshalb bringt jede Gruppe ihre eigene Setzfunktion mit, statt dass
-     die Schleife Fallunterscheidungen trifft.
+     An derselben Schleife hing frueher auch der Farbtausch der
+     Ueberschriften. Der ist entfallen - warum, steht im Stylesheet unter
+     "Warum hier kein Farbtausch mehr steht". Die Gruppen bringen weiter
+     ihre eigene Setzfunktion mit, statt dass die Schleife
+     Fallunterscheidungen trifft.
 
-     Die Zahlen stehen doppelt - hier und in @keyframes bild-tiefe
-     beziehungsweise titel-tausch. Wer eine aendert, muss die andere
-     mitziehen, sonst bewegt sich dasselbe je nach Browser verschieden
-     weit. */
+     Die Zahlen stehen doppelt - hier und in @keyframes bild-tiefe. Wer
+     eine aendert, muss die andere mitziehen, sonst bewegt sich dasselbe
+     je nach Browser verschieden weit. */
 
   var kannSichtAnimation = window.CSS && CSS.supports &&
                            CSS.supports('animation-timeline', 'view()') &&
@@ -466,34 +449,6 @@
       gruppen.push({ bezug: dienste, sichtbar: false,
                      setze: bildSetzer(Array.prototype.slice.call(karten)) });
     }
-
-    /* Ueberschriften: 0 ist der Entwurfszustand, 1 der getauschte. Die
-       Punkte sind Zeile fuer Zeile dieselben wie in @keyframes
-       titel-tausch - erst gibt die eine Haelfte das Gelb ab, dann nimmt
-       es die andere auf. Gemischt wird im Stylesheet; hier fallen nur die
-       beiden Zahlen. */
-    var TAUSCH_EINS = [[0, 1], [.22, 1], [.32, 0], [.42, 0], [.68, 0], [.78, 0], [.88, 1], [1, 1]];
-    var TAUSCH_ZWEI = [[0, 1], [.22, 1], [.32, 1], [.42, 0], [.68, 0], [.78, 1], [.88, 1], [1, 1]];
-
-    /* Zwischen zwei Punkten linear - genau das, was linear in der
-       CSS-Animation auch tut. */
-    var aufKurve = function (punkte, anteil) {
-      for (var i = 1; i < punkte.length; i++) {
-        if (anteil > punkte[i][0]) continue;
-        var a = punkte[i - 1], b = punkte[i];
-        var spanne = b[0] - a[0];
-        if (spanne <= 0) return b[1];
-        return a[1] + (b[1] - a[1]) * (anteil - a[0]) / spanne;
-      }
-      return punkte[punkte.length - 1][1];
-    };
-
-    Array.prototype.forEach.call(document.querySelectorAll('.section__title'), function (el) {
-      gruppen.push({ bezug: el, sichtbar: false, setze: function (anteil) {
-        el.style.setProperty('--tausch-eins', aufKurve(TAUSCH_EINS, anteil).toFixed(4));
-        el.style.setProperty('--tausch-zwei', aufKurve(TAUSCH_ZWEI, anteil).toFixed(4));
-      } });
-    });
 
     if (gruppen.length) {
       var offen = 0;

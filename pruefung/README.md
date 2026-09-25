@@ -21,11 +21,11 @@ nichts weiter als Node und Playwright; beides bringt die Umgebung mit.
 
 | Datei | Worum es geht |
 |---|---|
-| `01-projekte.mjs` | Jedes Projekt hat Titel, Ort, Bild oder roten Platzhalter, Gewerke und zwei Absätze. Fotos laden erst beim Heranscrollen. Ohne JavaScript steht alles im Quelltext. |
+| `01-projekte.mjs` | Jedes Projekt hat Titel, Ort, Bild oder roten Platzhalter, Gewerke als benannte Liste und zwei Absätze. Fotos laden erst beim Heranscrollen. Ohne JavaScript steht alles im Quelltext. |
 | `02-grossansicht.mjs` | Blättern, Zähler, Fotonachweis, Escape, Klick daneben. Ein einzelnes Bild bekommt weder Pfeile noch Zähler. |
 | `03-breite.mjs` | Kein seitlicher Überlauf — fünf Seiten, sieben Breiten von 320 bis 1920 px. Hat am meisten gefunden. |
 | `04-hero.mjs` | Der Claim wird in seine tatsächlichen Zeilen zerlegt und fährt versetzt herein. Am Handy bricht er anders um und bleibt vollständig. |
-| `05-bewegung.mjs` | Bilder fahren beim Scrollen heran, Überschriften tauschen die Farbe. Im Ruhe-Modus steht alles still. |
+| `05-bewegung.mjs` | Bilder fahren beim Scrollen heran — und sonst nichts: Überschriften wechseln unterwegs nicht die Farbe und tragen keinen farbig abgesetzten Halbsatz. Im Ruhe-Modus steht alles still. |
 | `06-navigation.mjs` | Navigation und Pflichtangaben auf allen Seiten, klebende Kopfzeile, Laufband mit Tastatur, Menü am Handy. |
 | `07-formular.mjs` | Pflichtfelder, Fehlermeldungen, Honigtopf, Erfolg und Misserfolg. Ohne JavaScript ein normales Formular. |
 | `08-zustimmung.mjs` | Einwilligung: gleich große und gleich gestaltete Wege, Wegklicken ist keine Zustimmung, kein Cookie, nichts nach draußen. |

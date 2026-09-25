@@ -1,9 +1,11 @@
 /* Bewegung beim Scrollen.
 
-   Zwei Dinge fahren mit dem Scrollen: die Bilder werden tiefer, und die
-   Abschnittsüberschriften tauschen die Farbe. Kann der Browser
-   scrollgebundene CSS-Animationen, macht das Stylesheet die Arbeit;
-   sonst springt eine Schleife in main.js ein.
+   Nur eines fährt beim Scrollen mit: die Bilder werden tiefer. Kann der
+   Browser scrollgebundene CSS-Animationen, macht das Stylesheet die
+   Arbeit; sonst springt eine Schleife in main.js ein.
+
+   Den Farbtausch der Überschriften gibt es nicht mehr - und genau das
+   wird hier festgehalten, damit er nicht zurückkommt.
 
    Beide Wege werden geprüft - der Rückfallweg hatte zwei Fehler:
    ein Zähler lief ins Negative, und die Kartenbilder wurden nie
@@ -61,8 +63,8 @@ export default async function ({ ort, browser, ok }) {
      `${kOben.karte[0]?.skala} / ${kOben.karte[0]?.versatz}  ->  ` +
      `${kUnten.karte[0]?.skala} / ${kUnten.karte[0]?.versatz}`);
 
-  /* Die Überschriften tauschen die Farbe. Gemessen wird die gerechnete
-     Farbe, nicht die Angabe - color-mix löst sich erst dort auf. */
+  /* Die Überschriften bleiben unterwegs, wie sie sind. Gemessen wird
+     die gerechnete Farbe, nicht die Angabe. */
   const farben = [];
   for (const anteil of [0.1, 0.45, 0.8]) {
     await p.evaluate((a) => window.scrollTo(0,
@@ -71,8 +73,15 @@ export default async function ({ ort, browser, ok }) {
     farben.push(await p.evaluate(() => [...document.querySelectorAll('.section__title')]
       .map((t) => getComputedStyle(t).color)));
   }
-  const getauscht = farben[0].some((c, i) => c !== farben[1][i] || c !== farben[2][i]);
-  ok(getauscht, 'die Abschnittsüberschriften tauschen unterwegs die Farbe');
+  const steht = farben[0].every((c, i) => c === farben[1][i] && c === farben[2][i]);
+  ok(steht, 'die Abschnittsüberschriften wechseln unterwegs nicht die Farbe',
+     farben[0][0]);
+
+  /* Und kein Halbsatz darin steht in der Signalfarbe - das einzelne
+     farbige Wort in einer Überschrift ist genau das, was hier weg
+     sollte. */
+  const bunt = await p.evaluate(() => [...document.querySelectorAll('.section__title em')].length);
+  ok(bunt === 0, 'und keine trägt einen farbig abgesetzten Halbsatz');
   await p.schliessen();
 
   /* --- Ruhe-Modus: nichts fährt, nichts wechselt --- */
