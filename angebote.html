@@ -1016,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-24.1";
+var APP_VERSION="2026-09-25.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -3962,14 +3962,16 @@ function reRow(r){
     +'<td class="nowrap">'+esc(r.invoiceDate||r.received||"")+'</td>'
     +'<td class="right nowrap"><b>'+eur(invNet(r))+'</b>'+(reIsEdited(r)?'<div class="muted" style="font-size:10px" title="'+esc(reEditInfo(r))+'">✎ korrigiert</div>':'')+'</td>'
     +'<td class="nowrap">'+reTargetLabel(r)+'</td>'
+    +'<td class="nowrap">'+invPaidCell(r)+'</td>'
     +'<td class="nowrap">'+link+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button> <button class="btn sm ghost re-edit" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung bearbeiten: Absender, Betreff, Datum, Netto/Brutto/MwSt korrigieren">✎</button>'+(r._manual?(' <button class="btn sm danger re-mandel2" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung löschen">🗑</button>'):'')+'</td>'
     +'</tr>';
 }
 function reTable(list){
-  return '<table class="lines"><thead><tr><th>Absender / Betreff</th><th>Box</th><th>Datum</th><th class="right">Netto</th><th>Ziel</th><th></th></tr></thead><tbody>'
+  return '<table class="lines"><thead><tr><th>Absender / Betreff</th><th>Box</th><th>Datum</th><th class="right">Netto</th><th>Ziel</th><th title="Bezahlt-Markierung – Haken setzen, Datum anpassen">Bezahlt</th><th></th></tr></thead><tbody>'
     +list.map(reRow).join("")+'</tbody></table>';
 }
 function reWireAssign(scope){
+  if(typeof reWirePaid==="function") reWirePaid(scope);
   (scope||document).querySelectorAll(".re-assign").forEach(function(b){
     b.onclick=function(){ var id=decodeURIComponent(b.dataset.id); var inv=reList().filter(function(x){return x.id===id;})[0]; if(inv) openAssignInvoice(inv); };
   });
@@ -4270,7 +4272,7 @@ function ohMonthDetail(){
   var h='<div class="card panel-pad"><div class="section-title" style="display:flex;justify-content:space-between;align-items:center">Rechnungen im '+ohMonthLbl(mk)+' <span class="muted" style="font-weight:400;font-size:12.5px">'+list.length+' Rechnungen · Σ '+eur(sum)+' netto · <a href="#" id="oh-det-close" style="color:var(--ink-soft)">schließen ×</a></span></div>';
   if(!list.length) h+='<div class="muted">Keine zugewiesenen Overhead-Rechnungen in diesem Monat.</div>';
   else{
-    h+='<table class="lines"><thead><tr><th>Datum</th><th>Absender / Betreff</th><th class="right">Netto</th><th>Sparte</th><th></th></tr></thead><tbody>'+
+    h+='<table class="lines"><thead><tr><th>Datum</th><th>Absender / Betreff</th><th class="right">Netto</th><th>Sparte</th><th>Bezahlt</th><th></th></tr></thead><tbody>'+
       list.map(function(r){
         return '<tr><td class="nowrap">'+esc(String(r.invoiceDate||r.received||"").slice(0,10))+'</td>'+
           '<td>'+esc(r.senderName||r.senderEmail||"—")+'<div class="muted" style="font-size:11px">'+esc(String(r.subject||"").slice(0,60))+'</div></td>'+
@@ -4278,6 +4280,7 @@ function ohMonthDetail(){
           '<td><select class="oh-resel" data-id="'+encodeURIComponent(r.id)+'" style="font-size:12px;padding:3px;border:1px solid var(--line);border-radius:5px">'+
             SPARTEN.map(function(sp){ return '<option value="'+sp.slug+'"'+(r.generalCat===sp.slug?' selected':'')+'>'+esc(sp.label)+'</option>'; }).join("")+
             '<option value="__eingang">→ zurück in den Eingang</option></select></td>'+
+          '<td class="nowrap">'+invPaidCell(r)+'</td>'+
           '<td>'+(r.webLink?('<a href="'+esc(r.webLink)+'" target="_blank" rel="noopener" title="Mail öffnen">✉︎</a>'):'')+'</td></tr>';
       }).join("")+'</tbody></table>';
   }
@@ -4288,6 +4291,7 @@ function ohMonthDetail(){
   h+='</div>';
   box.innerHTML=h;
   var cl=document.getElementById("oh-det-close"); if(cl) cl.onclick=function(e){ e.preventDefault(); window._ohMk=null; ohMonthDetail(); };
+  if(typeof reWirePaid==="function") reWirePaid(box);
   box.querySelectorAll(".oh-resel").forEach(function(sel){
     sel.onchange=function(){
       var id=decodeURIComponent(sel.dataset.id);
@@ -5880,10 +5884,11 @@ function reShowMessen(){
   h+='</tbody></table>';
   h+='<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:14px"><input id="messe-new-name" placeholder="Neue Messe, z. B. Prolight + Sound" style="flex:2;min-width:180px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><input id="messe-new-jahr" placeholder="Jahr" style="width:80px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><input id="messe-new-ort" placeholder="Ort" style="width:140px;padding:7px 9px;border:1px solid var(--line);border-radius:8px"><button class="btn sm primary" id="messe-new-add">+ Messe anlegen</button></div>';
   if(all.length){
-    h+='<div style="font-weight:600;margin:6px 0">Rechnungen der Sparte Messe</div><table class="lines"><thead><tr><th>Absender / Betreff</th><th>Datum</th><th class="right">Netto</th><th>Messe</th><th></th></tr></thead><tbody>'+
+    h+='<div style="font-weight:600;margin:6px 0">Rechnungen der Sparte Messe</div><table class="lines"><thead><tr><th>Absender / Betreff</th><th>Datum</th><th class="right">Netto</th><th>Messe</th><th>Bezahlt</th><th></th></tr></thead><tbody>'+
       all.sort(function(a,b){ return String(b.invoiceDate||b.received||"").localeCompare(String(a.invoiceDate||a.received||"")); }).map(function(r){
         return '<tr><td>'+esc(r.senderName||r.senderEmail||"—")+'<div class="muted" style="font-size:11px">'+esc(String(r.subject||"").slice(0,64))+'</div></td><td class="nowrap">'+esc(String(r.invoiceDate||r.received||"").slice(0,10))+'</td><td class="right nowrap"><b>'+eur(invNet(r))+'</b></td>'+
           '<td><select class="messe-sel" data-id="'+encodeURIComponent(r.id)+'" style="font-size:12px;padding:3px;border:1px solid var(--line);border-radius:5px"><option value="">– keine –</option>'+messeSorted().map(function(m){ return '<option value="'+esc(m.id)+'"'+(mp[r.id]===m.id?' selected':'')+'>'+esc(messeLabel(m))+'</option>'; }).join("")+'</select></td>'+
+          '<td class="nowrap">'+invPaidCell(r)+'</td>'+
           '<td class="nowrap">'+(r.webLink?('<a href="'+esc(r.webLink)+'" target="_blank" rel="noopener" title="Mail öffnen">✉︎</a> '):'')+'<button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button> <button class="btn sm ghost re-edit" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung bearbeiten">✎</button></td></tr>'; }).join("")+'</tbody></table>';
   }
   el.innerHTML=h;
@@ -5985,6 +5990,7 @@ function openAssignInvoice(inv){
   var body=document.getElementById("re-assign-body");
   var h='<div style="margin-bottom:10px"><b>'+esc(inv.senderName||inv.senderEmail||"—")+'</b> · '+eur(invNet(inv))+(inv.invoiceNumber?(' · '+esc(inv.invoiceNumber)):'')+'<br><span class="muted" style="font-size:12px">'+esc(inv.subject||"")+'</span>'+(inv.webLink?(' · <a href="'+esc(inv.webLink)+'" target="_blank" rel="noopener">Mail öffnen</a>'):'')+'</div>';
   if(inv.status==="ausgang") h+='<div class="muted" style="margin-bottom:8px">Eigene Nova-Works-Rechnung – wird als Ausgangsrechnung'+(inv.projektNr?(' in Projekt '+esc(inv.projektNr)):'')+' geführt und erscheint nicht im Eingang.</div>';
+  h+='<div style="display:flex;align-items:center;gap:8px;margin:6px 0 2px"><span style="font-weight:600">Bezahlt:</span>'+invPaidCell(inv)+'</div>';
   h+='<div style="font-weight:600;margin:12px 0 6px">Sparte</div><div style="display:flex;flex-wrap:wrap;gap:6px">';
   SPARTEN.forEach(function(sp){ h+='<button class="btn sm re-sp" data-sp="'+sp.slug+'"'+((inv.assignType==="general"&&inv.generalCat===sp.slug)?' style="background:var(--gold);color:#fff"':'')+'>'+esc(sp.label)+'</button>'; });
   h+='</div>';
@@ -5995,6 +6001,7 @@ function openAssignInvoice(inv){
   if(inv._manual) h+=' <button class="btn sm danger" id="re-mandel">🗑 Rechnung löschen</button>';
   h+='<button class="btn sm" data-close="re-assign-bg">Schließen</button></div>';
   body.innerHTML=h;
+  reWirePaid(body);
   body.querySelectorAll(".re-sp").forEach(function(b){ b.onclick=function(){
     if(b.dataset.sp==="messe"){ var old=body.querySelector("#re-messe-pick"); if(old) old.remove(); b.parentNode.insertAdjacentHTML("afterend",messePickHtml(inv)); messePickWire(body,inv,function(){ closeModal("re-assign-bg"); }); return; }
     assignInvoiceSparte(inv,b.dataset.sp); closeModal("re-assign-bg"); }; });
@@ -6470,23 +6477,50 @@ function invPaidInfo(r){
   if(r.assignType==="project"&&r.projektNr){
     var ps=(DB.projects||[]).filter(function(p){ return awNorm(p.nummer)===awNorm(r.projektNr); });
     for(var i=0;i<ps.length;i++){ var st=(pKosten(ps[i]).rech||{})[r.id]; if(st&&st.paid) return {paid:true,date:st.paidDate||"",via:st.paidVia||""}; }
-    if(r.paid) return {paid:true,date:r.paidDate||""};
-    if(ps.length) return {paid:false};
   }
+  var P=DB.rechPaid||{}; if(P[r.id]&&P[r.id].paid) return {paid:true,date:P[r.id].date||"",via:"manuell"};
   if(r.paid) return {paid:true,date:r.paidDate||""};
-  return null;
+  return {paid:false};
+}
+/* Bezahlt-Markierung setzen/entfernen – Projektrechnungen in der Kostenverwaltung des Projekts (wie in der
+   Projekt-Auswertung), alle anderen (Overhead/Sparten, nicht zugeordnet) in DB.rechPaid (übersteht den Server-Abgleich). */
+function invSetPaid(r,on,date){
+  date=on?(date||awTodayDE()):"";
+  var done=false;
+  if(r.assignType==="project"&&r.projektNr){
+    (DB.projects||[]).filter(function(p){ return awNorm(p.nummer)===awNorm(r.projektNr); }).forEach(function(p){ var k=pKosten(p); if(!k.rech[r.id]) k.rech[r.id]={posId:"",paid:false,paidDate:""}; k.rech[r.id].paid=!!on; k.rech[r.id].paidDate=date; if(on) k.rech[r.id].paidVia="manuell"; done=true; });
+  }
+  var P=(DB.rechPaid=DB.rechPaid||{});
+  if(!done){ if(on) P[r.id]={paid:true,date:date}; else delete P[r.id]; }
+  else if(!on) delete P[r.id];
+  save();
+}
+function invPaidCell(r){
+  var pi=invPaidInfo(r), id=encodeURIComponent(r.id);
+  return '<label class="re-paidlbl" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer;white-space:nowrap" title="Bezahlt-Markierung (laut System)"><input type="checkbox" class="re-paid-cb" data-id="'+id+'"'+(pi.paid?' checked':'')+'>'+
+    (pi.paid?('<input type="date" class="re-paid-date" data-id="'+id+'" value="'+esc(String(pi.date||"").slice(0,10))+'" title="Bezahlt am" style="font-size:11px;padding:1px 3px;border:1px solid var(--line);border-radius:4px;color:#2d7a4f">'):'<span style="color:#c0392b;font-size:11px">offen</span>')+'</label>';
+}
+function reWirePaid(scope){
+  (scope||document).querySelectorAll(".re-paid-cb").forEach(function(cb){ cb.onclick=function(e){ e.stopPropagation(); }; cb.onchange=function(){ var id=decodeURIComponent(cb.dataset.id), inv=reList().find(function(x){ return x.id===id; }); if(!inv) return; invSetPaid(inv,cb.checked); toast(cb.checked?"Als bezahlt markiert":"Bezahlt-Markierung entfernt"); reAfterPaid(); }; });
+  (scope||document).querySelectorAll(".re-paid-date").forEach(function(d){ d.onclick=function(e){ e.stopPropagation(); }; d.onchange=function(){ var id=decodeURIComponent(d.dataset.id), inv=reList().find(function(x){ return x.id===id; }); if(!inv) return; invSetPaid(inv,!!d.value,d.value); reAfterPaid(); }; });
+}
+function reAfterPaid(){
+  var act=(document.querySelector(".view.active")||{}).id;
+  if(act==="view-rechnungen"&&typeof renderRechnungen==="function") renderRechnungen();
+  else if(act==="view-overhead"&&typeof renderOverhead==="function") renderOverhead();
+  else if(act==="view-auswertung"&&typeof renderLieferanten==="function") renderLieferanten();
+  else if(act==="view-projekt"&&typeof renderProjectAuswertung==="function"){ try{ renderProjectAuswertung(); }catch(e){} }
 }
 function lfStatusHtml(r,forPdf){
   var pi=invPaidInfo(r);
-  if(!pi) return '<span style="color:#999">'+(r.assignType==="general"?"keine Zahlungsinfo":"nicht zugeordnet")+'</span>';
   if(pi.paid) return '<span style="color:#2d7a4f;font-weight:700">bezahlt'+(pi.date?(' '+fmtDateAny(String(pi.date).slice(0,10))):'')+'</span>';
   return '<span style="color:#c0392b;font-weight:700">offen</span>';
 }
 function lfProjLabel(r){ if(r.assignType==="project"&&r.projektNr){ var nm=projNameByNr(r.projektNr); return r.projektNr+(nm?(" "+nm):""); } if(r.assignType==="general") return "Allgemein · "+sparteLabel(r.generalCat||""); return "–"; }
-function lfSums(rows){ var s={n:rows.length,netto:0,brutto:0,bez:0,bezN:0,offen:0,offenN:0,unk:0,unkN:0}; rows.forEach(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; s.netto+=n; s.brutto+=b; var pi=invPaidInfo(r); if(!pi){ s.unk+=n; s.unkN++; } else if(pi.paid){ s.bez+=n; s.bezN++; } else { s.offen+=n; s.offenN++; } }); return s; }
+function lfSums(rows){ var s={n:rows.length,netto:0,brutto:0,bez:0,bezN:0,offen:0,offenN:0,unk:0,unkN:0}; rows.forEach(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; s.netto+=n; s.brutto+=b; var pi=invPaidInfo(r); if(pi.paid){ s.bez+=n; s.bezN++; } else { s.offen+=n; s.offenN++; } }); return s; }
 function lfPdfHead(title,sub){ return '<div class="phead">'+((typeof logoDataUrl!=="undefined"&&logoDataUrl)?('<img src="'+logoDataUrl+'">'):'<div style="font-size:16px;font-weight:700;letter-spacing:.14em">NOVA WORKS</div>')+'<div class="ptitle"><div class="t">'+esc(title)+'</div><div class="s">'+esc(sub)+'</div></div></div>'; }
 function lfSumBox(s){ return '<div style="display:flex;gap:10px;margin:10px 0 14px">'+
-  [["Rechnungen",s.n+"",""],["Netto gesamt",eur(s.netto),"brutto "+eur(s.brutto)],["Bezahlt",eur(s.bez),s.bezN+" Rechn.","#2d7a4f"],["Offen laut System",eur(s.offen),s.offenN+" Rechn.","#c0392b"],["Ohne Zahlungsinfo",eur(s.unk),s.unkN+" Rechn.","#999"]].map(function(x){ return '<div style="flex:1;border-top:2px solid '+(x[3]||"#3d3d3d")+';padding-top:5px"><div style="font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#888">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:'+(x[3]||"#3d3d3d")+'">'+x[1]+'</div>'+(x[2]?('<div style="font-size:8px;color:#888">'+x[2]+'</div>'):'')+'</div>'; }).join("")+'</div>'; }
+  [["Rechnungen",s.n+"",""],["Netto gesamt",eur(s.netto),"brutto "+eur(s.brutto)],["Bezahlt",eur(s.bez),s.bezN+" Rechn.","#2d7a4f"],["Offen laut System",eur(s.offen),s.offenN+" Rechn.","#c0392b"]].map(function(x){ return '<div style="flex:1;border-top:2px solid '+(x[3]||"#3d3d3d")+';padding-top:5px"><div style="font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#888">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:'+(x[3]||"#3d3d3d")+'">'+x[1]+'</div>'+(x[2]?('<div style="font-size:8px;color:#888">'+x[2]+'</div>'):'')+'</div>'; }).join("")+'</div>'; }
 /* PDF eines Lieferanten (bei gesetztem Zeitraum nur dieser) */
 function lfPDF(g){
   var vd=lfVon?parseDM(lfVon):null, bd=lfBis?parseDM(lfBis):null; if(bd) bd=new Date(bd.getFullYear(),bd.getMonth(),bd.getDate(),23,59,59);
@@ -6497,18 +6531,18 @@ function lfPDF(g){
     rows.map(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; return '<tr><td class="nw">'+lfFmtD(lfDate(r))+'</td><td class="nw">'+esc(r.invoiceNumber||"–")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,60))+'</td><td>'+esc(lfProjLabel(r))+'</td><td class="r">'+eur(n)+'</td><td class="r" style="color:#777">'+eur(b)+'</td><td class="nw">'+lfStatusHtml(r,true)+'</td></tr>'; }).join("")+
     '<tr style="border-top:2px solid #3d3d3d;font-weight:700"><td colspan="4" style="padding-top:6px">Summe · '+s.n+' Rechnungen</td><td class="r" style="padding-top:6px">'+eur(s.netto)+'</td><td class="r" style="padding-top:6px;color:#777">'+eur(s.brutto)+'</td><td style="padding-top:6px" class="nw"><span style="color:#2d7a4f">bezahlt '+eur(s.bez)+'</span><br><span style="color:#c0392b">offen '+eur(s.offen)+'</span></td></tr></tbody></table>';
   var body=lfPdfHead("Lieferanten-Auswertung",g.name+" · "+per+" · Stand "+fmtDate(today()))+lfSumBox(s)+tbl+
-    '<div style="font-size:8px;color:#888;margin-top:8px">Status laut System: „bezahlt“ = in der Projekt-Kostenverwaltung als bezahlt markiert (manuell oder Lexware-Abgleich), „offen“ = Projektrechnung ohne Zahlungsmarkierung, „keine Zahlungsinfo“ = allgemeine Rechnung (Overhead-Sparte) ohne Zahlungsverfolgung. Alle Beträge netto, Brutto laut Beleg.</div>';
+    '<div style="font-size:8px;color:#888;margin-top:8px">Status laut System: „bezahlt“ = Bezahlt-Markierung in der App (Rechnungen, Projekt-Kostenverwaltung oder Lexware-Abgleich), „offen“ = ohne Markierung. Alle Beträge netto, Brutto laut Beleg.</div>';
   printDoc("Lieferant "+g.name, body, ".r{text-align:right;white-space:nowrap}.nw{white-space:nowrap}");
 }
 /* PDF-Übersicht aller Lieferanten (Suchfilter berücksichtigt) */
 function lfAllPDF(list){
   var tot={n:0,netto:0,brutto:0,bez:0,offen:0,unk:0};
-  var tbl='<table><thead><tr><th>Lieferant</th><th style="text-align:right">Rechnungen</th><th style="text-align:right">Netto</th><th style="text-align:right">Brutto</th><th style="text-align:right">Bezahlt</th><th style="text-align:right">Offen laut System</th><th style="text-align:right">Ohne Zahlungsinfo</th></tr></thead><tbody>'+
+  var tbl='<table><thead><tr><th>Lieferant</th><th style="text-align:right">Rechnungen</th><th style="text-align:right">Netto</th><th style="text-align:right">Brutto</th><th style="text-align:right">Bezahlt</th><th style="text-align:right">Offen laut System</th></tr></thead><tbody>'+
     list.map(function(g){ var s=lfSums(g.rows); tot.n+=s.n; tot.netto+=s.netto; tot.brutto+=s.brutto; tot.bez+=s.bez; tot.offen+=s.offen; tot.unk+=s.unk;
-      return '<tr><td><b>'+esc(g.name)+'</b></td><td class="r">'+s.n+'</td><td class="r">'+eur(s.netto)+'</td><td class="r" style="color:#777">'+eur(s.brutto)+'</td><td class="r" style="color:#2d7a4f">'+(s.bez?eur(s.bez):"–")+'</td><td class="r" style="color:#c0392b">'+(s.offen?eur(s.offen):"–")+'</td><td class="r" style="color:#999">'+(s.unk?eur(s.unk):"–")+'</td></tr>'; }).join("")+
-    '<tr style="border-top:2px solid #3d3d3d;font-weight:700"><td style="padding-top:6px">Gesamt · '+list.length+' Lieferanten</td><td class="r" style="padding-top:6px">'+tot.n+'</td><td class="r" style="padding-top:6px">'+eur(tot.netto)+'</td><td class="r" style="padding-top:6px;color:#777">'+eur(tot.brutto)+'</td><td class="r" style="padding-top:6px;color:#2d7a4f">'+eur(tot.bez)+'</td><td class="r" style="padding-top:6px;color:#c0392b">'+eur(tot.offen)+'</td><td class="r" style="padding-top:6px;color:#999">'+eur(tot.unk)+'</td></tr></tbody></table>';
+      return '<tr><td><b>'+esc(g.name)+'</b></td><td class="r">'+s.n+'</td><td class="r">'+eur(s.netto)+'</td><td class="r" style="color:#777">'+eur(s.brutto)+'</td><td class="r" style="color:#2d7a4f">'+(s.bez?eur(s.bez):"–")+'</td><td class="r" style="color:#c0392b">'+(s.offen?eur(s.offen):"–")+'</td></tr>'; }).join("")+
+    '<tr style="border-top:2px solid #3d3d3d;font-weight:700"><td style="padding-top:6px">Gesamt · '+list.length+' Lieferanten</td><td class="r" style="padding-top:6px">'+tot.n+'</td><td class="r" style="padding-top:6px">'+eur(tot.netto)+'</td><td class="r" style="padding-top:6px;color:#777">'+eur(tot.brutto)+'</td><td class="r" style="padding-top:6px;color:#2d7a4f">'+eur(tot.bez)+'</td><td class="r" style="padding-top:6px;color:#c0392b">'+eur(tot.offen)+'</td></tr></tbody></table>';
   var body=lfPdfHead("Lieferanten-Auswertung","Übersicht"+(lfQuery?(" · Filter „"+lfQuery+"“"):"")+" · Stand "+fmtDate(today()))+tbl+
-    '<div style="font-size:8px;color:#888;margin-top:8px">Bezahlt / offen laut Projekt-Kostenverwaltung; allgemeine Rechnungen (Overhead) ohne Zahlungsverfolgung stehen unter „Ohne Zahlungsinfo“. Alle Beträge netto, Brutto laut Beleg.</div>';
+    '<div style="font-size:8px;color:#888;margin-top:8px">Bezahlt / offen laut Bezahlt-Markierung in der App (Rechnungen, Projekt-Kostenverwaltung, Lexware-Abgleich). Alle Beträge netto, Brutto laut Beleg.</div>';
   printDoc("Lieferanten-Übersicht", body, ".r{text-align:right;white-space:nowrap}");
 }
 function renderLieferanten(){
@@ -6547,11 +6581,11 @@ function lfDetailHtml(g){
   var rows=g.rows.slice().sort(function(a,b){ var x=lfDate(a),y=lfDate(b); return (y?y.getTime():0)-(x?x.getTime():0); }).map(function(r){
     var d=lfDate(r);
     var ziel=(r.assignType==="project"&&r.projektNr)?("Projekt "+r.projektNr):(r.assignType==="general"?"Allgemein":"offen");
-    return '<tr><td class="nowrap">'+lfFmtD(d)+'</td><td class="nowrap">'+esc(r.invoiceNumber||"")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,46))+'</td><td class="nowrap">'+esc(ziel)+'</td><td class="right nowrap"><b>'+eur(invNet(r))+'</b></td><td class="nowrap">'+lfStatusHtml(r)+'</td></tr>'; }).join("");
+    return '<tr><td class="nowrap">'+lfFmtD(d)+'</td><td class="nowrap">'+esc(r.invoiceNumber||"")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,46))+'</td><td class="nowrap">'+esc(ziel)+'</td><td class="right nowrap"><b>'+eur(invNet(r))+'</b></td><td class="nowrap">'+invPaidCell(r)+'</td></tr>'; }).join("");
   var S=lfSums(g.rows);
   return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm" id="lf-back">← Alle Lieferanten</button><span style="flex:1"></span><button class="btn sm primary" id="lf-pdf" title="Rechnungen dieses Lieferanten mit Datum, Rechnungsnummer, Projekt, Summe und Zahlungsstatus als PDF (bei gesetztem Zeitraum nur dieser)">🖨 PDF-Export</button></div>'+
     '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;margin:12px 0 4px"><span style="font-size:17px;font-weight:700">'+esc(g.name)+'</span>'+
-    '<span class="muted">'+g.rows.length+' Rechnungen</span><span>Gesamt: <b>'+eur(g.netto)+'</b> netto</span><span class="muted">'+eur(g.brutto)+' brutto</span><span style="color:#2d7a4f">bezahlt '+eur(S.bez)+' ('+S.bezN+')</span><span style="color:#c0392b">offen laut System '+eur(S.offen)+' ('+S.offenN+')</span>'+(S.unkN?('<span class="muted" title="Allgemeine Rechnungen ohne Zahlungsverfolgung">ohne Zahlungsinfo '+eur(S.unk)+' ('+S.unkN+')</span>'):'')+'</div>'+
+    '<span class="muted">'+g.rows.length+' Rechnungen</span><span>Gesamt: <b>'+eur(g.netto)+'</b> netto</span><span class="muted">'+eur(g.brutto)+' brutto</span><span style="color:#2d7a4f">bezahlt '+eur(S.bez)+' ('+S.bezN+')</span><span style="color:#c0392b">offen laut System '+eur(S.offen)+' ('+S.offenN+')</span>'+'</div>'+
     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0;padding:9px 12px;background:var(--gold-bg);border-radius:8px">'+
     '<b style="font-size:12px">Zeitraum:</b>'+
     '<input id="lf-von" value="'+esc(lfVon)+'" placeholder="📅 von" readonly style="width:104px;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:5px;background:#fff">'+
@@ -6566,6 +6600,7 @@ function lfDetailHtml(g){
 function lfWireDetail(el,g){
   document.getElementById("lf-back").onclick=function(){ lfSel=null; renderLieferanten(); };
   var pb=document.getElementById("lf-pdf"); if(pb) pb.onclick=function(){ lfPDF(g); };
+  if(typeof reWirePaid==="function") reWirePaid(el);
   document.getElementById("lf-von").onclick=function(){ openCalendar(lfVon,function(str){ lfVon=str; renderLieferanten(); },null,true); };
   document.getElementById("lf-bis").onclick=function(){ openCalendar(lfBis,function(str){ lfBis=str; renderLieferanten(); },null,true); };
   var zr=document.getElementById("lf-zr"); if(zr) zr.onclick=function(){ lfVon=""; lfBis=""; renderLieferanten(); };
