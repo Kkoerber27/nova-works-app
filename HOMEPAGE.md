@@ -13,10 +13,10 @@ Wurzelverzeichnis, die Homepage lebt vollständig in `site/`.
 ```
 site/                      ← das, was auf den Server kommt
 ├─ index.php               Startseite, baut sich aus inhalt/ und vorlage/
-├─ impressum.html          Rechtstext
-├─ datenschutz.html        Rechtstext
-├─ agb.html                Allgemeine Geschäftsbedingungen, §§ 1–36
-├─ 404.html
+├─ impressum.php           Rechtstext
+├─ datenschutz.php         Rechtstext
+├─ agb.php                 Allgemeine Geschäftsbedingungen, §§ 1–36
+├─ 404.php
 ├─ kontakt.php             Formular-Handler (verschickt die E-Mail)
 ├─ .htaccess               Weiterleitungen, Caching, Sicherheits-Header
 ├─ .user.ini               PHP-Grenzen (Upload 32 MB, Speicher 512 MB)
@@ -121,7 +121,7 @@ Von Hand geht weiterhin alles:
 | Markup der Startseite | `site/vorlage/startseite.php` |
 | Farben, Abstände, Schriftgrößen | `site/assets/css/style.css`, Block `:root` |
 | Verhalten (Menü, Laufband, Einwilligung, Formular) | `site/assets/js/main.js` |
-| Rechtsseiten | `site/impressum.html`, `datenschutz.html`, `agb.html` |
+| Rechtsseiten | `site/impressum.php`, `datenschutz.php`, `agb.php` |
 | Bilder | Backend → Mediathek, oder `werkzeug/bilder-neu.php` |
 
 Die Versionsnummer hinter `style.css` und `main.js` muss **nicht mehr** von
@@ -491,6 +491,28 @@ nach dieser Firma. Geändert wurde:
 
 Großschrift steht jetzt an genau einer Stelle: im Claim über dem Kopfbild.
 Der soll wuchten, alles andere darf still sein.
+
+## Die Marke im Kopf der Seite
+
+Das Logo bestand aus einer einzigen SVG-Datei: Wortmarke, Trennlinie und
+Claim in einem Pfad. Der Claim ist darin **14,5 von 425 Einheiten** hoch –
+3,4 Prozent der Logobreite. Bei den früheren 170 px in der Kopfzeile waren
+das 5,8 px, und selbst bei 300 px wären es erst 10. Größer skalieren löst
+das nicht, es macht nur das ganze Logo zu groß.
+
+Deshalb ist es jetzt zweiteilig:
+
+- `logo-marke-weiss.svg` trägt Wortmarke und Trennlinie. Es ist dieselbe
+  Datei wie `logo-weiss.svg`, nur mit engerem `viewBox` – am Pfad wurde
+  nichts geändert, der Claim liegt einfach außerhalb und wird abgeschnitten.
+- Der Claim steht als echter Text darunter (`.marke__claim`).
+
+Damit hängt seine Größe nicht mehr an der Breite der Wortmarke. In der
+Kopfzeile ist er jetzt **10,4 px** statt 5,8, und die Wortmarke konnte von
+170 auf 200 px wachsen, ohne dass der Kopf auseinanderfällt.
+
+`logo-weiss.svg` und `logo-schwarz.svg` bleiben unverändert liegen – für
+Druck, Fahrzeugbeschriftung und alles, wo das Logo groß genug ist.
 
 ## Marke
 

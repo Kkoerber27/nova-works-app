@@ -13,7 +13,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- Impressum --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/impressum.html'); await p.waitForTimeout(400);
+    await p.goto(ort + '/impressum.php'); await p.waitForTimeout(400);
     const t = await p.evaluate(() => document.querySelector('main').textContent.replace(/\s+/g, ' '));
     const pflicht = {
       'Firma': /NovaWorks GmbH/,
@@ -43,7 +43,7 @@ export default async function ({ ort, browser, ok }) {
   /* --- AGB --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/agb.html'); await p.waitForTimeout(400);
+    await p.goto(ort + '/agb.php'); await p.waitForTimeout(400);
     const a = await p.evaluate(() => {
       const kopf = [...document.querySelectorAll('.legal--agb h3')].map((h) => h.textContent.trim());
       const nummern = kopf.map((k) => Number((k.match(/§\s*(\d+)/) || [])[1])).filter((n) => n);
@@ -97,10 +97,53 @@ export default async function ({ ort, browser, ok }) {
     await p.schliessen();
   }
 
+  /* --- Nichts darf sich überlappen ---
+     Eine Textzeile, die quer über einer Überschrift liegt, faellt beim
+     Lesen des Quelltextes nicht auf und in keiner der bisherigen
+     Pruefungen - gesehen hat es erst ein Blick auf das Bild. Genau das
+     ist hier passiert: Ein negativer Abstand aus einer frueheren Fassung
+     zog die Unterzeile der AGB in den Titel hinein.
+
+     Geprueft werden die Kaesten aufeinanderfolgender Bloecke im Textteil.
+     Ueberschneiden sie sich senkrecht um mehr als zwei Pixel, stimmt
+     etwas nicht - ein, zwei Pixel gehen auf das Konto von Unterlaengen
+     und Rundung. */
+  for (const [name, pfad] of [['Impressum', '/impressum.php'],
+                              ['Datenschutz', '/datenschutz.php'],
+                              ['AGB', '/agb.php']]) {
+    const o = await seite(browser, ok);
+    await o.goto(ort + pfad); await o.waitForTimeout(500);
+    const treffer = await o.evaluate(() => {
+      /* Ein <header> im Inhalt wird durch seine Kinder ersetzt, statt
+         zusätzlich in der Liste zu stehen - sonst vergleicht die Prüfung
+         einen Kasten mit einem Kasten darin und meldet jedes Mal eine
+         Überlappung. */
+      const bloecke = [];
+      for (const k of document.querySelector('.legal__inner').children) {
+        if (k.tagName === 'HEADER') bloecke.push(...k.children);
+        else bloecke.push(k);
+      }
+      const sichtbar = bloecke.filter((e) => e.getBoundingClientRect().height > 0);
+      const schlecht = [];
+      for (let n = 1; n < sichtbar.length; n++) {
+        const a = sichtbar[n - 1].getBoundingClientRect();
+        const b = sichtbar[n].getBoundingClientRect();
+        const ueber = a.bottom - b.top;
+        if (ueber > 2) {
+          schlecht.push(`${sichtbar[n - 1].tagName}/${sichtbar[n].tagName} um ${Math.round(ueber)} px`);
+        }
+      }
+      return schlecht;
+    });
+    ok(treffer.length === 0, `${name}: nichts überlappt`,
+       treffer.slice(0, 2).join(', ') || `${pfad}`);
+    await o.schliessen();
+  }
+
   /* --- Datenschutzerklärung gegen den echten Quelltext --- */
   {
     const p = await seite(browser, ok);
-    await p.goto(ort + '/datenschutz.html'); await p.waitForTimeout(400);
+    await p.goto(ort + '/datenschutz.php'); await p.waitForTimeout(400);
     const d = await p.evaluate(() => ({
       text: document.querySelector('main').textContent.replace(/\s+/g, ' '),
       offen: [...document.querySelectorAll('.offen--block')].length,

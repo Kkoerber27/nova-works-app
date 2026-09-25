@@ -290,13 +290,50 @@ a { color: inherit; }
   gap: 2rem;
 }
 
-.masthead__logo { flex: none; margin-right: auto; }
-.masthead__logo img {
-  width: clamp(120px, 13vw, 170px);
+/* --- Die Marke --------------------------------------------------------
+   Wortmarke als Grafik, Claim als echter Text darunter.
+
+   Im Original steckte beides in einer SVG-Datei. Der Claim ist darin
+   14,5 von 425 Einheiten hoch - 3,4 Prozent der Logobreite. Bei den
+   frueheren 170 px waren das 5,8 px; selbst bei 300 px waeren es erst
+   10, und das bei einem hellen, weit gesperrten Schnitt. Groesser
+   skalieren loest das nicht, es macht nur das ganze Logo zu gross.
+
+   Als Text haengt die Groesse des Claims nicht mehr an der Breite der
+   Wortmarke. Beide lassen sich dadurch unabhaengig einstellen - und die
+   Wortmarke konnte deutlich waschsen, ohne dass der Kopf auseinander
+   faellt. */
+.marke {
+  display: inline-grid;
+  justify-items: start;
+  gap: .34em;
+  text-decoration: none;
+  width: max-content;
+}
+.marke__zeichen {
   height: auto;
   transition: opacity .3s var(--ease), filter .55s var(--ease);
 }
-.masthead__logo:hover img { opacity: .72; }
+.marke:hover .marke__zeichen,
+.marke:hover .marke__claim { opacity: .72; }
+
+/* Gesperrt wie im Original, aber in einer Groesse, die man liest. Der
+   letzte Buchstabe traegt die Sperrung mit; ohne den negativen Abstand
+   am Ende saesse der Block sichtbar zu weit rechts. */
+.marke__claim {
+  font-size: var(--claim-groesse, .7rem);
+  font-weight: 300;
+  letter-spacing: .2em;
+  margin-right: -.2em;
+  line-height: 1;
+  color: var(--text-dim);
+  white-space: nowrap;
+  transition: opacity .3s var(--ease);
+}
+
+.masthead__logo { flex: none; margin-right: auto; }
+.masthead__logo .marke__zeichen { width: clamp(148px, 15vw, 200px); }
+.masthead__logo { --claim-groesse: clamp(.6rem, .72vw, .72rem); }
 
 .nav { display: flex; gap: clamp(1.5rem, 2.5vw, 2.75rem); }
 
@@ -587,6 +624,12 @@ a { color: inherit; }
 .section--raised { background: var(--ink-raised); }
 
 .section__head { margin-bottom: clamp(2.5rem, 6vh, 4.5rem); }
+.section__vorspann {
+  max-width: 54ch;
+  margin: 1.1rem 0 0;
+  color: var(--text-dim);
+  font-size: var(--fs-lead);
+}
 
 /* Kein Abstand nach oben mehr: Darueber stand frueher eine Etikettzeile
    ("Services", "Kontakt"), die den Abschnittsnamen wiederholte. Die ist
@@ -638,6 +681,82 @@ a { color: inherit; }
 .about__body { color: var(--text-dim); font-size: var(--fs-lead); }
 .about__body p + p { margin-top: 1.5rem; }
 .about__cta { margin-top: 2.5rem; }
+
+
+/* --- Gewerke-Tafel ---------------------------------------------------
+   Eine durchgehende Linie, an der die Gewerke haengen.
+
+   Das Bild ist nicht ausgedacht, es beschreibt die Sache: Auf einer
+   Produktion haengt buchstaeblich alles am selben Rig. Deshalb keine
+   Kaesten, keine Symbole, keine Nummern - eine Traverse und Abhaenger.
+
+   column-gap ist null und der Abstand steckt im Innenabstand der Zellen.
+   Nur so laeuft die Linie ueber die ganze Reihe durch; mit einer Luecke
+   zwischen den Spalten zerfiele sie in Stuecke und saehe aus wie ein
+   Rahmen statt wie eine Traverse. */
+
+.tafel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 0;
+  row-gap: clamp(2.75rem, 6vh, 4.5rem);
+}
+
+/* Der Innenabstand oben folgt der Laenge des Abhaengers. Zwei Gruende:
+   Erstens stiess der Punkt am Ende des laengsten Abhaengers sonst in die
+   Ueberschrift - am Handy sichtbar in die Versalie hinein. Zweitens
+   sitzen die Gewerke dadurch tatsaechlich auf verschiedener Hoehe, statt
+   dass nur die Linie unterschiedlich lang ist. Erst damit liest sich der
+   Versatz als Absicht und nicht als Schluderei. */
+.gewerk {
+  position: relative;
+  padding: calc(var(--abhaenger, 2rem) + 1.1rem) clamp(1.25rem, 3vw, 3rem) 0 0;
+  border-top: 1px solid var(--line);
+}
+
+/* Der Abhaenger. Die Laenge kommt als --abhaenger aus der Vorlage und
+   wechselt von Zelle zu Zelle - wie Scheinwerfer auf unterschiedlichem
+   Trim. Ein Raster, in dem jede Zelle gleich aussieht, sieht aus wie ein
+   Baukasten; drei wechselnde Laengen kosten nichts und nehmen ihm das. */
+.gewerk::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: var(--abhaenger, 2rem);
+  background: var(--line-strong);
+}
+
+/* Der Punkt, an dem das Gewerk haengt. Klein, aber er macht aus einer
+   Linie einen Abhaengepunkt. */
+.gewerk::after {
+  content: '';
+  position: absolute;
+  top: calc(var(--abhaenger, 2rem) - 2px);
+  left: -2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--signal);
+}
+
+.gewerk__name {
+  margin: 0;
+  font-size: clamp(1.45rem, 2.9vw, 2.35rem);
+  font-weight: 600;
+  letter-spacing: -.025em;
+  line-height: 1.05;
+  text-wrap: balance;
+}
+
+.gewerk__was {
+  max-width: 34ch;
+  margin: .85rem 0 0;
+  color: var(--text-dim);
+  font-size: var(--fs-small);
+  line-height: 1.65;
+}
 
 
 /* --- Leistungen ------------------------------------------------------ */
@@ -1478,8 +1597,9 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   gap: 1.5rem 2rem;
 }
 
-.footer__logo img { width: 140px; opacity: .55; transition: opacity .3s var(--ease), filter .55s var(--ease); }
-.footer__logo:hover img { opacity: 1; }
+.footer__logo { --claim-groesse: .66rem; opacity: .62; }
+.footer__logo .marke__zeichen { width: 168px; }
+.footer__logo:hover { opacity: 1; }
 
 .footer__meta {
   display: flex;
@@ -1512,21 +1632,86 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 .legal { padding-block: clamp(8rem, 18vh, 12rem) var(--section-y); }
 
 .legal__inner { max-width: 74ch; }
+
+/* Kopf einer Rechtsseite: Titel, darunter eine Zeile, die sagt, was die
+   Seite ist. Danach eine Linie - dieselbe Trennung wie zwischen den
+   Abschnitten der Startseite. */
+.legal__kopf {
+  padding-bottom: clamp(1.5rem, 3vh, 2.25rem);
+  margin-bottom: clamp(2rem, 4vh, 3rem);
+  border-bottom: 1px solid var(--line);
+}
+.legal__unter {
+  margin: .9rem 0 0;
+  color: var(--text-faint);
+  font-size: var(--fs-small);
+}
+
+.legal__vorspann {
+  font-size: var(--fs-lead);
+  color: var(--text) !important;
+}
+/* Der Anbieter steht heraus - es ist die Angabe, wegen der die Seite
+   existiert. */
+.legal__anbieter {
+  margin: 0 0 clamp(2rem, 4vh, 2.75rem);
+  font-size: var(--fs-lead);
+  line-height: 1.5;
+  color: var(--text) !important;
+}
+.legal__anbieter strong { font-weight: 600; }
+
+/* Pflichtangaben als Definitionsliste - dieselbe Form wie die Gewerke
+   auf der Startseite und die Kontaktdaten darunter. Wer eine Angabe
+   sucht, findet sie an der Bezeichnung links, statt sie aus einem
+   Absatz herauszulesen. */
+.angaben {
+  display: grid;
+  gap: 0;
+  margin: 0 0 clamp(2.5rem, 5vh, 3.5rem);
+  border-top: 1px solid var(--line);
+}
+.angaben__zeile {
+  display: grid;
+  grid-template-columns: minmax(9rem, 13ch) minmax(0, 1fr);
+  gap: 0 clamp(1rem, 2.5vw, 2.5rem);
+  padding: 1.05rem 0;
+  border-bottom: 1px solid var(--line);
+}
+.angaben dt {
+  color: var(--text-faint);
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+.angaben dd {
+  margin: 0;
+  color: var(--text);
+  line-height: 1.65;
+}
+
 .legal__inner h1 {
-  margin-bottom: 2.5rem;
+  margin: 0;
   font-size: var(--fs-h2);
   font-weight: 300;
+  letter-spacing: -.03em;
 }
+/* Die Gliederungsebene wird ueber Groesse und Linie unterschieden, nicht
+   ueber Farbe. Vorher stand h3 in Signalgelb - ein Rest aus der Zeit vor
+   der Ueberarbeitung des Entwurfs. Auf einer Seite mit zwanzig
+   Zwischenueberschriften war die Seite dadurch ueberwiegend gelb, und
+   Gelb sollte auf dieser Website etwas heissen. */
 .legal__inner h2 {
-  margin: 3rem 0 1rem;
+  margin: clamp(3rem, 6vh, 4rem) 0 1rem;
+  padding-top: clamp(1.5rem, 3vh, 2rem);
+  border-top: 1px solid var(--line);
   font-size: clamp(1.4rem, 2.4vw, 1.9rem);
   font-weight: 400;
+  letter-spacing: -.02em;
 }
 .legal__inner h3 {
-  margin: 2.25rem 0 .75rem;
+  margin: 2.5rem 0 .75rem;
   font-size: var(--fs-h3);
-  font-weight: 400;
-  color: var(--signal);
+  font-weight: 500;
 }
 .legal__inner h4 {
   margin: 1.75rem 0 .5rem;
@@ -1563,10 +1748,10 @@ textarea.field__input { min-height: 150px; resize: vertical; }
    Sechsunddreissig Paragraphen auf einer Seite brauchen mehr Fuehrung als
    Impressum und Datenschutz. Drei Dinge leisten das:
 
-   Die Paragraphenzeile bleibt weiss. In den anderen Rechtstexten ist h3
-   gelb - bei sechsunddreissig Stueck waere die Seite darueber wieder gelb,
-   und genau das soll sie nicht sein. Das Gelb bleibt dem Geltungshinweis
-   und den Verweisen vorbehalten.
+   Die Teil-Ueberschriften tragen eine Linie und stehen in Grossschrift -
+   das ist die Gliederung eines Vertragswerks, nicht die einer Website.
+   Farbe traegt dabei nichts bei: Gelb bleibt dem Geltungshinweis und den
+   Verweisen vorbehalten.
 
    Das Anspringen der Paragraphen deckt bereits scroll-padding-top: 6rem
    am html-Element ab - so weit steht die feste Kopfzeile in die Seite
@@ -1575,8 +1760,12 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 
 .legal--agb { max-width: 78ch; }
 
+/* Der Abstand war frueher negativ, weil h1 selbst 2,5 rem nach unten
+   mitbrachte. Seit h1 keinen eigenen Abstand mehr hat, zog der negative
+   Wert die Zeile in die Ueberschrift hinein - im Bild lag "Fuer
+   Vermietung, Vermittlung ..." quer ueber "Geschaeftsbedingungen". */
 .legal--agb .agb__kopf {
-  margin: -1.25rem 0 2rem;
+  margin: .9rem 0 2rem;
   font-size: var(--fs-small);
   color: var(--text-faint);
 }
@@ -1943,11 +2132,24 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   .about__grid,
   .contact__grid { grid-template-columns: 1fr; }
 
+  /* Zwei Gewerke nebeneinander statt drei. */
+  .tafel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
   .hero__foot { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 620px) {
   .slider__spur > .card { flex-basis: calc(100vw - 2 * var(--gutter) - 2.5rem); }
+
+  /* Am Handy haengt eines unter dem anderen. Der rechte Innenabstand
+     entfaellt - sonst stuende der Text unnoetig schmal. */
+  .tafel { grid-template-columns: 1fr; row-gap: 2.25rem; }
+  .gewerk { padding-right: 0; }
+  .gewerk__was { max-width: none; }
+
+  /* Der Claim wird am Handy sonst breiter als der Kopfbereich. */
+  .masthead__logo { --claim-groesse: .58rem; }
+  .masthead__logo .marke__zeichen { width: 138px; }
 
   .form__row { grid-template-columns: 1fr; gap: 0; }
   .detail { padding-left: 1.15rem; }
@@ -1979,6 +2181,7 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   .zustimmung, .einstellungen { display: none !important; }
   body { background: #fff; color: #000; }
   .legal__inner h3, .legal__inner a { color: #000; }
+  .legal__kopf, .angaben, .angaben__zeile { border-color: #999; }
 
   /* Die AGB werden ausgedruckt und abgeheftet. Auf Weiss muss deshalb der
      ganze Satz schwarz stehen, nicht nur die Ueberschriften - der

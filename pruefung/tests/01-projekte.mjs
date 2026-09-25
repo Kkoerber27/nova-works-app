@@ -124,7 +124,7 @@ export default async function ({ ort, browser, ok }) {
   const ohne = await q.evaluate(() => ({
     projekte: document.querySelectorAll('.refs .ref').length,
     pfade: [...document.querySelectorAll('.ref__foto')]
-      .map((i) => i.getAttribute('src')).filter((s) => s && s.startsWith('assets/img/')).length,
+      .map((i) => i.getAttribute('src')).filter((s) => s && s.startsWith('/assets/img/')).length,
     fotos: document.querySelectorAll('.ref__foto').length,
     listen: document.querySelectorAll('.ref__bilder li a').length,
   }));

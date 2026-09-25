@@ -79,12 +79,12 @@ function bild(string $name, array $opt = []): string {
 
     $quellen = [];
     foreach ($fassungen as $f) {
-        $quellen[] = "assets/img/$name-{$f['breite']}.webp {$f['breite']}w";
+        $quellen[] = "/assets/img/$name-{$f['breite']}.webp {$f['breite']}w";
     }
     $groesste = end($fassungen);
 
     $attribute = [
-        'src'      => "assets/img/$name.jpg",
+        'src'      => "/assets/img/$name.jpg",
         'width'    => $groesste['breite'],
         'height'   => $groesste['hoehe'],
         'alt'      => $opt['alt'] ?? '',
@@ -125,7 +125,7 @@ function bild_pfad(string $name, int $breite = 2560): string {
             $beste = $f['breite'];
         }
     }
-    return $beste ? "assets/img/$name-$beste.webp" : '';
+    return $beste ? "/assets/img/$name-$beste.webp" : '';
 }
 
 
@@ -168,4 +168,43 @@ function fassung(): string {
         $f = (string) max($zeiten);
     }
     return $f;
+}
+
+
+/* =========================================================================
+   Die Marke
+   ========================================================================= */
+
+/* Wortmarke plus Claim.
+
+   Warum getrennt: Im Original steckt beides in einer einzigen SVG-Grafik.
+   Der Claim ist darin 14,5 von 425 Einheiten hoch - also 3,4 Prozent der
+   Logobreite. Bei den 170 Pixeln, die das Logo in der Kopfzeile hatte,
+   sind das 5,8 Pixel. Zu klein, um ihn zu lesen, und auch bei 300 Pixeln
+   wären es erst 10.
+
+   Deshalb trägt die Grafik nur noch die Wortmarke und die Trennlinie -
+   beschnitten über den viewBox, der Pfad selbst ist unverändert -, und
+   der Claim steht als echter Text darunter. Der ist damit in jeder Größe
+   scharf, lässt sich markieren, und seine Größe hängt nicht mehr an der
+   Breite des Logos.                                                      */
+function marke(string $klasse, string $groesse = 'gross'): string {
+    /* Das Seitenverhältnis der beschnittenen Grafik: viewBox 385 x 62. */
+    $breite = $groesse === 'gross' ? 200 : 168;
+    $hoehe  = (int) round($breite * 62 / 385);
+
+    return '<a class="marke ' . h($klasse) . '" href="/" aria-label="Nova Works, zur Startseite">'
+         . '<img class="marke__zeichen" src="/assets/img/logo-marke-weiss.svg?v=' . h(fassung()) . '"'
+         . ' alt="Nova Works" width="' . $breite . '" height="' . $hoehe . '">'
+         . '<span class="marke__claim">systems creating moments</span>'
+         . '</a>';
+}
+
+/* Ein Sprungziel wie #kontakt führt auf der Startseite an die richtige
+   Stelle. Auf einer Rechtsseite gibt es diesen Abschnitt nicht - dort
+   muss daraus /#kontakt werden, sonst passiert beim Klick nichts. */
+function zielAufStartseite(string $ziel, bool $nurLesen): string {
+    if (!$nurLesen) return $ziel;
+    if ($ziel === '' || $ziel[0] !== '#') return $ziel;
+    return '/' . $ziel;
 }

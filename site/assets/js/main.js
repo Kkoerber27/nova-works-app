@@ -695,9 +695,28 @@
      Seite selbst. Die Startseite verlinkt relativ, die 404-Seite absolut -
      und die kann unter jedem Pfad ausgeliefert werden. Selbst geraten
      waere einer der beiden Faelle immer falsch. */
+  /* Die Adresse der Datenschutzerklaerung. Sie kommt aus dem JSON-Block,
+     den die Vorlage schreibt - dieselbe Quelle wie die Verweise in der
+     Fusszeile.
+
+     Vorher stand hier ein Selektor, in dem "datenschutz.html" fest
+     eingetragen war. Beim Umbau der Rechtsseiten auf .php fand er nichts
+     mehr und fiel auf die alte, tote Adresse zurueck. Der Hinweis zeigte
+     danach auf eine Seite, die es nicht mehr gibt - und das ausgerechnet
+     im Einwilligungsfenster. Die Suche im Markt bleibt als zweiter Weg,
+     aber ohne Endung, damit sie nicht wieder an einer Dateiendung
+     zerbricht. */
   var DATENSCHUTZ_URL = (function () {
-    var v = document.querySelector('.footer__meta a[href$="datenschutz.html"]');
-    return v ? v.getAttribute('href') : 'datenschutz.html';
+    try {
+      var block = document.getElementById('einwilligung-texte');
+      if (block) {
+        var aus = JSON.parse(block.textContent);
+        if (aus && aus.datenschutzZiel) return aus.datenschutzZiel;
+      }
+    } catch (e) { /* weiter zum zweiten Weg */ }
+
+    var v = document.querySelector('.footer__meta a[href*="datenschutz"]');
+    return v ? v.getAttribute('href') : 'datenschutz.php';
   })();
 
   var EINWILLIGUNG_SCHLUESSEL = 'nova-einwilligung';

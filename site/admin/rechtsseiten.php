@@ -13,9 +13,9 @@ anmeldung_pflicht();
 /* Feste Liste statt freier Dateiname: Damit kann über den Parameter keine
    andere Datei des Servers geöffnet oder überschrieben werden. */
 const RECHTSSEITEN = [
-    'impressum'   => ['Impressum',   'impressum.html',   '§ 5 DDG · Anbieterkennzeichnung'],
-    'datenschutz' => ['Datenschutz', 'datenschutz.html', 'DSGVO-Erklärung'],
-    'agb'         => ['AGB',         'agb.html',         'Allgemeine Geschäftsbedingungen'],
+    'impressum'   => ['Impressum',   'impressum.php',   '§ 5 DDG · Anbieterkennzeichnung'],
+    'datenschutz' => ['Datenschutz', 'datenschutz.php', 'DSGVO-Erklärung'],
+    'agb'         => ['AGB',         'agb.php',         'Allgemeine Geschäftsbedingungen'],
 ];
 
 const RECHT_SICHERUNG = SEITEN_WURZEL . '/inhalt/sicherungen';

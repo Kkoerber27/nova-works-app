@@ -6,17 +6,17 @@
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://nova-works.de/impressum.html</loc>
+    <loc>https://nova-works.de/impressum.php</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>
   <url>
-    <loc>https://nova-works.de/datenschutz.html</loc>
+    <loc>https://nova-works.de/datenschutz.php</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>
   <url>
-    <loc>https://nova-works.de/agb.html</loc>
+    <loc>https://nova-works.de/agb.php</loc>
     <changefreq>yearly</changefreq>
     <priority>0.2</priority>
   </url>

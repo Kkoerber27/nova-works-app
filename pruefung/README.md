@@ -37,7 +37,7 @@ auch wenn eine Prüfung mittendrin fehlschlägt.
 | `06-navigation.mjs` | Navigation und Pflichtangaben auf allen Seiten, klebende Kopfzeile, Laufband mit Tastatur, Menü am Handy. |
 | `07-formular.mjs` | Pflichtfelder, Fehlermeldungen, Honigtopf, Erfolg und Misserfolg. Ohne JavaScript ein normales Formular. |
 | `08-zustimmung.mjs` | Einwilligung: gleich große und gleich gestaltete Wege, Wegklicken ist keine Zustimmung, kein Cookie, nichts nach draußen. |
-| `09-recht.mjs` | Pflichtangaben im Impressum, AGB vollständig und durchnummeriert, Datenschutzerklärung gegen den echten Quelltext. |
+| `09-recht.mjs` | Pflichtangaben im Impressum, AGB vollständig und durchnummeriert, Datenschutzerklärung gegen den echten Quelltext. Dazu: Auf keiner der drei Seiten darf sich ein Block mit dem nächsten überlappen – genau das war passiert, als ein negativer Abstand aus einer früheren Fassung die Unterzeile der AGB in den Titel zog. |
 | `10-logo.mjs` | Der Trennstrich im Logo ist überall mindestens ein Pixel hoch und hebt sich messbar ab. |
 | `11-druck.mjs` | Rechtstexte drucken schwarz auf weiß, ohne Kopf und Fuß. |
 | `12-vorschau.mjs` | Die Vorschau ist eine zweite Umgebung und wird auch so geprüft. |

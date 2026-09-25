@@ -10,7 +10,7 @@
 import { seite } from '../hilfe.mjs';
 export const NAME = 'Breite';
 
-const SEITEN = ['/index.php', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
+const SEITEN = ['/index.php', '/impressum.php', '/datenschutz.php', '/agb.php', '/404.php'];
 const BREITEN = [320, 390, 430, 768, 1024, 1440, 1920];
 
 export default async function ({ ort, browser, ok }) {

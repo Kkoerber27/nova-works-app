@@ -37,9 +37,16 @@ DirectoryIndex index.php
 
 <IfModule mod_alias.c>
   # --- Alte WordPress-Adressen auf die neuen Seiten --------------------
-  RedirectMatch 301 ^/impressum/?$              /impressum.html
-  RedirectMatch 301 ^/datenschutzerklaerung/?$  /datenschutz.html
-  RedirectMatch 301 ^/datenschutz/?$            /datenschutz.html
+  RedirectMatch 301 ^/impressum/?$              /impressum.php
+  RedirectMatch 301 ^/datenschutzerklaerung/?$  /datenschutz.php
+  RedirectMatch 301 ^/datenschutz/?$            /datenschutz.php
+
+  # Die Rechtsseiten waren bis zum Umbau .html-Dateien. Wer noch einen
+  # solchen Verweis hat - aus einer Mail, einem Lesezeichen oder einem
+  # Suchergebnis -, landet auf der neuen Adresse statt auf 404.
+  RedirectMatch 301 ^/impressum\.html$    /impressum.php
+  RedirectMatch 301 ^/datenschutz\.html$  /datenschutz.php
+  RedirectMatch 301 ^/agb\.html$          /agb.php
 
   # Der WordPress-Standardbeitrag entfaellt ersatzlos
   RedirectMatch 301 ^/2026/02/06/hallo-welt/?$  /
@@ -52,7 +59,7 @@ DirectoryIndex index.php
   RedirectMatch 410 ^/feed/?$
 </IfModule>
 
-ErrorDocument 404 /404.html
+ErrorDocument 404 /404.php
 
 # =========================================================================
 #  Sicherheits-Header

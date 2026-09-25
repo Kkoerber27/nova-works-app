@@ -20,15 +20,14 @@ $v = fassung();
 $breitenProjekt  = '(max-width: 960px) 100vw, 1192px';
 $breitenKarte    = '(max-width: 620px) calc(100vw - 4rem), (max-width: 960px) 45vw, 400px';
 $breitenKopfbild = '100vw';
-?>
-<!doctype html>
-<html lang="<?= h($i['meta']['sprache'] ?: 'de') ?>">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 
-<title><?= h($i['meta']['titel']) ?></title>
-<meta name="description" content="<?= h($i['meta']['beschreibung']) ?>">
+/* Kopf und Fuß liegen in eigenen Dateien - sie tragen auch die
+   Rechtsseiten. Was diese Seite zusätzlich in den <head> braucht,
+   reicht sie über $kopfExtra durch. */
+$seitenTitel = $i['meta']['titel'];
+$seitenText  = $i['meta']['beschreibung'];
+
+ob_start(); ?>
 <link rel="canonical" href="<?= h($i['meta']['kanonisch']) ?>">
 <meta name="theme-color" content="<?= h($i['meta']['themenfarbe']) ?>">
 
@@ -39,53 +38,17 @@ $breitenKopfbild = '100vw';
 <meta property="og:description" content="<?= h($i['meta']['og']['beschreibung']) ?>">
 <meta property="og:url" content="<?= h($i['meta']['og']['url']) ?>">
 <meta name="twitter:card" content="summary_large_image">
-
-<link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
-<link rel="apple-touch-icon" href="assets/img/favicon.svg">
-
-<link rel="preload" href="assets/fonts/zalando-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="assets/css/style.css?v=<?= h($v) ?>">
-
 <?php if ($i['meta']['organisation']): ?>
 <script type="application/ld+json">
 <?= json_encode($i['meta']['organisation'],
       JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
 
 </script>
-<?php endif; ?>
-</head>
+<?php endif;
+$kopfExtra = ob_get_clean();
 
-<body>
-<a class="skip-link" href="#main">Zum Inhalt springen</a>
-<div class="grain" aria-hidden="true"></div>
-
-<header class="masthead" id="masthead">
-  <div class="shell masthead__inner">
-    <a class="masthead__logo" href="index.php" aria-label="Nova Works, zur Startseite">
-      <img src="assets/img/logo-weiss.svg?v=<?= h($v) ?>" alt="Nova Works" width="170" height="57">
-    </a>
-
-    <nav class="nav" aria-label="Hauptnavigation">
-<?php foreach ($i['nav']['punkte'] as $p): ?>
-      <a class="nav__link" href="<?= h($p['ziel']) ?>"><?= h($p['text']) ?></a>
-<?php endforeach; ?>
-    </nav>
-
-    <a class="btn masthead__cta" href="<?= h($i['nav']['knopf']['ziel']) ?>"><span class="btn__label"><?= h($i['nav']['knopf']['text']) ?></span></a>
-
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-drawer">
-      <span class="nav-toggle__bars" aria-hidden="true"></span>
-      <span class="visually-hidden">Menü öffnen</span>
-    </button>
-  </div>
-</header>
-
-<div class="nav-drawer" id="nav-drawer" hidden>
-<?php foreach ($i['nav']['punkte'] as $p): ?>
-  <a href="<?= h($p['ziel']) ?>"><?= h($p['text']) ?></a>
-<?php endforeach; ?>
-  <a class="btn" href="<?= h($i['nav']['knopf']['ziel']) ?>"><span class="btn__label"><?= h($i['nav']['knopf']['text']) ?></span></a>
-</div>
+require __DIR__ . '/kopf.php';
+?>
 
 <main id="main">
 
@@ -130,10 +93,35 @@ $breitenKopfbild = '100vw';
         </div>
       </div>
 
-      <dl class="gewerke gewerke--gross">
-        <dt><?= h($i['ueberUns']['gewerke']['titel']) ?></dt>
-        <dd><?= h($i['ueberUns']['gewerke']['leistungen']) ?></dd>
-      </dl>
+    </div>
+  </section>
+
+  <!-- ================= Gewerke =================
+       Die Traverse: eine durchgehende Linie, an der die Gewerke hängen.
+       Das ist keine Zierde, sondern das Bild, das die Sache beschreibt -
+       auf einer Produktion hängt buchstäblich alles am selben Rig.
+
+       Die Abhänger sind verschieden lang, wie Scheinwerfer auf
+       unterschiedlichem Trim. Ein Raster, in dem jede Zelle gleich
+       aussieht, sieht aus wie ein Baukasten; drei wechselnde Längen
+       kosten nichts und nehmen ihm das.                              -->
+  <section class="section section--raised" id="gewerke">
+    <div class="shell">
+      <div class="section__head">
+        <h2 class="section__title"><?= h($i['gewerke']['titel']) ?></h2>
+<?php if (!empty($i['gewerke']['vorspann'])): ?>
+        <p class="section__vorspann"><?= hh($i['gewerke']['vorspann']) ?></p>
+<?php endif; ?>
+      </div>
+
+      <div class="tafel">
+<?php foreach ($i['gewerke']['eintraege'] as $nr => $g): ?>
+        <article class="gewerk" style="--abhaenger: <?= [2.1, 3.2, 1.5][$nr % 3] ?>rem">
+          <h3 class="gewerk__name"><?= h($g['name']) ?></h3>
+          <p class="gewerk__was"><?= hh($g['was']) ?></p>
+        </article>
+<?php endforeach; ?>
+      </div>
     </div>
   </section>
 
@@ -243,7 +231,7 @@ $breitenKopfbild = '100vw';
       <div class="contact__grid">
 
         <!-- Formular. Ohne JavaScript postet es ganz normal an kontakt.php. -->
-        <form id="kontaktformular" action="kontakt.php" method="post" novalidate>
+        <form id="kontaktformular" action="/kontakt.php" method="post" novalidate>
 <?php
   $f = $i['kontakt']['felder'];
   $pflicht = ' <span class="req" aria-hidden="true">*</span>';
@@ -367,28 +355,4 @@ $breitenKopfbild = '100vw';
   </div>
 </dialog>
 
-<footer class="footer">
-  <div class="shell footer__grid">
-    <a class="footer__logo" href="index.php" aria-label="Nova Works, zur Startseite">
-      <img src="assets/img/logo-weiss.svg?v=<?= h($v) ?>" alt="Nova Works" width="140" height="47" loading="lazy">
-    </a>
-    <p class="footer__meta">
-      <span><?= h($i['fuss']['copyright']) ?></span>
-<?php foreach ($i['fuss']['links'] as $l): ?>
-      <a href="<?= h($l['ziel']) ?>"><?= h($l['text']) ?></a>
-<?php endforeach; ?>
-    </p>
-  </div>
-</footer>
-
-<!-- Die Texte des Einwilligungsfensters. Sie standen fest in main.js;
-     damit waren sie der einzige Teil der Seite, den das Backend nicht
-     erreicht hätte. Als JSON im Markup liest main.js sie aus, ohne dass
-     etwas nachgeladen werden muss. -->
-<script type="application/json" id="einwilligung-texte"><?=
-  json_encode($i['einwilligung'], JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP)
-?></script>
-
-<script src="assets/js/main.js?v=<?= h($v) ?>" defer></script>
-</body>
-</html>
+<?php require __DIR__ . '/fuss.php';

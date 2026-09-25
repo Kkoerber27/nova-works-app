@@ -101,11 +101,26 @@ function abschnitte(): array {
                 ['art' => 'text', 'name' => 'text', 'bezeichnung' => 'Beschriftung'],
                 ['art' => 'text', 'name' => 'ziel', 'bezeichnung' => 'Ziel'],
             ]],
-            ['art' => 'gruppe', 'name' => 'gewerke', 'bezeichnung' => 'Gewerke', 'felder' => [
-                ['art' => 'text', 'name' => 'titel', 'bezeichnung' => 'Bezeichnung links'],
-                ['art' => 'mehrzeilig', 'name' => 'leistungen', 'bezeichnung' => 'Leistungen', 'zeilen' => 2,
-                 'hinweis' => 'Im Fließtext, durch Komma getrennt.'],
-            ]],
+        ],
+    ],
+
+    'gewerke' => [
+        'name'        => 'Gewerke',
+        'beschreibung'=> 'Die Tafel mit den Erläuterungen',
+        'felder'      => [
+            ['art' => 'text', 'name' => 'titel', 'bezeichnung' => 'Überschrift'],
+            ['art' => 'mehrzeilig', 'name' => 'vorspann', 'bezeichnung' => 'Vorspann', 'zeilen' => 2],
+            ['art' => 'liste', 'name' => 'eintraege', 'bezeichnung' => 'Gewerke',
+             'titelFeld' => 'name',
+             'hinweis' => 'Die Reihenfolge ist die auf der Seite. Sie hängen an einer '
+                        . 'durchgehenden Linie – je Reihe drei, am Handy eines unter '
+                        . 'dem anderen.',
+             'felder' => [
+                ['art' => 'text', 'name' => 'name', 'bezeichnung' => 'Gewerk'],
+                ['art' => 'mehrzeilig', 'name' => 'was', 'bezeichnung' => 'Was gehört dazu?', 'zeilen' => 3,
+                 'hinweis' => 'Zwei Sätze. Was das Gewerk umfasst – nicht, was auf einer '
+                            . 'bestimmten Produktion gemacht wurde. Das steht beim Projekt.'],
+             ]],
         ],
     ],
 

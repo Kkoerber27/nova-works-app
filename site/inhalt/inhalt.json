@@ -80,11 +80,37 @@
         "knopf": {
             "text": "Projekt starten",
             "ziel": "#kontakt"
-        },
-        "gewerke": {
-            "titel": "Gewerke",
-            "leistungen": "Technische Leitung, Licht, Ton, Rigging, AV / Video, Logistik"
         }
+    },
+    "gewerke": {
+        "titel": "Sechs Gewerke. Ein Aufbau.",
+        "vorspann": "Was auf einer Produktion zusammenkommt – und was die Begriffe bedeuten, die im Angebot stehen.",
+        "eintraege": [
+            {
+                "name": "Technische Leitung",
+                "was": "Planung, Ablauf und Verantwortung über alle Gewerke hinweg. Die Stelle, bei der zusammenläuft, was sonst nebeneinanderher liefe."
+            },
+            {
+                "name": "Licht",
+                "was": "Design, Programmierung und Operating. Vom ersten Entwurf bis zum Finger am Pult, während die Show läuft."
+            },
+            {
+                "name": "Ton",
+                "was": "Beschallung für Publikum und Bühne, Monitoring, Einmessen des Raums. Gut ist sie dann, wenn niemand über sie spricht."
+            },
+            {
+                "name": "Rigging",
+                "was": "Traversen, Motoren, Lastverteilung – und die Statik dahinter. Alles, was über den Köpfen hängt, hängt hier dran."
+            },
+            {
+                "name": "AV und Video",
+                "was": "LED-Wände, Kamera, Zuspielung, Content. Was auf den Flächen läuft, und wie es dorthin kommt."
+            },
+            {
+                "name": "Logistik",
+                "was": "Trucking, Auf- und Abbau, Personal, Zeitpläne. Der Teil, den das Publikum nie sieht und ohne den nichts steht."
+            }
+        ]
     },
     "leistungen": {
         "titel": "Unsere Spielplätze. Ihre Bühne.",
@@ -434,7 +460,7 @@
             "Corporate Events",
             "TV"
         ],
-        "einwilligung": "Ich habe die <a href=\"datenschutz.html\">Datenschutzbedingungen</a> gelesen und bin mit der Verarbeitung meiner personenbezogenen Daten einverstanden. Sie können diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen.",
+        "einwilligung": "Ich habe die <a href=\"/datenschutz.php\">Datenschutzbedingungen</a> gelesen und bin mit der Verarbeitung meiner personenbezogenen Daten einverstanden. Sie können diese Einwilligung jederzeit mit Wirkung für die Zukunft widerrufen.",
         "knopf": "Absenden",
         "pflichthinweis": "",
         "angaben": [
@@ -457,15 +483,15 @@
         "links": [
             {
                 "text": "Impressum",
-                "ziel": "impressum.html"
+                "ziel": "/impressum.php"
             },
             {
                 "text": "Datenschutzerklärung",
-                "ziel": "datenschutz.html"
+                "ziel": "/datenschutz.php"
             },
             {
                 "text": "AGB",
-                "ziel": "agb.html"
+                "ziel": "/agb.php"
             }
         ]
     },

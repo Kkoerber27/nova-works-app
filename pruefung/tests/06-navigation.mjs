@@ -6,7 +6,7 @@
 import { seite } from '../hilfe.mjs';
 export const NAME = 'Navigation und Laufband';
 
-const SEITEN = ['/index.php', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
+const SEITEN = ['/index.php', '/impressum.php', '/datenschutz.php', '/agb.php', '/404.php'];
 
 export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);

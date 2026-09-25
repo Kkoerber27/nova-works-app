@@ -11,7 +11,7 @@ export default async function ({ ort, browser, ok }) {
   const p = await seite(browser, ok);
   await p.emulateMedia({ media: 'print' });
 
-  for (const pfad of ['/agb.html', '/datenschutz.html', '/impressum.html']) {
+  for (const pfad of ['/agb.php', '/datenschutz.php', '/impressum.php']) {
     await p.goto(ort + pfad);
     await p.waitForTimeout(500);
     const d = await p.evaluate(() => {

@@ -226,14 +226,17 @@ export default async function ({ ort, browser, ok }) {
     const recht = await p.inputValue('#html');
     ok(recht.includes('<') && recht.length > 200, 'die Rechtsseite steht als HTML im Feld',
        `${recht.length} Zeichen`);
-    ok(!recht.includes('<header') && !recht.includes('<footer'),
-       'und zwar nur der Inhalt, nicht Kopf- und Fußzeile');
+    /* Geprüft wird auf die Kopf- und Fußzeile der Seite, nicht auf jedes
+       <header>: Das Impressum hat seit dem Design-Durchgang einen eigenen
+       <header class="legal__kopf"> im Inhalt, und der gehört dorthin. */
+    ok(!recht.includes('class="masthead"') && !recht.includes('class="footer"'),
+       'und zwar nur der Inhalt, nicht Kopf- und Fußzeile der Seite');
 
     await p.fill('#html', recht + '\n<script>alert(1)</script>');
     await p.click('#formular button[type=submit], button[type=submit]'); await p.waitForTimeout(600);
     ok(/script.*Element|dürfen nichts nachladen/.test(await p.textContent('body')),
        'ein <script> im Rechtstext wird abgewiesen');
-    ok(!readFileSync(join(SEITE, 'impressum.html'), 'utf8').includes('alert(1)'),
+    ok(!readFileSync(join(SEITE, 'impressum.php'), 'utf8').includes('alert(1)'),
        'und landet nicht in der Datei');
 
     /* --- Abmelden --- */

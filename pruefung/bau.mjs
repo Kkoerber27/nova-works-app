@@ -25,7 +25,11 @@ const TYP = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
    im Bau-Bericht, was noch fehlt. */
 const fehlend = new Set(), eingebettet = new Map();
 async function einbetten(text) {
-  const pfade = [...new Set((text.match(/assets\/img\/[A-Za-z0-9._-]+/g) || []))];
+  /* Der fuehrende Schraegstrich gehoert mit in den Treffer: Seit die
+     Vorlage absolute Pfade schreibt, bliebe er sonst vor der
+     data:-Adresse stehen - aus src="/assets/img/live.jpg" wuerde
+     src="/data:image/..." und damit ein toter Verweis. */
+  const pfade = [...new Set((text.match(/\/?assets\/img\/[A-Za-z0-9._-]+/g) || []))];
   for (const pfad of pfade) {
     if (eingebettet.has(pfad)) continue;
     try {
@@ -82,9 +86,9 @@ function fuerVorschauEindampfen(html) {
     /* Jede Bildadresse auf die eine Breite ziehen - die aus der Staffel
        ebenso wie den JPEG-Rückfall ohne Zahl im Namen. Danach zeigt
        alles auf dieselbe Datei, und sie wird genau einmal eingebettet. */
-    .replace(/assets\/img\/([A-Za-z0-9_-]+?)(?:-\d+)?\.(?:webp|jpg)/g, (ganz, name) => {
+    .replace(/(\/?)assets\/img\/([A-Za-z0-9_-]+?)(?:-\d+)?\.(?:webp|jpg)/g, (ganz, schraeg, name) => {
       const b = eineBreite(name);
-      return b ? `assets/img/${name}-${b}.webp` : ganz;
+      return b ? `${schraeg}assets/img/${name}-${b}.webp` : ganz;
     });
 }
 

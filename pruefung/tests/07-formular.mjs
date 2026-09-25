@@ -1,6 +1,6 @@
 /* Das Kontaktformular.
 
-   Ohne JavaScript postet es ganz normal an kontakt.php. Mit
+   Ohne JavaScript postet es ganz normal an /kontakt.php. Mit
    JavaScript prüft es die Eingaben selbst und schickt im Hintergrund.
    Beides muss funktionieren - und im Fehlerfall müssen Telefon und
    E-Mail dastehen, damit niemand ohne Weg bleibt. */
@@ -42,8 +42,11 @@ export default async function ({ ort, browser, ok }) {
       datenschutzVerweis: !!document.querySelector('#kontakt a[href*="datenschutz"]'),
     };
   });
-  ok(bau.ziel === 'kontakt.php' && bau.methode === 'post',
-     'das Formular postet an kontakt.php', `${bau.methode} ${bau.ziel}`);
+  /* Absolut, nicht relativ: Die Hülle der Seite verweist seit dem Umbau
+     durchgehend ab der Wurzel, damit die Fehlerseite unter jedem Pfad
+     funktioniert. Für das Formular gilt dasselbe. */
+  ok(bau.ziel === '/kontakt.php' && bau.methode === 'post',
+     'das Formular postet an /kontakt.php', `${bau.methode} ${bau.ziel}`);
   for (const n of ['vorname', 'nachname', 'email', 'nachricht', 'datenschutz']) {
     ok(bau[n] && bau[n].da && bau[n].beschriftet && bau[n].pflicht,
        `${n.padEnd(12)} vorhanden, beschriftet, Pflichtfeld`);
@@ -123,7 +126,7 @@ export default async function ({ ort, browser, ok }) {
              pflicht: f.querySelectorAll('[required]').length,
              knopf: !!f.querySelector('button[type="submit"]') };
   });
-  ok(roh.ziel === 'kontakt.php' && roh.knopf && roh.pflicht >= 4,
+  ok(roh.ziel === '/kontakt.php' && roh.knopf && roh.pflicht >= 4,
      'ohne JavaScript bleibt es ein normales Formular', `${roh.pflicht} Pflichtfelder`);
   await q.schliessen();
 }

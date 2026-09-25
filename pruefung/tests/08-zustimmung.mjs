@@ -7,7 +7,7 @@ import { seite } from '../hilfe.mjs';
 export const NAME = 'Einwilligung';
 
 const SCHLUESSEL = 'nova-einwilligung';
-const SEITEN = ['/index.php', '/impressum.html', '/datenschutz.html', '/agb.html', '/404.html'];
+const SEITEN = ['/index.php', '/impressum.php', '/datenschutz.php', '/agb.php', '/404.php'];
 
 const gespeichert = (p) => p.evaluate((k) => {
   try { return JSON.parse(window.localStorage.getItem(k) || 'null'); } catch (e) { return 'FEHLER'; }
@@ -32,9 +32,11 @@ export default async function ({ ort, browser, ok }) {
          `${pfad.padEnd(20)} Hinweis erscheint und ist benannt`);
       ok(z.wege.includes('alle') && z.wege.includes('keine') && z.wege.includes('einstellungen'),
          `${pfad.padEnd(20)} zustimmen, ablehnen, Einstellungen`, z.wege.join(', '));
-      /* Die 404-Seite kann unter jedem Pfad ausgeliefert werden und
-         verlinkt deshalb absolut. */
-      const soll = pfad === '/404.html' ? '/datenschutz.html' : 'datenschutz.html';
+      /* Absolut, auf jeder Seite. Die Fehlerseite wird unter jedem
+         beliebigen Pfad ausgeliefert - ein relativer Verweis zeigte dort
+         ins Leere. Deshalb gilt das für die ganze Hülle, nicht nur für
+         diesen einen Verweis. */
+      const soll = '/datenschutz.php';
       ok(z.verweis === soll, `${pfad.padEnd(20)} Verweis auf die Erklärung stimmt`, z.verweis);
     }
     await p.schliessen();
