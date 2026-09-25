@@ -61,6 +61,22 @@ Dann <http://127.0.0.1:4174> öffnen, das Backend unter
 <http://127.0.0.1:4174/admin/>. `php -S` ist zwingend: Die Startseite ist
 `index.php`, ein reiner Dateiserver lieferte den Quelltext aus.
 
+**macOS liefert seit Monterey kein PHP mehr mit.** `php -v` sagt dann
+`command not found`. Nachinstallieren über Homebrew:
+
+```bash
+brew install php
+```
+
+Ob die Installation taugt, sagt:
+
+```bash
+php werkzeug/pruefe-php.php
+```
+
+Dasselbe Skript lässt sich auch auf dem Webspace aufrufen – siehe
+[`docs/hosting.md`](docs/hosting.md).
+
 Der eingebaute Server von PHP liest `.user.ini` **nicht**. Für Uploads
 größerer Fotos deshalb lokal:
 

@@ -51,7 +51,49 @@ benutzt.
 
 ---
 
+### Vorher prüfen, ob das PHP taugt
+
+`werkzeug/pruefe-php.php` ins Wurzelverzeichnis des Webspace legen und im
+Browser aufrufen:
+
+```
+https://nova-works.de/pruefe-php.php
+```
+
+Es prüft PHP-Fassung, GD mit WebP, EXIF, die Upload-Grenze, den
+Arbeitsspeicher und die Schreibrechte der Ordner – also genau das, woran
+das Backend sonst scheitert, ohne dass man den Grund sieht.
+
+**Danach wieder löschen.** Die Datei verrät jedem, der die Adresse kennt,
+welche PHP-Fassung und welche Grenzen dort gelten.
+
+### Das Backend
+
+Nach dem Hochladen <https://nova-works.de/admin/> aufrufen und **sofort
+ein Passwort vergeben**. Solange keines gesetzt ist, kann das jeder tun,
+der die Adresse kennt.
+
+Zwei Dinge müssen dafür stimmen:
+
+- Der Ordner `inhalt/` muss beschreibbar sein (Rechte 755).
+- `.htaccess` und `.user.ini` beginnen mit einem Punkt. Viele
+  FTP-Programme blenden solche Dateien aus – in FileZilla unter *Server →
+  Versteckte Dateien anzeigen* einschalten. Ohne sie greifen weder die
+  Weiterleitungen noch die 32-MB-Uploadgrenze noch der Schutz von
+  `inhalt/` und `vorlage/`.
+
+Der Ordner `inhalt/originale/` ist 74 MB groß und wird nie ausgeliefert.
+Die Seite läuft ohne ihn; gebraucht wird er nur, um Bildfassungen neu zu
+erzeugen. Beim ersten Hochladen kann er also wegbleiben.
+
+---
+
 ## Weg 2: Netlify
+
+**Seit dem Umbau auf das Backend ist dieser Weg nicht mehr gangbar.** Die
+Startseite ist `index.php` und das Backend ist eine PHP-Anwendung; Netlify
+führt kein PHP aus. Der folgende Abschnitt beschreibt den Stand davor und
+bleibt nur als Notiz stehen.
 
 Netlify führt **kein PHP** aus. `kontakt.php` läuft dort nicht.
 
