@@ -1,0 +1,737 @@
+{
+    "bayreuth": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "bayreuth-2": {
+        "quelle": {
+            "breite": 3213,
+            "hoehe": 5712,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 1138
+            },
+            {
+                "breite": 960,
+                "hoehe": 1707
+            },
+            {
+                "breite": 1280,
+                "hoehe": 2276
+            },
+            {
+                "breite": 1920,
+                "hoehe": 3413
+            },
+            {
+                "breite": 2560,
+                "hoehe": 4551
+            }
+        ]
+    },
+    "bayreuth-3": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "csd": {
+        "quelle": {
+            "breite": 1206,
+            "hoehe": 678,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1206,
+                "hoehe": 678
+            }
+        ]
+    },
+    "ehrlich-2": {
+        "quelle": {
+            "breite": 4032,
+            "hoehe": 2268,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "ehrlich-3": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "gluecks": {
+        "quelle": {
+            "breite": 4032,
+            "hoehe": 2268,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "gluecks-2": {
+        "quelle": {
+            "breite": 3226,
+            "hoehe": 4031,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 800
+            },
+            {
+                "breite": 960,
+                "hoehe": 1200
+            },
+            {
+                "breite": 1280,
+                "hoehe": 1599
+            },
+            {
+                "breite": 1920,
+                "hoehe": 2399
+            },
+            {
+                "breite": 2560,
+                "hoehe": 3199
+            }
+        ]
+    },
+    "gluecks-3": {
+        "quelle": {
+            "breite": 4032,
+            "hoehe": 2268,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "header": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "ikarus": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "ikarus-2": {
+        "quelle": {
+            "breite": 4032,
+            "hoehe": 2268,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "ikarus-3": {
+        "quelle": {
+            "breite": 2268,
+            "hoehe": 4032,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 1138
+            },
+            {
+                "breite": 960,
+                "hoehe": 1707
+            },
+            {
+                "breite": 1280,
+                "hoehe": 2276
+            },
+            {
+                "breite": 1920,
+                "hoehe": 3413
+            },
+            {
+                "breite": 2268,
+                "hoehe": 4032
+            }
+        ]
+    },
+    "live": {
+        "quelle": {
+            "breite": 8529,
+            "hoehe": 5686,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 427
+            },
+            {
+                "breite": 960,
+                "hoehe": 640
+            },
+            {
+                "breite": 1280,
+                "hoehe": 853
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1280
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1707
+            }
+        ]
+    },
+    "live-2": {
+        "quelle": {
+            "breite": 900,
+            "hoehe": 1600,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 1138
+            },
+            {
+                "breite": 900,
+                "hoehe": 1600
+            }
+        ]
+    },
+    "live-3": {
+        "quelle": {
+            "breite": 8640,
+            "hoehe": 5760,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 427
+            },
+            {
+                "breite": 960,
+                "hoehe": 640
+            },
+            {
+                "breite": 1280,
+                "hoehe": 853
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1280
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1707
+            }
+        ]
+    },
+    "newpop": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "newpop-2": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "newpop-3": {
+        "quelle": {
+            "breite": 2730,
+            "hoehe": 1536,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "rainbow": {
+        "quelle": {
+            "breite": 900,
+            "hoehe": 1600,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 1138
+            },
+            {
+                "breite": 900,
+                "hoehe": 1600
+            }
+        ]
+    },
+    "rainbow-2": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "sven": {
+        "quelle": {
+            "breite": 1080,
+            "hoehe": 1440,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 853
+            },
+            {
+                "breite": 960,
+                "hoehe": 1280
+            },
+            {
+                "breite": 1080,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "sven-2": {
+        "quelle": {
+            "breite": 1536,
+            "hoehe": 1920,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 800
+            },
+            {
+                "breite": 960,
+                "hoehe": 1200
+            },
+            {
+                "breite": 1280,
+                "hoehe": 1600
+            },
+            {
+                "breite": 1536,
+                "hoehe": 1920
+            }
+        ]
+    },
+    "sven-3": {
+        "quelle": {
+            "breite": 1920,
+            "hoehe": 1280,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 427
+            },
+            {
+                "breite": 960,
+                "hoehe": 640
+            },
+            {
+                "breite": 1280,
+                "hoehe": 853
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1280
+            }
+        ]
+    },
+    "tv": {
+        "quelle": {
+            "breite": 2268,
+            "hoehe": 4032,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 1138
+            },
+            {
+                "breite": 960,
+                "hoehe": 1707
+            },
+            {
+                "breite": 1280,
+                "hoehe": 2276
+            },
+            {
+                "breite": 1920,
+                "hoehe": 3413
+            },
+            {
+                "breite": 2268,
+                "hoehe": 4032
+            }
+        ]
+    },
+    "tv-2": {
+        "quelle": {
+            "breite": 5712,
+            "hoehe": 3213,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    },
+    "tv-3": {
+        "quelle": {
+            "breite": 4032,
+            "hoehe": 2268,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 360
+            },
+            {
+                "breite": 960,
+                "hoehe": 540
+            },
+            {
+                "breite": 1280,
+                "hoehe": 720
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1080
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1440
+            }
+        ]
+    }
+}
