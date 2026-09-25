@@ -798,15 +798,18 @@ a { color: inherit; }
   gap: clamp(3.5rem, 9vh, 7rem);
 }
 
+/* Ein Projekt steht gestapelt: erst der Kopf, dann das Bild ueber die
+   ganze Breite, dann der Text. Vorher standen Bild und Text nebeneinander
+   und teilten sich die Breite - das Bild kam dabei nie zur Geltung.
+
+   Das ist die Ordnung, in der man ein Projekt liest: Worum geht es, wie
+   sah es aus, was haben wir gemacht. */
 .ref {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr);
-  gap: clamp(1.75rem, 4vw, 4.5rem);
-  align-items: center;
+  gap: clamp(1.25rem, 2.5vw, 2rem);
 }
 
-/* Jedes zweite Projekt seitenverkehrt - das gibt der Liste einen Takt. */
-.ref:nth-child(even) .ref__media { order: 2; }
+.ref__kopf { max-width: 34ch; }
 
 /* Ein oder zwei Bilder. Bei zweien teilen sie sich die Spalte. */
 .ref__media {
@@ -821,7 +824,12 @@ a { color: inherit; }
    sonst wanderten Rand und Ecken mit. */
 .ref__bild {
   position: relative;
-  aspect-ratio: 3 / 2;
+  /* Breiter als hoch, seit das Bild ueber die ganze Spalte laeuft: Im
+     3:2-Format waere es bei 1320 px Breite 880 px hoch und passte auf
+     keinen Laptop-Schirm mehr. max-height deckelt es zusaetzlich, damit
+     es auch auf flachen Schirmen ganz zu sehen ist. */
+  aspect-ratio: 16 / 9;
+  max-height: min(72vh, 780px);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   /* Feste Flaeche, damit ein fehlendes Foto kein Loch hinterlaesst. */
@@ -960,16 +968,40 @@ a { color: inherit; }
 }
 
 .ref__titel {
-  margin: .75rem 0 1rem;
-  font-size: clamp(1.5rem, 2.6vw, 2.25rem);
+  margin: .6rem 0 0;
+  /* Groesser als vorher: Der Titel steht jetzt allein ueber dem Bild und
+     traegt den Abschnitt, statt neben ihm herzulaufen. */
+  font-size: clamp(1.75rem, 3.4vw, 3rem);
   font-weight: 400;
   letter-spacing: -.02em;
+  text-wrap: balance;
 }
 
-.ref__text p:not(.eyebrow) {
-  max-width: 46ch;
+/* Der Text steht unter dem Bild in zwei Spalten: links, worum es ging,
+   rechts, was wir daran gemacht haben. Nicht ueber die volle Breite -
+   eine Zeile von 1320 px laesst sich nicht lesen.
+
+   Die beiden Saeulen sind eigene Kaesten und nicht einfach Absaetze im
+   Raster: Zu unserem Teil gehoeren manchmal zwei Absaetze, und die
+   sollen untereinander stehen statt in die naechste Rasterzeile zu
+   rutschen - dort klaffte sonst eine Luecke ueber die halbe Breite. */
+.ref__text {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1rem, 3vw, 3rem);
+  align-items: start;
+  margin-top: clamp(.25rem, 1vw, .75rem);
+}
+
+.ref__text p {
+  margin: 0 0 1em;
+  max-width: 54ch;
   color: var(--text-dim);
 }
+.ref__text p:last-child { margin-bottom: 0; }
+
+/* Die Gewerke laufen unter beiden Spalten durch. */
+.ref__text .trades { grid-column: 1 / -1; }
 
 /* --- Bildtiefe beim Scrollen -------------------------------------------
    Die Fotos stehen nicht still, solange sie im Bild sind: Sie fahren
@@ -1937,8 +1969,15 @@ textarea.field__input { min-height: 150px; resize: vertical; }
     flex-basis: calc((100vw - 2 * var(--gutter) - .625rem) / 2);
   }
 
-  .ref { grid-template-columns: 1fr; gap: 1.5rem; }
-  .ref:nth-child(even) .ref__media { order: 0; }
+  .ref { gap: 1.25rem; }
+  .ref__kopf { max-width: none; }
+  .ref__text { grid-template-columns: 1fr; gap: 0; }
+  .ref__text p { max-width: none; }
+  /* Untereinander braucht der zweite Kasten Luft nach oben. */
+  .ref__unser { margin-top: 1em; }
+  /* Am Handy hat das Bild die Breite des Schirms - 16:9 waere dort ein
+     schmaler Streifen. Zurueck auf 3:2, das traegt das Motiv besser. */
+  .ref__bild { aspect-ratio: 3 / 2; max-height: none; }
   .nav-toggle { display: block; }
 
   .about__grid,
