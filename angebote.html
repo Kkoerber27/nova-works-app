@@ -1016,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-25.2";
+var APP_VERSION="2026-09-25.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -3921,8 +3921,8 @@ function dispoPrint(){
 var SPARTEN=[
  {slug:"marketing",label:"Marketing"},{slug:"auto",label:"Auto"},{slug:"auto_strom",label:"Auto Strom"},
  {slug:"reise",label:"Reisekosten"},{slug:"betriebskosten",label:"Betriebskosten"},{slug:"geschaeftsausstattung",label:"Geschäftsausstattung"},
- {slug:"versicherungen",label:"Versicherungen"},{slug:"mobilfunk",label:"Mobilfunk"},{slug:"gehalt",label:"Gehälter & Lohnnebenkosten"},
- {slug:"finanzamt",label:"Finanzamt"},{slug:"messe",label:"Messe"},{slug:"allgemein",label:"Allgemein"}
+ {slug:"versicherungen",label:"Versicherungen"},{slug:"mobilfunk",label:"Mobilfunk"},{slug:"gehalt",label:"Gehälter"},
+ {slug:"finanzamt",label:"Lohnnebenkosten"},{slug:"messe",label:"Messe"},{slug:"allgemein",label:"Allgemein"}
 ];
 function sparteLabel(slug){ for(var i=0;i<SPARTEN.length;i++){ if(SPARTEN[i].slug===slug) return SPARTEN[i].label; } return slug||""; }
 function invM(x){ var n=Number(x); return isNaN(n)?0:n; }
