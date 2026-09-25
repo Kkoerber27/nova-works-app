@@ -95,11 +95,23 @@ pruef('Upload-Grenze', $hoch >= 8 * 1048576, lesbar($hoch),
         . 'hilft: php -d upload_max_filesize=32M -d post_max_size=160M -S …',
       !$imBrowser);
 
-$speicher = bytes('memory_limit');
-pruef('Arbeitsspeicher', $speicher >= 256 * 1048576, lesbar($speicher),
-      'Ein Foto mit 8640 x 5760 Pixeln belegt in GD 199 MB. Reicht der '
-    . 'Speicher nicht, bricht die Umwandlung ab. Auch das steht in '
-    . 'site/.user.ini.');
+/* Die Bildverarbeitung hebt den Wert selbst an, sobald sie startet
+   (siehe bild_speicher_anheben in admin/kern/bild.php). Geprüft wird
+   deshalb, ob das gelingt - nicht, was vorher eingestellt war. Sperrt
+   der Anbieter ini_set, bleibt es beim alten Wert, und genau das ist
+   die Auskunft, die hier zählt. */
+$vorher  = bytes('memory_limit');
+@ini_set('memory_limit', '512M');
+$nachher = bytes('memory_limit');
+@ini_set('memory_limit', $vorher === PHP_INT_MAX ? '-1' : (int) ($vorher / 1048576) . 'M');
+
+pruef('Arbeitsspeicher', $nachher >= 256 * 1048576,
+      $nachher === $vorher
+        ? lesbar($nachher)
+        : lesbar($vorher) . ' → ' . lesbar($nachher) . ' (wird angehoben)',
+      'Ein Foto mit 8640 x 5760 Pixeln belegt in GD 199 MB. Der Anbieter '
+    . 'lässt das Anheben nicht zu - dann helfen nur kleinere Fotos oder '
+    . 'der Support.');
 
 $zeit = (int) ini_get('max_execution_time');
 pruef('Rechenzeit', $zeit === 0 || $zeit >= 60,

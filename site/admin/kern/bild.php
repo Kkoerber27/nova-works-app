@@ -51,6 +51,33 @@ const BILD_JPEG_BREITE = 1280;
 const BILD_FORMATE = ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp'];
 
 
+/* --- Speicher selbst anheben ---------------------------------------------
+   GD hält ein Bild unkomprimiert: Breite mal Höhe mal 4 Byte. Ein Foto mit
+   8640 x 5760 Pixeln sind 199 MB - die Voreinstellung von PHP ist 128 MB.
+   Das traf sofort beim ersten Versuch auf einem frisch installierten PHP.
+
+   Sich darauf zu verlassen, dass jemand die .user.ini hochlädt oder beim
+   Aufruf ein -d memory_limit=512M mitgibt, heißt: Es geht irgendwann
+   schief, und zwar an dem Tag, an dem niemand daran denkt. Deshalb hebt
+   der Code den Wert selbst an.
+
+   Nur anheben, nie senken - auf einem Server mit viel Speicher soll die
+   dortige Einstellung gelten. Geht es nicht (manche Anbieter sperren
+   ini_set), bleibt es beim alten Wert, und bild_speicher_pruefen() sagt
+   hinterher verständlich, woran es lag.                                 */
+function bild_speicher_anheben(int $mindestensMb = 512): void {
+    static $getan = false;
+    if ($getan) return;
+    $getan = true;
+
+    $jetzt = bild_speichergrenze();
+    if ($jetzt === 0) return;                          // schon unbegrenzt
+    if ($jetzt >= $mindestensMb * 1024 * 1024) return; // reicht bereits
+
+    @ini_set('memory_limit', $mindestensMb . 'M');
+}
+
+
 /* =========================================================================
    Lesen
    ========================================================================= */
@@ -59,6 +86,8 @@ const BILD_FORMATE = ['jpg', 'jpeg', 'png', 'webp', 'avif', 'gif', 'bmp'];
    Angaben zurück, sonst eine Klartext-Meldung - die geht im Backend
    direkt an den Benutzer, deshalb steht dort kein Fachjargon. */
 function bild_lesbar(string $pfad): array {
+    bild_speicher_anheben();
+
     if (!is_file($pfad)) {
         return ['ok' => false, 'fehler' => 'Die Datei wurde nicht gefunden.'];
     }
@@ -302,6 +331,8 @@ function bild_guete(int $breite): int {
    alles, was mit srcset nichts anfangen kann. */
 function bild_staffel(string $quelle, string $zielOrdner, string $name,
                       ?array $breiten = null): array {
+    bild_speicher_anheben();
+
     $art = bild_lesbar($quelle);
     if (!$art['ok']) return ['ok' => false, 'fehler' => $art['fehler']];
 

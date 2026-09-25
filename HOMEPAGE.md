@@ -54,6 +54,14 @@ ihn weglassen und später nachreichen.
 ## Lokal ansehen
 
 ```bash
+./werkzeug/lokal-starten.sh
+```
+
+Das Skript findet seinen eigenen Ort, egal aus welchem Verzeichnis es
+aufgerufen wird, und gibt PHP die Grenzen mit, die auf dem Server aus der
+`.user.ini` kommen. Von Hand geht es auch:
+
+```bash
 cd site && php -S 127.0.0.1:4174
 ```
 
