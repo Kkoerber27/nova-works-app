@@ -319,7 +319,7 @@
     <div class="page-head">
       <div>
         <button class="btn ghost sm" id="pd-back">← Projekte</button>
-        <h1 id="pd-title" style="margin-top:6px">Projekt</h1>
+        <h1 id="pd-title" style="margin-top:6px">Projekt</h1><div id="pd-abgesagt" style="display:none;margin:8px 0 0;padding:8px 12px;border-radius:8px;background:#f9ece9;color:#8a2c22;font-size:12.5px"><b>Projekt abgesagt</b> – aus dem Workflow ausgenommen: keine Rechnungszuordnung, keine Disposition, kein Forecast, kein Import und kein Hilfsprojekt-Bezug. Status im Feld „Ampel“ ändern, um es wieder aufzunehmen.</div>
       </div>
       <div class="toolbar"><button class="btn" id="pd-archive">✓ Projekt abschließen</button>
       <button class="btn danger" id="pd-delete">Projekt löschen</button></div>
@@ -1016,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-25.1";
+var APP_VERSION="2026-09-25.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1155,6 +1155,7 @@ function renderProjectDetail(){
   const p=curProject;
   document.getElementById("pd-title").textContent="Projekt "+(p.nummer||"")+(p.name?" — "+p.name:"")+(p.archiviert?"  🗄":"");
   var _pab=document.getElementById("pd-archive"); if(_pab) _pab.textContent=p.archiviert?"↩ Projekt wieder öffnen":"✓ Projekt abschließen";
+  var _pabg=document.getElementById("pd-abgesagt"); if(_pabg) _pabg.style.display=(p.ampel==="abgesagt")?"block":"none";
   document.getElementById("p-nummer").value=p.nummer||"";
   document.getElementById("p-name").value=p.name||"";
   document.getElementById("p-ap").value=p.ansprechpartner||"";
@@ -1594,7 +1595,7 @@ function renderMoveTargets(){
   var tt=document.getElementById("movegrp-title"); if(tt) tt.textContent=copy?"Positionsgruppe kopieren":"Positionsgruppe verschieben";
   var h='<div class="muted" style="margin-bottom:10px">'+(copy?"Kopiere":"Verschiebe")+' <b>'+esc(g.name||"Position")+'</b> in einen Job / ein Angebot – auch in einem anderen Projekt:</div>'+
     '<div class="field" style="margin-bottom:12px"><label>Ziel-Projekt</label><select id="mv-proj" style="width:100%">'+
-    [].concat(DB.projects).sort(function(a,b){return (b.nummer||"").localeCompare(a.nummer||"");}).map(function(x){ return '<option value="'+esc(x.id)+'"'+(x===p?' selected':'')+'>'+esc(x.nummer||"")+' · '+esc(x.name||"")+(x===curProject?' (dieses Projekt)':'')+'</option>'; }).join("")+
+    [].concat(DB.projects).filter(function(x){ return projAktiv(x)||x===p; }).sort(function(a,b){return (b.nummer||"").localeCompare(a.nummer||"");}).map(function(x){ return '<option value="'+esc(x.id)+'"'+(x===p?' selected':'')+'>'+esc(x.nummer||"")+' · '+esc(x.name||"")+(x===curProject?' (dieses Projekt)':'')+'</option>'; }).join("")+
     '</select></div>';
   (p.offers||[]).forEach(function(o){
     var isCur=(o===curOffer);
@@ -2207,6 +2208,7 @@ function dispoPersonSpan(p,person){
 function collectCrewAssignments(){
   var out=[];
   (DB.projects||[]).forEach(function(p){
+    if(!projAktiv(p)) return;
     var d=p.dispo;
     if(d&&d.personnel&&d.personnel.length){
       d.personnel.forEach(function(pe){ if(!pe.name)return; var s=dispoPersonSpan(p,pe); if(s) out.push({p:p,name:pe.name,funktion:pe.gewerk||"",von:s.von,bis:s.bis}); });
@@ -6014,7 +6016,7 @@ function openAssignInvoice(inv){
   var ps=document.getElementById("re-proj-search");
   function renderProj(q){
     q=String(q||"").toLowerCase();
-    var pl=(DB.projects||[]).filter(function(p){ return !q || ((p.nummer||"")+" "+(p.name||"")).toLowerCase().indexOf(q)>=0; }).slice(0,50);
+    var pl=(DB.projects||[]).filter(function(p){ if(!projAktiv(p)&&!(inv.assignType==="project"&&inv.projektNr===p.nummer)) return false; return !q || ((p.nummer||"")+" "+(p.name||"")).toLowerCase().indexOf(q)>=0; }).slice(0,50);
     var box=document.getElementById("re-proj-list");
     box.innerHTML=pl.map(function(p){ return '<button class="btn sm re-pj" data-nr="'+esc(p.nummer||"")+'" style="display:block;width:100%;text-align:left;margin:3px 0'+((inv.assignType==="project"&&inv.projektNr===p.nummer)?';background:var(--gold);color:#fff':'')+'">'+esc(p.nummer||"")+' · '+esc(p.name||"")+'</button>'; }).join("") || '<div class="muted">Keine Treffer.</div>';
     box.querySelectorAll(".re-pj").forEach(function(b){ b.onclick=function(){ assignInvoiceProject(inv,b.dataset.nr); closeModal("re-assign-bg"); }; });
@@ -6024,6 +6026,8 @@ function openAssignInvoice(inv){
   openModal("re-assign-bg");
 }
 
+/* Abgesagte Projekte sind aus dem Workflow raus: keine Rechnungszuordnung, Disposition, Deals, Importe, Hilfsprojekte */
+function projAktiv(p){ return !!p && p.ampel!=="abgesagt"; }
 function awNorm(s){ return String(s||"").replace(/\D/g,""); }
 function awProjNr(name){ var m=/(\d{2})[.\-](\d{3,4})/.exec(name||""); return m?(m[1]+"-"+m[2]):""; }
 function awGet(nr){ return (DB.auswertung&&DB.auswertung[awNorm(nr)])||null; }
@@ -6855,7 +6859,7 @@ function renderDeals(){
     d.partner.map(function(pt,i){ return '<span style="border:1px solid var(--line);border-radius:14px;padding:3px 10px;font-size:12px;background:#fff">'+esc(pt)+' <a href="#" data-delpartner="'+i+'" style="color:#c0392b;text-decoration:none">×</a></span>'; }).join("")+
     '<input id="deal-newpartner" placeholder="Partner (z.B. CGS)" style="width:130px"><button class="btn sm" id="deal-addpartner">+ Partner</button></div>';
   // Projekt hinzufügen
-  var cands=(DB.projects||[]).filter(function(p){ return d.projekte.indexOf(p.id)<0; }).sort(function(a,b){return String(b.nummer||"").localeCompare(String(a.nummer||""));});
+  var cands=(DB.projects||[]).filter(function(p){ return d.projekte.indexOf(p.id)<0&&projAktiv(p); }).sort(function(a,b){return String(b.nummer||"").localeCompare(String(a.nummer||""));});
   h+='<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'+
     '<select id="deal-addproj-sel" style="min-width:260px"><option value="">– Projekt hinzufügen –</option>'+cands.map(function(p){return '<option value="'+esc(p.id)+'">'+esc((p.nummer||"")+" · "+(p.name||""))+'</option>';}).join("")+'</select>'+
     '<button class="btn sm" id="deal-addproj">+ Aufnehmen</button>'+
@@ -8095,7 +8099,7 @@ document.getElementById("c-delete").onclick=()=>{
 function fillParentSelect(){
   var sel=document.getElementById("p-parent"); if(!sel) return;
   var cur=curProject;
-  var list=(DB.projects||[]).filter(function(p){ return p.id!==(cur&&cur.id) && p.nummer; }).sort(function(a,b){ return String(b.nummer).localeCompare(String(a.nummer)); });
+  var list=(DB.projects||[]).filter(function(p){ return p.id!==(cur&&cur.id) && p.nummer && (projAktiv(p)||(cur&&cur.parentNr===p.nummer)); }).sort(function(a,b){ return String(b.nummer).localeCompare(String(a.nummer)); });
   sel.innerHTML='<option value="">— eigenständiges Projekt —</option>'+list.map(function(p){ return '<option value="'+esc(p.nummer)+'">'+esc(p.nummer)+' · '+esc(p.name||"")+'</option>'; }).join("");
   sel.value=(cur&&cur.parentNr)||"";
   sel.onchange=function(){ pullProject(); save(); if(typeof renderProjectAuswertung==="function") renderProjectAuswertung(); if(typeof renderProjectKpis==="function") renderProjectKpis(); };
@@ -9013,7 +9017,7 @@ function piReanalyze(entry){
 
 /* ---------- Ansicht ---------- */
 function piProjectList(){
-  return (DB.projects||[]).filter(function(p){ return !p.archiviert; }).sort(function(a,b){ return (b.nummer||"").localeCompare(a.nummer||""); });
+  return (DB.projects||[]).filter(function(p){ return !p.archiviert&&projAktiv(p); }).sort(function(a,b){ return (b.nummer||"").localeCompare(a.nummer||""); });
 }
 function piSrcLabel(s){
   var pg=s.pages.length>1?("S. "+Math.min.apply(null,s.pages)+"–"+Math.max.apply(null,s.pages)):("S. "+s.page);
