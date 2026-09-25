@@ -806,10 +806,34 @@ a { color: inherit; }
    sah es aus, was haben wir gemacht. */
 .ref {
   display: grid;
+  grid-template-areas: "bild" "text";
   gap: clamp(1.25rem, 2.5vw, 2rem);
 }
 
-.ref__kopf { max-width: 34ch; }
+.ref__media { grid-area: bild; }
+.ref__text  { grid-area: text; }
+
+/* Ort und Titel liegen in derselben Rasterzelle wie das Bild, unten
+   links darin. Titel und Bild lesen sich dadurch als ein Stueck, statt
+   als zwei gestapelte Bloecke.
+
+   Nicht der ganze Text: Gemessen verdeckt ein Verlauf, der einen
+   Absatz traegt, rund 40 Prozent der Bildflaeche - genau die Flaeche,
+   die das grosse Bild gewonnen hat. Fuer zwei Zeilen reicht ein
+   flacher Verlauf am unteren Rand, und der kostet 1 Prozent. */
+.ref__kopf {
+  grid-area: bild;
+  align-self: end;
+  justify-self: start;
+  position: relative;
+  z-index: 1;
+  max-width: min(70%, 42rem);
+  padding: clamp(1.5rem, 3vw, 2.75rem);
+  /* Der Kasten selbst laesst Klicks durch zum Bildschalter darunter,
+     seine Zeilen bleiben markierbar. */
+  pointer-events: none;
+}
+.ref__kopf > * { pointer-events: auto; }
 
 /* Ein oder zwei Bilder. Bei zweien teilen sie sich die Spalte. */
 .ref__media {
@@ -829,7 +853,7 @@ a { color: inherit; }
      keinen Laptop-Schirm mehr. max-height deckelt es zusaetzlich, damit
      es auch auf flachen Schirmen ganz zu sehen ist. */
   aspect-ratio: 16 / 9;
-  max-height: min(72vh, 780px);
+  max-height: min(76vh, 820px);
   border: 1px solid var(--line);
   border-radius: var(--radius-lg);
   /* Feste Flaeche, damit ein fehlendes Foto kein Loch hinterlaesst. */
@@ -846,6 +870,21 @@ a { color: inherit; }
   transition: border-color .4s var(--ease);
 }
 .ref:hover .ref__bild { border-color: var(--line-strong); }
+
+/* Der Verlauf unter dem Titel. Nur am unteren Rand und flach - dort
+   steht auf diesen Fotos ohnehin meist der Publikumsblock. */
+.ref__bild::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 62%;
+  background: linear-gradient(to top,
+    rgba(8, 8, 9, .92) 0%,
+    rgba(8, 8, 9, .72) 26%,
+    rgba(8, 8, 9, .34) 54%,
+    rgba(8, 8, 9, 0) 100%);
+  pointer-events: none;
+}
 
 /* Der Rahmen ist ein Schalter - er muss aussehen wie vorher der Kasten.
    width: 100% ist noetig, weil ein button sonst nur so breit wird wie
@@ -906,6 +945,7 @@ a { color: inherit; }
    Griff -, damit keine Bilddatei dafuer noetig ist. */
 .ref__zeichen {
   position: absolute;
+  z-index: 1;   /* ueber dem Verlauf, der als ::after zuletzt gezeichnet wird */
   right: 1rem;
   bottom: 1rem;
   width: 2.75rem;
@@ -968,7 +1008,7 @@ a { color: inherit; }
 }
 
 .ref__titel {
-  margin: .6rem 0 0;
+  margin: .35rem 0 0;
   /* Groesser als vorher: Der Titel steht jetzt allein ueber dem Bild und
      traegt den Abschnitt, statt neben ihm herzulaufen. */
   font-size: clamp(1.75rem, 3.4vw, 3rem);
@@ -1969,8 +2009,18 @@ textarea.field__input { min-height: 150px; resize: vertical; }
     flex-basis: calc((100vw - 2 * var(--gutter) - .625rem) / 2);
   }
 
-  .ref { gap: 1.25rem; }
-  .ref__kopf { max-width: none; }
+  /* Unter 960 px steht der Kopf wieder ueber dem Bild statt darin: Auf
+     einem 390 px breiten Bild braeuchte ein Titel so viel Verlauf, dass
+     vom Foto nichts uebrig bliebe. */
+  .ref { grid-template-areas: none; gap: 1.25rem; }
+  .ref__media, .ref__text, .ref__kopf { grid-area: auto; }
+  .ref__kopf {
+    position: static;
+    max-width: none;
+    padding: 0;
+    pointer-events: auto;
+  }
+  .ref__bild::after { display: none; }
   .ref__text { grid-template-columns: 1fr; gap: 0; }
   .ref__text p { max-width: none; }
   /* Untereinander braucht der zweite Kasten Luft nach oben. */
