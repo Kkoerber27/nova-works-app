@@ -1016,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-25.3";
+var APP_VERSION="2026-09-26.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5805,6 +5805,7 @@ function renderRechnungen(){
   h+='<div style="font-weight:700;font-size:15px;margin-bottom:10px">Eingang <span class="muted" style="font-weight:400">('+neu.length+' offen)</span></div>';
   h+= neu.length? reTable(neu) : '<div class="muted">Kein offener Rechnungseingang – alles zugewiesen.</div>';
   h+='</div>';
+  h+='<div class="card panel-pad" style="margin-bottom:16px;border-left:4px solid #c0392b" id="re-offen"></div>';
   h+='<div class="card panel-pad" style="margin-bottom:16px"><div style="font-weight:700;font-size:15px;margin-bottom:10px">Sparten</div><div style="display:flex;flex-wrap:wrap;gap:10px">';
   SPARTEN.forEach(function(sp){
     var list=zug.filter(function(r){return r.assignType==="general"&&r.generalCat===sp.slug;});
@@ -5820,6 +5821,7 @@ function renderRechnungen(){
     +'</div><div id="re-all"></div></div>';
   el.innerHTML=h;
   el.querySelectorAll(".re-sparte").forEach(function(c){ c.onclick=function(){ reShowSparte(c.dataset.sp); }; });
+  if(typeof renderOffene==="function") renderOffene();
   var si=document.getElementById("re-search"); if(si) si.oninput=function(){ reRenderAll(si.value); };
   reRenderAll("");
   reWireAssign(el);
@@ -6457,6 +6459,58 @@ function vglPPT(ids){
     pptx.writeFile({fileName:"Nova Works – Projektvergleich "+awTodayDE().replace(/\./g,"-")+".pptx"});
     toast("PowerPoint erstellt – Download startet");
   }).catch(function(e){ toast("PowerPoint-Fehler: "+(e&&e.message||e)); });
+}
+/* ===== Offene Rechnungen – alles ohne Bezahlt-Haken (manuell oder Lexware), Eingang und Ausgang ===== */
+function offeneEingang(){ return reList().filter(function(r){ return r.status!=="ignoriert"&&r.status!=="ausgang"&&!invPaidInfo(r).paid; }); }
+function offeneAusgang(){
+  var out=[];
+  (DB.projects||[]).forEach(function(p){ if(!projAktiv(p)) return; pAusgang(p).forEach(function(a){ if(a.paid) return; var c=(DB.customers||[]).find(function(x){ return x.id===p.kunde; }); out.push({p:p,a:a,kunde:c?c.firma:""}); }); });
+  return out.sort(function(x,y){ return String(x.a.datum||"").localeCompare(String(y.a.datum||"")); });
+}
+function offeneGruppen(list){
+  var m={}; list.forEach(function(r){ var k=lfKey(r); if(!m[k]) m[k]={name:(r.senderName||r.senderEmail||"Unbekannt").trim(),rows:[],netto:0,brutto:0}; m[k].rows.push(r); m[k].netto+=invNet(r); m[k].brutto+=(r.gross!=null&&r.gross!=="")?Number(r.gross):invNet(r); });
+  return Object.keys(m).map(function(k){ return m[k]; }).sort(function(a,b){ return b.netto-a.netto; });
+}
+var offenOpen=(function(){ try{ return localStorage.getItem("re_offen")!=="0"; }catch(e){ return true; } })();
+function renderOffene(){
+  var el=document.getElementById("re-offen"); if(!el) return;
+  var ein=offeneEingang(), aus=offeneAusgang(), G=offeneGruppen(ein);
+  var sumE=ein.reduce(function(s,r){ return s+invNet(r); },0), sumEB=ein.reduce(function(s,r){ return s+((r.gross!=null&&r.gross!=="")?Number(r.gross):invNet(r)); },0), sumA=aus.reduce(function(s,x){ return s+(Number(x.a.amount)||0); },0);
+  var h='<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><div style="font-weight:700;font-size:15px">Offene Rechnungen <span class="muted" style="font-weight:400;font-size:12px">(ohne Bezahlt-Haken, manuell oder Lexware)</span></div>'+
+    '<span style="color:#c0392b;font-weight:700">Eingang '+eur(sumE)+' netto</span><span class="muted" style="font-size:12px">'+ein.length+' Rechnungen · '+G.length+' Lieferanten</span>'+
+    '<span style="color:#b8860b;font-weight:700">Ausgang '+eur(sumA)+' netto</span><span class="muted" style="font-size:12px">'+aus.length+' Kundenrechnungen</span><span style="flex:1"></span>'+
+    '<button class="btn sm" id="re-offen-pdf">🖨 PDF</button><button class="btn ghost sm" id="re-offen-toggle">'+(offenOpen?'▾ einklappen':'▸ aufklappen')+'</button></div>';
+  if(offenOpen){
+    h+='<div style="font-weight:600;margin:12px 0 6px">Eingangsrechnungen – wir schulden</div>';
+    h+=G.length?('<table class="lines"><thead><tr><th>Lieferant / Rechnung</th><th>Datum</th><th>Rechn.-Nr.</th><th>Zuordnung</th><th class="right">Netto</th><th>Bezahlt</th><th></th></tr></thead><tbody>'+
+      G.map(function(g){ return '<tr style="background:#faf8f3"><td colspan="4"><b>'+esc(g.name)+'</b> <span class="muted">· '+g.rows.length+' offen</span></td><td class="right nowrap"><b>'+eur(g.netto)+'</b></td><td colspan="2" class="muted" style="font-size:11px">brutto '+eur(g.brutto)+'</td></tr>'+
+        g.rows.slice().sort(function(a,b){ return String(a.invoiceDate||a.received||"").localeCompare(String(b.invoiceDate||b.received||"")); }).map(function(r){ return '<tr><td style="padding-left:18px">'+esc(String(r.subject||"").slice(0,60))+'</td><td class="nowrap">'+esc(fmtDateAny(String(r.invoiceDate||r.received||"").slice(0,10)))+'</td><td class="nowrap">'+esc(r.invoiceNumber||"–")+'</td><td class="nowrap">'+reTargetLabel(r)+'</td><td class="right nowrap">'+eur(invNet(r))+'</td><td class="nowrap">'+invPaidCell(r)+'</td><td class="nowrap"><button class="btn sm re-assign" data-id="'+encodeURIComponent(r.id)+'">Zuordnen</button> <button class="btn sm ghost re-edit" data-id="'+encodeURIComponent(r.id)+'" title="Rechnung bearbeiten">✎</button></td></tr>'; }).join(""); }).join("")+
+      '<tr style="border-top:2px solid #b9b2a2;font-weight:700"><td colspan="4">Summe Eingang offen · '+ein.length+' Rechnungen</td><td class="right nowrap">'+eur(sumE)+'</td><td colspan="2" class="muted" style="font-size:11px;font-weight:400">brutto '+eur(sumEB)+'</td></tr></tbody></table>'):'<div class="muted">Keine offenen Eingangsrechnungen – alles abgehakt.</div>';
+    h+='<div style="font-weight:600;margin:16px 0 6px">Ausgangsrechnungen – Kunden schulden uns</div>';
+    h+=aus.length?('<table class="lines"><thead><tr><th>Projekt</th><th>Kunde</th><th>Rechnung</th><th>Datum</th><th class="right">Netto</th><th>Bezahlt</th></tr></thead><tbody>'+
+      aus.map(function(x){ return '<tr><td class="nowrap"><a href="#" class="offen-proj" data-pid="'+esc(x.p.id)+'" style="color:var(--ink);font-weight:700;text-decoration:none">'+esc(x.p.nummer||"")+'</a> '+esc(x.p.name||"")+'</td><td>'+esc(x.kunde||"–")+'</td><td>'+esc(x.a.label||x.a.nr||"Rechnung")+'</td><td class="nowrap">'+esc(fmtDateAny(String(x.a.datum||"").slice(0,10)))+'</td><td class="right nowrap">'+eur(Number(x.a.amount)||0)+'</td><td><label style="display:inline-flex;gap:5px;align-items:center;cursor:pointer"><input type="checkbox" class="offen-ag" data-pid="'+esc(x.p.id)+'" data-id="'+esc(x.a.id)+'"><span style="color:#c0392b;font-size:11px">offen</span></label></td></tr>'; }).join("")+
+      '<tr style="border-top:2px solid #b9b2a2;font-weight:700"><td colspan="4">Summe Ausgang offen · '+aus.length+' Rechnungen</td><td class="right nowrap">'+eur(sumA)+'</td><td></td></tr></tbody></table>'):'<div class="muted">Keine offenen Ausgangsrechnungen.</div>';
+    h+='<div class="muted" style="font-size:11px;margin-top:8px">Eingang: alle Rechnungen aus Postfach und manueller Erfassung ohne Bezahlt-Haken (Projekt-Kostenverwaltung, Lexware-Abgleich oder Markierung hier), inkl. noch nicht zugeordneter. Ausgang: Ausgangsrechnungen aktiver Projekte ohne Zahlungseingang.</div>';
+  }
+  el.innerHTML=h;
+  document.getElementById("re-offen-toggle").onclick=function(){ offenOpen=!offenOpen; try{ localStorage.setItem("re_offen",offenOpen?"1":"0"); }catch(e){} renderOffene(); };
+  document.getElementById("re-offen-pdf").onclick=offenePDF;
+  el.querySelectorAll(".offen-proj").forEach(function(a){ a.onclick=function(e){ e.preventDefault(); openProject(a.dataset.pid); }; });
+  el.querySelectorAll(".offen-ag").forEach(function(cb){ cb.onchange=function(){ var p=(DB.projects||[]).find(function(x){ return x.id===cb.dataset.pid; }); if(!p) return; var a=pAusgang(p).find(function(x){ return x.id===cb.dataset.id; }); if(!a) return; a.paid=true; a.paidDate=awTodayDE(); save(); toast("Zahlungseingang markiert"); renderRechnungen(); }; });
+  reWireAssign(el);
+}
+function offenePDF(){
+  var ein=offeneEingang(), aus=offeneAusgang(), G=offeneGruppen(ein);
+  var sumE=ein.reduce(function(s,r){ return s+invNet(r); },0), sumEB=ein.reduce(function(s,r){ return s+((r.gross!=null&&r.gross!=="")?Number(r.gross):invNet(r)); },0), sumA=aus.reduce(function(s,x){ return s+(Number(x.a.amount)||0); },0);
+  var kpi='<div style="display:flex;gap:10px;margin:10px 0 14px">'+[["Eingang offen (wir schulden)",eur(sumE),ein.length+" Rechnungen · "+G.length+" Lieferanten · brutto "+eur(sumEB),"#c0392b"],["Ausgang offen (Kunden schulden)",eur(sumA),aus.length+" Rechnungen","#b8860b"],["Saldo",eur(sumA-sumE),"Ausgang − Eingang",(sumA-sumE)>=0?"#2d7a4f":"#c0392b"]].map(function(x){ return '<div style="flex:1;border-top:2px solid '+x[3]+';padding-top:5px"><div style="font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#888">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:'+x[3]+'">'+x[1]+'</div><div style="font-size:8px;color:#888">'+x[2]+'</div></div>'; }).join("")+'</div>';
+  var t1='<div class="pbar">Eingangsrechnungen offen</div><table><thead><tr><th>Lieferant / Betreff</th><th>Datum</th><th>Rechnungs-Nr.</th><th>Projekt / Zuordnung</th><th style="text-align:right">Netto</th><th style="text-align:right">Brutto</th></tr></thead><tbody>'+
+    G.map(function(g){ return '<tr style="background:#f1efe9"><td colspan="4"><b>'+esc(g.name)+'</b> · '+g.rows.length+' offen</td><td class="r"><b>'+eur(g.netto)+'</b></td><td class="r" style="color:#777">'+eur(g.brutto)+'</td></tr>'+
+      g.rows.slice().sort(function(a,b){ return String(a.invoiceDate||a.received||"").localeCompare(String(b.invoiceDate||b.received||"")); }).map(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; return '<tr><td style="padding-left:14px">'+esc(String(r.subject||"").slice(0,60))+'</td><td class="nw">'+esc(fmtDateAny(String(r.invoiceDate||r.received||"").slice(0,10)))+'</td><td class="nw">'+esc(r.invoiceNumber||"–")+'</td><td>'+esc(lfProjLabel(r)==="–"?"nicht zugeordnet":lfProjLabel(r))+'</td><td class="r">'+eur(n)+'</td><td class="r" style="color:#777">'+eur(b)+'</td></tr>'; }).join(""); }).join("")+
+    '<tr style="border-top:2px solid #3d3d3d;font-weight:700"><td colspan="4" style="padding-top:6px">Summe Eingang offen · '+ein.length+' Rechnungen</td><td class="r" style="padding-top:6px">'+eur(sumE)+'</td><td class="r" style="padding-top:6px;color:#777">'+eur(sumEB)+'</td></tr></tbody></table>';
+  var t2='<div class="pbar" style="margin-top:14px">Ausgangsrechnungen offen (Kunden)</div><table><thead><tr><th>Projekt</th><th>Kunde</th><th>Rechnung</th><th>Datum</th><th style="text-align:right">Netto</th></tr></thead><tbody>'+
+    (aus.length?aus.map(function(x){ return '<tr><td class="nw"><b>'+esc(x.p.nummer||"")+'</b> '+esc(x.p.name||"")+'</td><td>'+esc(x.kunde||"–")+'</td><td>'+esc(x.a.label||x.a.nr||"Rechnung")+'</td><td class="nw">'+esc(fmtDateAny(String(x.a.datum||"").slice(0,10)))+'</td><td class="r">'+eur(Number(x.a.amount)||0)+'</td></tr>'; }).join(""):'<tr><td colspan="5" style="color:#888">Keine offenen Ausgangsrechnungen.</td></tr>')+
+    '<tr style="border-top:2px solid #3d3d3d;font-weight:700"><td colspan="4" style="padding-top:6px">Summe Ausgang offen · '+aus.length+' Rechnungen</td><td class="r" style="padding-top:6px">'+eur(sumA)+'</td></tr></tbody></table>';
+  printDoc("Offene Rechnungen", lfPdfHead("Offene Rechnungen","laut Nova Works App · ohne Bezahlt-Haken · Stand "+fmtDate(today()))+kpi+t1+t2+'<div style="font-size:8px;color:#888;margin-top:8px">Alle Beträge netto, Brutto laut Beleg. Bezahlt = Haken in der App (manuell, Projekt-Kostenverwaltung oder Lexware-Abgleich).</div>', ".r{text-align:right;white-space:nowrap}.nw{white-space:nowrap}");
 }
 /* ===== Lieferanten-Auswertung (Suche, Umsaetze, Zeitraum, Monat/Jahr) ===== */
 var lfSel=null, lfVon="", lfBis="", lfQuery="";
