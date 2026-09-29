@@ -1016,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-29.1";
+var APP_VERSION="2026-09-29.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1839,12 +1839,14 @@ var DEFAULT_CREW_ROLES=[
   {name:"Fahrer",satz:380}
 ];
 function ensureCrewRoles(){ if(!DB.crewRoles||!DB.crewRoles.length){ DB.crewRoles=DEFAULT_CREW_ROLES.map(function(r){return {name:r.name,satz:r.satz};}); } }
-function crewLineTotal(c){ return (Number(c.personen)||0)*(Number(c.tage)||0)*((Number(c.satz)||0)+(Number(c.spesen)||0)); }
+/* Crew-Zeile als Option (c.opt): steht im Angebot mit Preis „auf Wunsch“, zählt aber in keiner Summe, Kalkulation oder Auswertung */
+function crewLineRaw(c){ return (Number(c.personen)||0)*(Number(c.tage)||0)*((Number(c.satz)||0)+(Number(c.spesen)||0)); }
+function crewLineTotal(c){ return (c&&c.opt)?0:crewLineRaw(c); }
 function crewTotal(o){ return (((o&&o.crew)||[]).reduce(function(s,c){return s+crewLineTotal(c);},0)); }
 function roleSatz(name){ ensureCrewRoles(); var r=(DB.crewRoles||[]).find(function(x){return x.name===name;}); return r?r.satz:0; }
 function roleEK(name){ ensureCrewRoles(); var r=(DB.crewRoles||[]).find(function(x){return x.name===name;}); return r?(Number(r.ek)||0):0; }
 function addCrew(){ if(!curOffer.crew) curOffer.crew=[]; curOffer.crew.push({funktion:"",personen:1,tage:1,satz:0,spesen:0,jobId:(curOffer._activeJobId||null)}); renderCrew(); save(); }
-function updateCrewLine(tr,c){ var cell=tr.querySelector("b.csum"); if(cell) cell.textContent=eur(crewLineTotal(c)); var ct=document.getElementById("crew-total"); if(ct) ct.textContent=eur(crewTotal(curOffer)); renderCrewStats(); renderSummary(); save(); }
+function updateCrewLine(tr,c){ var cell=tr.querySelector("b.csum"); if(cell) cell.textContent=c.opt?("optional "+eur(crewLineRaw(c))):eur(crewLineTotal(c)); var ct=document.getElementById("crew-total"); if(ct) ct.textContent=eur(crewTotal(curOffer)); renderCrewStats(); renderSummary(); save(); }
 /* ---- Transport-Kalkulation ---- */
 function transportLabel(typ){ if(typ==="pauschal"||!typ) return "Material Transport Pauschal"; var v=(typeof VEHICLES!=="undefined")&&VEHICLES.find(function(x){return x.id===typ;}); return v?v.name:typ; }
 function transportLineTotal(t){ return (Number(t.anz)||0)*(Number(t.preis)||0); }
@@ -1905,12 +1907,13 @@ function renderCrew(){
       '<td><input class="cs" type="number" min="0" step="0.01" value="'+(c.satz||0)+'" style="width:92px;text-align:right"></td>'+
       '<td><input class="cz" type="number" min="0" step="0.01" value="'+(c.spesen||0)+'" style="width:92px;text-align:right"></td>'+
       '<td><input class="cek" type="number" min="0" step="0.01" value="'+(c.ek!=null?c.ek:"")+'" placeholder="0,00" style="width:92px;text-align:right"></td>'+
-      '<td class="right nowrap"><b class="csum">'+eur(crewLineTotal(c))+'</b></td>'+
+      '<td class="right nowrap"><b class="csum"'+(c.opt?' style="color:#c96a00;font-weight:400"':'')+'>'+(c.opt?('optional '+eur(crewLineRaw(c))):eur(crewLineTotal(c)))+'</b></td>'+
+      '<td style="text-align:center"><input type="checkbox" class="copt"'+(c.opt?' checked':'')+' title="Als Option anbieten: steht im Angebot mit Preis „auf Wunsch“, zählt aber nicht in Summe, Kalkulation und Auswertung (z. B. Hotelkosten)"></td>'+
       '<td class="right"><button class="btn sm danger cdel">×</button></td></tr>';
   }).join("");
   el.innerHTML='<datalist id="crew-roles">'+roles+'</datalist>'+
-    '<table class="lines"><thead><tr><th style="width:24px"></th><th>Funktion</th><th>Job</th><th>Personen</th><th>Tage</th><th>Tagessatz €</th><th>Spesen/Tag €</th><th class="right">EK/Tag €</th><th class="right">Summe</th><th></th></tr></thead><tbody>'+
-    (rows||'<tr><td colspan="10" class="muted" style="text-align:center;padding:12px">Noch keine Crew – „+ Crew" klicken.</td></tr>')+'</tbody></table>';
+    '<table class="lines"><thead><tr><th style="width:24px"></th><th>Funktion</th><th>Job</th><th>Personen</th><th>Tage</th><th>Tagessatz €</th><th>Spesen/Tag €</th><th class="right">EK/Tag €</th><th class="right">Summe</th><th title="Option: nicht im Gesamtpreis, im Angebot als „auf Wunsch“">Option</th><th></th></tr></thead><tbody>'+
+    (rows||'<tr><td colspan="11" class="muted" style="text-align:center;padding:12px">Noch keine Crew – „+ Crew" klicken.</td></tr>')+'</tbody></table>';
   el.querySelectorAll("tr[data-i]").forEach(function(tr){
     var i=+tr.dataset.i, c=curOffer.crew[i];
     var f=tr.querySelector(".cf"),p=tr.querySelector(".cp"),t=tr.querySelector(".ct"),s=tr.querySelector(".cs"),z=tr.querySelector(".cz");
@@ -1922,6 +1925,7 @@ function renderCrew(){
     z.oninput=function(){ c.spesen=parseFloat(z.value)||0; updateCrewLine(tr,c); };
     var cek=tr.querySelector(".cek"); if(cek) cek.oninput=function(){ c.ek=cek.value===""?null:(parseFloat(cek.value)||0); renderCrewStats(); renderSummary(); save(); };
     var cnote=tr.querySelector(".cnote"); if(cnote) cnote.oninput=function(){ c.note=cnote.value; save(); };
+    var copt=tr.querySelector(".copt"); if(copt) copt.onchange=function(){ if(copt.checked) c.opt=true; else delete c.opt; renderCrew(); renderSummary(); save(); if(typeof renderKalkAssistent==="function") renderKalkAssistent(); };
     tr.querySelector(".cdel").onclick=function(){ curOffer.crew.splice(i,1); renderCrew(); renderSummary(); save(); };
     tr.addEventListener("dragstart",function(){ tr.classList.add("dragging"); window._cdrag={from:i}; });
     tr.addEventListener("dragend",function(){ tr.classList.remove("dragging"); });
@@ -1933,14 +1937,15 @@ function renderCrew(){
 }
 function crewIsReise(c){ return typeof kaIsReise==="function"&&kaIsReise(c); }
 function crewStatsCalc(o){
-  var pers=0,ets=0,vk=0,ek=0,rVk=0,rEk=0,rN=0;
+  var pers=0,ets=0,vk=0,ek=0,rVk=0,rEk=0,rN=0,oN=0,oVk=0;
   ((o&&o.crew)||[]).forEach(function(c){
+    if(c.opt){ oN++; oVk+=crewLineRaw(c); return; }
     var p=Number(c.personen)||0, t=Number(c.tage)||0, lvk=crewLineTotal(c), lek=p*t*(Number(c.ek)||0);
     vk+=lvk; ek+=lek;
     if(crewIsReise(c)){ rN++; rVk+=lvk; rEk+=lek; return; }
     pers+=p; ets+=p*t;
   });
-  return {pers:pers,ets:ets,vk:vk,ek:ek,reiseVk:rVk,reiseEk:rEk,reiseN:rN,marge:(vk>0?(vk-ek)/vk*100:null)};
+  return {pers:pers,ets:ets,vk:vk,ek:ek,reiseVk:rVk,reiseEk:rEk,reiseN:rN,optN:oN,optVk:oVk,marge:(vk>0?(vk-ek)/vk*100:null)};
 }
 function renderCrewStats(){
   var st=document.getElementById("crew-stats"); if(!st) return;
@@ -1954,6 +1959,7 @@ function renderCrewStats(){
     pill("Techniker gesamt",s.pers)+
     pill("Einsatztage (ETs)",s.ets)+
     (s.reiseN?pill("Reisekosten",eur(s.reiseVk)+' <span class="muted" style="font-weight:400;font-size:11px">(EK '+eur(s.reiseEk)+')</span>'):'')+
+    (s.optN?pill("Optionen (nicht enthalten)",eur(s.optVk)+' <span class="muted" style="font-weight:400;font-size:11px">('+s.optN+')</span>',"#c96a00"):'')+
     pill("Summe VK",eur(s.vk))+
     pill("Summe EK",eur(s.ek))+
     pill("Marge",(s.marge==null?"–":(Math.round(s.marge)+" %")),mcol)+
@@ -1961,7 +1967,7 @@ function renderCrewStats(){
 }
 function crewListePDF(){
   if(typeof curOffer==="undefined"||!curOffer){ toast("Kein Angebot geöffnet"); return; }
-  var crew=(curOffer.crew||[]).filter(function(c){ return (String(c.funktion||"").trim()||Number(c.personen)>0)&&!crewIsReise(c); });
+  var crew=(curOffer.crew||[]).filter(function(c){ return (String(c.funktion||"").trim()||Number(c.personen)>0)&&!crewIsReise(c)&&!c.opt; });
   if(!crew.length){ toast("Keine Crew-Kalkulation vorhanden"); return; }
   var jobName=function(id){ if(!id) return "ganzes Angebot"; var j=(curOffer.jobs||[]).find(function(x){return x.id===id;}); return j?(((j.nummer?j.nummer+" ":"")+(j.name||"Job")).trim()):"–"; };
   var pers=0, ets=0;
@@ -2628,7 +2634,7 @@ function gewerkForFunktion(f){
 function transferCalcToPlan(){
   if(!curOffer||!curProject){ return; }
   if(typeof pullOffer==="function") pullOffer();
-  var lines=(curOffer.crew||[]).filter(function(c){return ((c.funktion||"").trim() || (Number(c.personen)||0)>0)&&!crewIsReise(c);});
+  var lines=(curOffer.crew||[]).filter(function(c){return ((c.funktion||"").trim() || (Number(c.personen)||0)>0)&&!crewIsReise(c)&&!c.opt;});
   if(!lines.length){ toast("Crew-Kalkulation ist leer"); return; }
   var totalSlots=lines.reduce(function(s,c){return s+Math.max(1,Number(c.personen)||1);},0);
   if(!confirm("Aus der Crew-Kalkulation "+lines.length+" Position(en) mit insgesamt "+totalSlots+" Personen ins Crew Sheet (Disposition) dieses Projekts übernehmen?\n\nEs werden leere Slots je Funktion angelegt – Namen, Telefon & E-Mail trägst du danach im Crew Sheet ein. Vorhandene Disposition bleibt erhalten.")) return;
@@ -3540,8 +3546,8 @@ function crewKalkPDF(){
   if(!crew.length){ toast("Keine Crew-Kalkulation vorhanden"); return; }
   var jobName=function(id){ if(!id) return "ganzes Angebot"; var j=(curOffer.jobs||[]).find(function(x){return x.id===id;}); return j?(((j.nummer?j.nummer+" ":"")+(j.name||"Job")).trim()):"–"; };
   var sum=0, pers=0, reise=0;
-  var rows=crew.map(function(c){ var s=crewLineTotal(c); sum+=s; if(crewIsReise(c)) reise+=s; else pers+=(Number(c.personen)||0);
-    return '<tr><td><b>'+esc(c.funktion||"")+'</b>'+(c.note?('<div style="font-size:9px;color:#777">'+esc(c.note)+'</div>'):'')+'</td>'+
+  var rows=crew.map(function(c){ var s=crewLineTotal(c); sum+=s; if(c.opt){} else if(crewIsReise(c)) reise+=s; else pers+=(Number(c.personen)||0);
+    return '<tr'+(c.opt?' style="color:#c96a00"':'')+'><td><b>'+esc(c.funktion||"")+'</b>'+(c.opt?' <span style="font-size:9px;font-weight:700">OPTIONAL – nicht in der Summe ('+eur(crewLineRaw(c))+')</span>':'')+''+(c.note?('<div style="font-size:9px;color:#777">'+esc(c.note)+'</div>'):'')+'</td>'+
       '<td>'+esc(jobName(c.jobId))+'</td>'+
       '<td class="r">'+(Number(c.personen)||0)+'</td>'+
       '<td class="r">'+(Number(c.tage)||0)+'</td>'+
@@ -5418,7 +5424,7 @@ function kaRecord(p){
   if(!(vk>0)&&!(ist.sum>0)) return null;
   var base=erl>0?erl:vk, crew=kaCrew(p), days=kaDays(p), f=kaProfil(p);
   if(crew.n&&!crew.days&&days) crew.days=crew.n*days;
-  var reise=0, offPd=0; kostenOffers(p).forEach(function(o){ var abg={}; (o.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abg[j.id]=1; }); (o.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; if(kaIsReise(c)) reise+=crewLineEK(c); else offPd+=(Number(c.personen)||0)*(Number(c.tage)||0); }); });
+  var reise=0, offPd=0; kostenOffers(p).forEach(function(o){ var abg={}; (o.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abg[j.id]=1; }); (o.crew||[]).forEach(function(c){ if(c.opt||(c.jobId&&abg[c.jobId])) return; if(kaIsReise(c)) reise+=crewLineEK(c); else offPd+=(Number(c.personen)||0)*(Number(c.tage)||0); }); });
   ek.reise=reise;
   return {p:p,nr:p.nummer,name:p.name||"",typ:f.typ||"",rolle:f.rolle||"haupt",gewerke:f.gewerke||[],city:kaCity(p),days:days,vk:vk,erl:erl,base:base,ek:ek,ist:ist,hasIst:ist.sum>0,
     margePlan:(vk>0&&ek.sum>0)?(vk-ek.sum)/vk:null, margeIst:(base>0&&ist.sum>0)?(base-ist.sum)/base:null, crewN:crew.n, crewDays:crew.days, offerPd:offPd, reise:reise, bestaetigt:p.ampel==="bestaetigt"};
@@ -5479,7 +5485,7 @@ function kaAnalyse(project,offer){
   }
   /* Crew-Tagessatz */
   var crewPd=0, crewEk=0, reiseEk=0, reiseVk=0, reiseN=0, abgJ={}; (offer.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abgJ[j.id]=1; });
-  (offer.crew||[]).forEach(function(cl){ if(cl.jobId&&abgJ[cl.jobId]) return;
+  (offer.crew||[]).forEach(function(cl){ if(cl.opt||(cl.jobId&&abgJ[cl.jobId])) return;
     if(kaIsReise(cl)){ reiseN++; reiseEk+=crewLineEK(cl); reiseVk+=crewLineTotal(cl); return; }
     var pd=(Number(cl.personen)||0)*(Number(cl.tage)||0); crewPd+=pd; crewEk+=pd*(Number(cl.ek)||0); });
   var crewRateCur=crewPd>0?crewEk/crewPd:null, reisePd=crewPd>0?reiseEk/crewPd:null;
@@ -5533,7 +5539,7 @@ function pauschaleVerteilen(project,offer,betrag){
   var abg={}; (offer.jobs||[]).forEach(function(j){ if(j.status==="abgesagt") abg[j.id]=1; });
   var car={personal:[],transport:[],miete:[]};
   (offer.jobs||[]).forEach(function(j){ if(abg[j.id]) return; (j.groups||[]).forEach(function(g){ var k=g.kat==="personal"?"personal":(g.kat==="transport"?"transport":"miete"); car[k].push({t:"g",o:g,vk:groupVK(g)}); }); });
-  (offer.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; var pd=(Number(c.personen)||0)*(Number(c.tage)||0); if(pd>0) car.personal.push({t:"c",o:c,vk:crewLineTotal(c),pd:pd}); });
+  (offer.crew||[]).forEach(function(c){ if(c.opt||(c.jobId&&abg[c.jobId])) return; var pd=(Number(c.personen)||0)*(Number(c.tage)||0); if(pd>0) car.personal.push({t:"c",o:c,vk:crewLineTotal(c),pd:pd}); });
   (offer.transport||[]).forEach(function(t){ if(t.jobId&&abg[t.jobId]) return; var n=Number(t.anz)||0; if(n>0) car.transport.push({t:"t",o:t,vk:transportLineTotal(t),n:n}); });
   var cats=["personal","transport","miete"].filter(function(k){ return car[k].length; });
   if(!cats.length){ toast("Keine Positionen im Angebot – erst Gruppen, Crew oder Transport anlegen"); return false; }
@@ -5647,7 +5653,7 @@ function kaPayload(A){
     projekt:{nummer:p.nummer,name:p.name,typ:kaLabel(KA_TYPEN,f.typ)||"",rolle:kaLabel(KA_ROLLEN,f.rolle||"haupt"),gewerke:(f.gewerke||[]).map(function(g){return kaLabel(KA_GEWERKE,g);}),ort:A.cur.city,einsatztage:A.cur.days,
       eckdaten:(function(){ var d=(p.dispo&&p.dispo.fields)||{}; return {location:d.location||"",aufbau:d.aufbau||"",probe:d.probe||"",show:d.show||d.datum||"",abbau:d.abbau||"",zeitraum:d.zeitraum||"",inhalte:d.inhalte||""}; })()},
     angebot:{netto:Math.round(A.cur.vk),ek:{personal:Math.round(A.cur.ek.personal),transport:Math.round(A.cur.ek.transport),anmiete:Math.round(A.cur.ek.miete)},marge_plan:A.margePlanCur,crew_personentage:A.crewPd,crew_ek_je_personentag:A.crewRateCur,
-      crew:(curOffer.crew||[]).filter(function(c){ return !kaIsReise(c); }).map(function(c){ return {funktion:c.funktion,personen:c.personen,tage:c.tage,ek:c.ek,vk:c.satz}; }),
+      crew:(curOffer.crew||[]).filter(function(c){ return !kaIsReise(c)&&!c.opt; }).map(function(c){ return {funktion:c.funktion,personen:c.personen,tage:c.tage,ek:c.ek,vk:c.satz}; }),
       reisekosten:(curOffer.crew||[]).filter(kaIsReise).map(function(c){ return {bezeichnung:c.funktion,anzahl:c.personen,tage:c.tage,ek:c.ek,vk:c.satz,ek_gesamt:Math.round(crewLineEK(c))}; }),
       reisekosten_ek_gesamt:Math.round(A.reiseEk),reisekosten_je_personentag:A.reisePd,
       transport:(curOffer.transport||[]).map(function(t){ return {typ:transportLabel(t.typ),anzahl:t.anz,ek:t.ek,vk:t.preis}; }),
@@ -7395,7 +7401,7 @@ function addOfferPositions(k,o,prefix){
     var kat=g.kat==="personal"?"personal":g.kat==="transport"?"transport":"miete";
     k.positionen.push({id:uid(),label:pre+(g.name||"Position"),kat:kat,soll:(ek||null),paid:false,paidDate:"",auto:true}); add++;
   }); });
-  (o.crew||[]).forEach(function(c){ if(c.jobId&&abg[c.jobId]) return; var ek=(Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); k.positionen.push({id:uid(),label:pre+(c.funktion||"Crew"),kat:"personal",soll:(ek||null),paid:false,paidDate:"",auto:true}); add++; });
+  (o.crew||[]).forEach(function(c){ if(c.opt||(c.jobId&&abg[c.jobId])) return; var ek=(Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); k.positionen.push({id:uid(),label:pre+(c.funktion||"Crew"),kat:"personal",soll:(ek||null),paid:false,paidDate:"",auto:true}); add++; });
   (o.transport||[]).forEach(function(t){ if(t.jobId&&abg[t.jobId]) return; var ek=(Number(t.anz)||0)*(Number(t.ek)||0); k.positionen.push({id:uid(),label:pre+(typeof transportLabel==="function"?transportLabel(t.typ):(t.typ||"Transport")),kat:"transport",soll:(ek||null),paid:false,paidDate:"",auto:true}); add++; });
   return add;
 }
@@ -8444,11 +8450,13 @@ function offerHTML(o){
   let crewBlock="";
   if(o.crew && o.crew.length){
     let cn=0, crows="";
+    var hasOpt=false;
     o.crew.forEach(function(c){ cn++; var bez=esc(c.funktion||"Crew")+(c.tage?(" · "+c.tage+" Tag"+(Number(c.tage)===1?"":"e")):"");
-      crows+='<tr><td class="pn">'+cn+'</td><td class="an">'+(c.personen||0)+'</td><td>'+bez+(c.note?('<div style="color:#888;font-size:8.5px;margin-top:1px;font-style:italic">'+esc(c.note).replace(/\n/g,"<br>")+'</div>'):'')+'</td></tr>'; });
+      if(c.opt){ hasOpt=true; bez+=' <span style="color:#c96a00;font-weight:700;font-size:9px">OPTIONAL</span>'+(pausch?'':' <span style="color:#c96a00;font-size:9px">auf Wunsch: '+eur(crewLineRaw(c))+'</span>'); }
+      crows+='<tr'+(c.opt?' style="color:#c96a00"':'')+'><td class="pn">'+cn+'</td><td class="an">'+(c.personen||0)+'</td><td>'+bez+(c.note?('<div style="color:#888;font-size:8.5px;margin-top:1px;font-style:italic">'+esc(c.note).replace(/\n/g,"<br>")+'</div>'):'')+'</td></tr>'; });
     crewBlock='<div class="content"><div class="job-title"><span>Personal</span></div>'+
       '<table class="pos"><thead><tr><th>Pos.</th><th>Anzahl</th><th>Bezeichnung</th></tr></thead><tbody>'+
-      crows+(optGroup?'<tr class="grp-sum"><td></td><td></td><td>Summe Personal: <b>'+eur(crewTotal(o))+'</b></td></tr>':'')+'</tbody></table></div>';
+      crows+(optGroup?'<tr class="grp-sum"><td></td><td></td><td>Summe Personal: <b>'+eur(crewTotal(o))+'</b></td></tr>':'')+'</tbody></table>'+(hasOpt?'<div class="altnote">Optionale Positionen sind nicht im Gesamtpreis enthalten und werden nur auf Wunsch berechnet.</div>':'')+'</div>';
   }
   let transportBlock="";
   if(o.transport && o.transport.length){
@@ -9285,7 +9293,7 @@ function initPlanImport(){
 }
 initPlanImport();
 /* ===== Kalkulations-Rider (Zusammenfassung Jobs EK/VK + Crew + Transport, mit Grafik) ===== */
-function crewLineEK(c){ return (Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); }
+function crewLineEK(c){ return (c&&c.opt)?0:(Number(c.personen)||0)*(Number(c.tage)||0)*(Number(c.ek)||0); }
 function crewEKTotal(o){ return (((o&&o.crew)||[]).reduce(function(s,c){return s+crewLineEK(c);},0)); }
 function transportLineEK(t){ return (Number(t.anz)||0)*(Number(t.ek)||0); }
 function transportEKTotal(o){ return (((o&&o.transport)||[]).reduce(function(s,t){return s+transportLineEK(t);},0)); }
