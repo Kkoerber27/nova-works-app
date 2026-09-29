@@ -574,7 +574,11 @@
           </div>
           <div class="grid3">
             <div class="field"><label>MwSt %</label><input id="m-mwst" type="number" value="19"></div>
+            <div class="field" style="grid-column:span 2"><label>Steuerhinweis im Angebot <span style="font-weight:400;color:#999">(Auslandskunde / steuerfreie Leistung)</span></label>
+              <label style="display:flex;gap:6px;align-items:center;font-size:12.5px;cursor:pointer;margin:4px 0"><input type="checkbox" id="m-steuer-on" style="width:14px;height:14px"> Hinweis drucken (rechtliche Bestimmung unter den Summen)</label>
+              <textarea id="m-steuerhinweis" style="min-height:56px;font-size:12px;display:none" placeholder="Text des Steuerhinweises"></textarea></div>
           </div>
+          <div id="m-steuer-info" style="margin:-4px 0 10px"></div>
           <div class="field"><label>Anschreiben</label><textarea id="m-anschreiben"></textarea></div>
         </div>
 
@@ -1016,7 +1020,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-29.2";
+var APP_VERSION="2026-09-29.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1309,6 +1313,50 @@ function renderProjectSummary(){
 }
 
 /* ---------- offers ---------- */
+/* ===== Auslandskunden: Umsatzsteuer & Hinweis =====
+   Kunde mit Land ≠ Deutschland → Leistungsort beim Leistungsempfänger (§ 3a Abs. 2 UStG, B2B):
+   EU = Reverse-Charge (§ 13b UStG / Art. 196 MwStSystRL), Drittland = in Deutschland nicht steuerbar.
+   Neue Angebote bekommen automatisch 0 % MwSt und den Hinweis; beides bleibt im Editor änderbar. */
+var EU_LAENDER=["belgien","bulgarien","daenemark","dänemark","deutschland","estland","finnland","frankreich","griechenland","irland","italien","kroatien","lettland","litauen","luxemburg","malta","niederlande","oesterreich","österreich","polen","portugal","rumaenien","rumänien","schweden","slowakei","slowenien","spanien","tschechien","ungarn","zypern",
+  "belgium","bulgaria","denmark","germany","estonia","finland","france","greece","ireland","italy","croatia","latvia","lithuania","luxembourg","netherlands","austria","poland","portugal","romania","sweden","slovakia","slovenia","spain","czechia","czech republic","hungary","cyprus",
+  "be","bg","dk","de","ee","fi","fr","gr","el","ie","it","hr","lv","lt","lu","mt","nl","at","pl","pt","ro","se","sk","si","es","cz","hu","cy"];
+function landNorm(s){ return String(s||"").trim().toLowerCase().replace(/\.$/,""); }
+function landIstDE(s){ var l=landNorm(s); return !l||["deutschland","germany","de","d","brd","bundesrepublik deutschland","deu"].indexOf(l)>=0; }
+function custSteuer(c){
+  if(!c||landIstDE(c.land)) return null;
+  var eu=EU_LAENDER.indexOf(landNorm(c.land))>=0;
+  return {abroad:true,eu:eu,land:String(c.land||"").trim(),ustid:String(c.ustid||"").trim()};
+}
+function steuerHinweisText(c,en){
+  var st=custSteuer(c); if(!st) return "";
+  if(en){
+    return st.eu
+      ?("Tax-exempt supply of services: the place of supply is the recipient's place of business in "+st.land+" (Sec. 3a (2) German VAT Act). VAT is payable by the recipient under the reverse-charge mechanism (Sec. 13b German VAT Act / Art. 196 EU VAT Directive)."+(st.ustid?(" Recipient VAT ID: "+st.ustid+"."):"")+" All prices are net, without German VAT.")
+      :("The place of supply is the recipient's place of business in "+st.land+" (Sec. 3a (2) German VAT Act); the service is not taxable in Germany. No German VAT is charged. All prices are net.");
+  }
+  return st.eu
+    ?("Steuerfreie sonstige Leistung: Der Leistungsort liegt gemäß § 3a Abs. 2 UStG beim Leistungsempfänger in "+st.land+". Die Umsatzsteuer schuldet der Leistungsempfänger (Reverse-Charge-Verfahren, § 13b UStG / Art. 196 MwStSystRL)."+(st.ustid?(" USt-IdNr. des Leistungsempfängers: "+st.ustid+"."):"")+" Alle Preise verstehen sich netto ohne deutsche Umsatzsteuer.")
+    :("Der Leistungsort liegt gemäß § 3a Abs. 2 UStG beim Leistungsempfänger in "+st.land+"; die Leistung ist in Deutschland nicht steuerbar. Es wird keine deutsche Umsatzsteuer berechnet. Alle Preise verstehen sich netto.");
+}
+/* Angebot auf steuerfrei stellen (0 % + Hinweis) */
+function steuerAuslandAnwenden(o,c){ var st=custSteuer(c); if(!st) return false; o.mwst=0; o.steuerOn=true; o.steuerAuto=true; o.steuerhinweis=steuerHinweisText(c,false); return true; }
+function renderSteuerInfo(){
+  var box=document.getElementById("m-steuer-info"); if(!box||!curOffer||!curProject) return;
+  var c=(DB.customers||[]).find(function(x){ return x.id===curProject.kunde; }), st=custSteuer(c), o=curOffer, mw=Number(o.mwst)||0;
+  var on=document.getElementById("m-steuer-on"), ta=document.getElementById("m-steuerhinweis");
+  if(on) on.checked=!!o.steuerOn; if(ta){ ta.value=o.steuerhinweis||""; ta.style.display=o.steuerOn?"block":"none"; }
+  var h="";
+  if(st){
+    h+='<div style="padding:8px 12px;border-radius:8px;background:'+(mw>0?'#fff4e0':'#eef6ee')+';border:1px solid '+(mw>0?'#e8b96a':'#b9dbb9')+';font-size:12.5px">'+
+      '<b>Kunde im Ausland ('+esc(st.land)+', '+(st.eu?'EU':'Drittland')+')</b> – '+(st.eu?'Reverse-Charge nach § 13b UStG, keine deutsche Umsatzsteuer.':'in Deutschland nicht steuerbar (§ 3a Abs. 2 UStG), keine deutsche Umsatzsteuer.')+
+      (mw>0?(' <span style="color:#b4632e">Dieses Angebot hat noch '+fmtPct(mw)+' % MwSt.</span> <button class="btn sm" id="m-steuer-apply" type="button">0 % + Hinweis setzen</button>'):' <span style="color:#2d7a4f">MwSt 0 %'+(o.steuerOn?', Hinweis wird gedruckt':', Hinweis ist aus')+'.</span>')+
+      ((st.eu&&!st.ustid)?'<div style="color:#c0392b;margin-top:4px">⚠ USt-IdNr. des Kunden fehlt – für Reverse-Charge in der EU erforderlich (in den Adressdaten eintragen).</div>':'')+'</div>';
+  } else if(o.steuerOn||mw===0){
+    h+='<div class="muted" style="font-size:12px">Kunde in Deutschland'+(mw===0?' – MwSt steht auf 0 %, bitte prüfen.':'')+(o.steuerOn?' Der Steuerhinweis wird gedruckt.':'')+'</div>';
+  }
+  box.innerHTML=h;
+  var ap=document.getElementById("m-steuer-apply"); if(ap) ap.onclick=function(){ steuerAuslandAnwenden(o,c); document.getElementById("m-mwst").value=0; save(); renderSummary(); renderSteuerInfo(); toast("MwSt 0 % und Steuerhinweis gesetzt"); };
+}
 function newOffer(){
   pullProject();
   if(curProject&&!(curProject.profil&&curProject.profil.typ)&&!newOffer._skip){ openProfilDialog(curProject,function(){ newOffer._skip=true; try{ newOffer(); } finally { newOffer._skip=false; } }); return; }
@@ -1319,6 +1367,7 @@ function newOffer(){
     zahlung:(cust&&cust.zahlung)?cust.zahlung:"50%/50%", mwst:19,
     anschreiben:"vielen Dank für Ihr Interesse an unseren Produkten und Leistungen. Gerne unterbreiten wir Ihnen folgendes Angebot:",
     terms:DEFAULT_TERMS, crew:[], jobs:[ newJob(p.nummer+".01") ] };
+  if(custSteuer(cust)){ steuerAuslandAnwenden(o,cust); toast("Auslandskunde ("+custSteuer(cust).land+"): MwSt 0 % und Steuerhinweis gesetzt"); }
   p.offers.push(o); save(); openOffer(o.id);
 }
 function dupOffer(id){
@@ -1355,6 +1404,7 @@ function openOffer(id){
   document.getElementById("m-mwst").value=o.mwst??19;
   document.getElementById("m-anschreiben").value=o.anschreiben||"";
   document.getElementById("m-terms").value=o.terms||"";
+  if(typeof renderSteuerInfo==="function") renderSteuerInfo();
   renderJobs();
   if(!curOffer.crew) curOffer.crew=[];
   renderCrew();
@@ -1371,9 +1421,12 @@ function pullOffer(){
   o.titel=val("m-titel"); o.status=puNs; o.datum=val("m-datum");
   o.gueltig=val("m-gueltig"); o.zahlung=val("m-zahlung"); o.mwst=parseFloat(val("m-mwst"))||0;
   o.anschreiben=val("m-anschreiben"); o.terms=val("m-terms");
+  var so=document.getElementById("m-steuer-on"), sh=document.getElementById("m-steuerhinweis");
+  if(so){ o.steuerOn=so.checked; } if(sh){ var t=sh.value; if(o.steuerhinweis!==t){ o.steuerhinweis=t; o.steuerAuto=false; } }
 }
-["m-titel","m-status","m-datum","m-gueltig","m-zahlung","m-mwst","m-anschreiben","m-terms"]
-  .forEach(id=>document.getElementById(id).addEventListener("input",()=>{ pullOffer(); if(id==="m-mwst") renderSummary(); }));
+["m-titel","m-status","m-datum","m-gueltig","m-zahlung","m-mwst","m-anschreiben","m-terms","m-steuerhinweis"]
+  .forEach(id=>document.getElementById(id).addEventListener("input",()=>{ pullOffer(); if(id==="m-mwst"){ renderSummary(); renderSteuerInfo(); } }));
+document.getElementById("m-steuer-on").addEventListener("change",()=>{ var o=curOffer; if(!o) return; o.steuerOn=document.getElementById("m-steuer-on").checked; if(o.steuerOn&&!o.steuerhinweis){ var c=(DB.customers||[]).find(x=>x.id===curProject.kunde); o.steuerhinweis=steuerHinweisText(c,false)||"Steuerfreie Leistung – es wird keine Umsatzsteuer berechnet."; o.steuerAuto=true; } save(); renderSteuerInfo(); });
 
 document.getElementById("ed-back").onclick=()=>{ pullOffer(); save(); renderProjectDetail(); showView("projekt"); };
 document.getElementById("ed-save").onclick=()=>{ pullOffer(); save(); toast("Gespeichert"); if(typeof renderKalkAssistent==="function") renderKalkAssistent(); };
@@ -1687,6 +1740,7 @@ function doMoveGroupNewOffer(){
   var copy=(_grpMode==="copy"); var item=copy?cloneGroup(g):g;
   if(!copy) srcJob.groups=srcJob.groups.filter(function(x){return x!==g;});
   job.groups.push(item);
+  if(custSteuer(cust)) steuerAuslandAnwenden(o,cust);
   p.offers.push(o);
   save(); closeModal("movegrp-bg");
   toast((copy?"Position in neues Angebot kopiert":"Position in neues Angebot verschoben")+(p!==curProject?(" · "+(p.nummer||p.name||"Projekt")):""));
@@ -8382,7 +8436,7 @@ function offerHTML(o){
   const jobLines = jobLinesArr.join("");
 
   const sublinesHtml=`<div class="subline"><span>Summe Mietmaterial:</span><span>${eur(t.miete)}</span></div><div class="subline"><span>Summe Personal:</span><span>${eur(t.personal)}</span></div><div class="subline"><span>Summe Transport:</span><span>${eur(t.transport)}</span></div>`;
-  const totalsHtml=`<table class="totals"><tr class="net"><td>${pausch?(EN?'Lump sum (net)':'Pauschalpreis (netto)'):'Nettosumme'}:</td><td class="r">${eur(t.netto)}</td></tr><tr><td>MwSt ${fmtPct(o.mwst)} %:</td><td class="r">${eur(t.mwst)}</td></tr><tr class="gross"><td>Bruttosumme:</td><td class="r">${eur(t.brutto)}</td></tr></table>`;
+  const totalsHtml=`<table class="totals"><tr class="net"><td>${pausch?(EN?'Lump sum (net)':'Pauschalpreis (netto)'):'Nettosumme'}:</td><td class="r">${eur(t.netto)}</td></tr><tr><td>${(o.steuerOn&&!(Number(o.mwst)>0))?(EN?'VAT 0 % (see note)':'Umsatzsteuer 0 % (siehe Hinweis)'):('MwSt '+fmtPct(o.mwst)+' %')}:</td><td class="r">${eur(t.mwst)}</td></tr><tr class="gross"><td>${EN?'Total':'Bruttosumme'}:</td><td class="r">${eur(t.brutto)}</td></tr></table>${(o.steuerOn&&o.steuerhinweis)?`<div style="margin-top:8px;font-size:9px;color:#555;line-height:1.45;border-left:2px solid #b8973f;padding-left:8px">${esc((EN&&o.steuerAuto)?(steuerHinweisText(c,true)||o.steuerhinweis):o.steuerhinweis)}</div>`:''}`;
   const priceSummary=(optTotal==="sub"?(jobLines+sublinesHtml):"")+(optTotal!=="none"?totalsHtml:"");
   const cover=`<div class="cover">
     <div class="sender">${COMPANY.name} - ${COMPANY.strasse} - ${COMPANY.plz} - ${COMPANY.ort}</div>
@@ -8493,7 +8547,7 @@ function zusaetzeHTML(m){
   z.forEach(function(x){ n++;
     rows+='<tr><td class="pn">'+n+'</td><td class="an" style="font-weight:400;white-space:nowrap">'+esc(fmtDateAny(x.datum||""))+'</td><td>'+esc(x.label||"Zusatz")+(x.note?('<div style="color:#888;font-size:8.5px;margin-top:1px;font-style:italic">'+esc(x.note).replace(/\n/g,"<br>")+'</div>'):'')+'</td>'+(preise?('<td class="r">'+eur(Number(x.amount)||0)+'</td>'):'')+'</tr>'; });
   rows+='<tr class="grp-sum"><td colspan="'+(preise?4:3)+'" class="r">Summe Zusatzleistungen: <b>'+eur(netto)+'</b></td></tr>';
-  const totalsHtml=`<table class="totals"><tr class="net"><td>Nettosumme:</td><td class="r">${eur(netto)}</td></tr><tr><td>MwSt ${fmtPct(m.mwst)} %:</td><td class="r">${eur(mwst)}</td></tr><tr class="gross"><td>Bruttosumme:</td><td class="r">${eur(netto+mwst)}</td></tr></table>`;
+  const totalsHtml=`<table class="totals"><tr class="net"><td>Nettosumme:</td><td class="r">${eur(netto)}</td></tr><tr><td>${(m.steuerOn&&!(Number(m.mwst)>0))?'Umsatzsteuer 0 % (siehe Hinweis)':('MwSt '+fmtPct(m.mwst)+' %')}:</td><td class="r">${eur(mwst)}</td></tr><tr class="gross"><td>Bruttosumme:</td><td class="r">${eur(netto+mwst)}</td></tr></table>${(m.steuerOn&&m.steuerhinweis)?`<div style="margin-top:8px;font-size:9px;color:#555;line-height:1.45;border-left:2px solid #b8973f;padding-left:8px">${esc(m.steuerhinweis)}</div>`:''}`;
   const cover=`<div class="cover">
     <div class="sender">${COMPANY.name} - ${COMPANY.strasse} - ${COMPANY.plz} - ${COMPANY.ort}</div>
     <div class="cover-grid">
@@ -8556,7 +8610,7 @@ function zusaetzePDFGo(project, preise){
   if(!z.length){ toast("Noch keine Zusätze erfasst"); return; }
   var acc=accOffer(project);
   var merged={ nummer:project.nummer, projekt:project.name, kunde:project.kunde, ansprechpartner:project.ansprechpartner,
-    datum:today(), mwst:(acc&&acc.mwst!=null&&acc.mwst!=="")?acc.mwst:19, zusaetze:z, preise:(preise!==false),
+    datum:today(), mwst:(acc&&acc.mwst!=null&&acc.mwst!=="")?acc.mwst:19, steuerOn:!!(acc&&acc.steuerOn), steuerhinweis:(acc&&acc.steuerhinweis)||"", zusaetze:z, preise:(preise!==false),
     anschreiben:"im Rahmen des laufenden Projekts sind die nachfolgend aufgeführten Zusatzleistungen angefallen bzw. von Ihnen beauftragt worden. Diese werden zusätzlich zum bestehenden Angebot berechnet.",
     schluss:"Die Zusatzleistungen werden mit der Schlussrechnung abgerechnet." };
   var clean=zusaetzeHTML(merged);
