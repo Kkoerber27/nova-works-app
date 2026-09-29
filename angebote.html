@@ -185,6 +185,8 @@
   .inf-entry.mine{background:#f6f9f4;border-color:#cfe0c9}
   .inf-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;margin-bottom:4px}
   .inf-head button{background:transparent;border:0;cursor:pointer;font-size:14px;color:#777;padding:2px 4px}
+  .inf-head .inf-take{font-size:11.5px;border:1px solid var(--line);border-radius:6px;padding:3px 8px;color:var(--ink);background:#fff}
+  .inf-taken{margin-top:6px;font-size:11px;color:#2d7a4f}
   .inf-badge{background:var(--gold-bg);color:#8a6d3b;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700}
   .inf-text{white-space:pre-wrap;line-height:1.5}
   .inf-items{display:flex;flex-direction:column;gap:4px;margin-top:4px}
@@ -1045,7 +1047,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-30.1";
+var APP_VERSION="2026-09-30.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -2918,7 +2920,7 @@ function renderDispo(){
   if(typeof dispoSharePull==="function"){ try{ dispoSharePull(curProject); }catch(e){} }
   var d=dispoOf(curProject);
   var hb=document.getElementById("pd-add-assign"); if(hb) hb.style.display="none";
-  var tabs=[["infos","Infos/VB"],["crew","Crew Sheet"],["schichten","Schichtplan"],["daysheet","Day Sheet"],["tec","Tec Specs"],["bauzeit","Bauzeitenplan"],["hotels","Hotelplanung"],["catering","Crew Catering"],["funk","Funkgeräte"],["eck","Eckdaten"],["tour","Tour"],["leitung","Leitung"]];
+  var tabs=[["infos","Infos/VB"],["crew","Crew Sheet"],["eck","Eckdaten"],["hotels","Hotelplanung"],["bauzeit","Bauzeitenplan"],["schichten","Schichtplan"],["daysheet","Day Sheet"],["tec","Tec Specs"],["catering","Crew Catering"],["funk","Funkgeräte"],["tour","Tour"],["leitung","Leitung"]];
   var bar='<div class="toolbar" style="margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px">'+
     tabs.map(function(t){return '<button class="btn sm dispo-tab'+(dispoTab===t[0]?' primary':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
   var body="";
@@ -5442,7 +5444,8 @@ function infoEntryHtml(d,e){
   if(e.items&&e.items.length){ var done=e.items.filter(function(x){ return x.done; }).length; body+='<div class="inf-items">'+e.items.map(function(it,i){ return '<label class="inf-item'+(it.done?' done':'')+'"><input type="checkbox" class="inf-chk" data-eid="'+esc(e.id)+'" data-i="'+i+'"'+(it.done?' checked':'')+'><span>'+esc(it.t)+'</span></label>'; }).join("")+'<div class="muted" style="font-size:11px;margin-top:2px">'+done+' von '+e.items.length+' erledigt</div></div>'; }
   if(e.fotos&&e.fotos.length) body+='<div class="inf-fotos">'+e.fotos.map(function(f){ var src=infoPhotoSrc(f); return '<div class="inf-foto" data-fid="'+esc(f.id)+'"'+(src?'':' data-load="1"')+'>'+(src?('<img src="'+src+'" alt="">'):'<div class="inf-foto-ph">⏳</div>')+'</div>'; }).join("")+'</div>';
   return '<div class="inf-entry'+(mine?' mine':'')+'" data-eid="'+esc(e.id)+'"><div class="inf-head"><span class="inf-badge">'+ti.icon+' '+esc(ti.label)+'</span><b>'+esc(infoNameOf(e))+'</b><span class="muted">'+infoWhen(e.ts)+(e.edited?' · bearbeitet':'')+'</span><span style="flex:1"></span>'+
-    (mine?('<button class="inf-edit" title="Bearbeiten">✎</button><button class="inf-del" title="Löschen">🗑</button>'):'')+'</div>'+body+'</div>';
+    '<button class="inf-take" title="Daten aus diesem Eintrag in Eckdaten, Hotelplanung, Bauzeitenplan oder Crew-Sheet-Notizen übernehmen">→ Übernehmen</button>'+(mine?('<button class="inf-edit" title="Bearbeiten">✎</button><button class="inf-del" title="Löschen">🗑</button>'):'')+'</div>'+body+
+    ((e.uebernommen&&e.uebernommen.length)?('<div class="inf-taken">'+e.uebernommen.map(function(u){ return '✓ '+esc(u.ziel)+' <span class="muted">'+infoWhen(u.ts)+'</span>'; }).join(" · ")+'</div>'):'')+'</div>';
 }
 function infoWire(d){
   var el=document.getElementById("pd-crewplan"); if(!el) return;
@@ -5459,6 +5462,7 @@ function infoWire(d){
   if(send) send.onclick=async function(){ send.disabled=true; try{ var e=await infoAdd(d,infoTyp,ta?ta.value:"",files.slice()); if(e){ files.length=0; if(infoTyp==="foto") infoTyp="notiz"; renderDispo(); toast("Eingetragen"); } }finally{ send.disabled=false; } };
   var pr=document.getElementById("inf-print"); if(pr) pr.onclick=function(){ infoPrint(d); };
   el.querySelectorAll(".inf-chk").forEach(function(cb){ cb.onchange=function(){ var e=infoList(d).find(function(x){ return x.id===cb.dataset.eid; }); if(!e||!e.items) return; e.items[+cb.dataset.i].done=cb.checked; e.edited=Date.now(); save(); renderDispo(); }; });
+  el.querySelectorAll(".inf-take").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(e) openInfoTake(d,e); }; });
   el.querySelectorAll(".inf-del").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(!e) return; if(!confirm("Eintrag von "+infoNameOf(e)+" ("+infoWhen(e.ts)+") löschen?")) return; infoDelete(d,e); renderDispo(); }; });
   el.querySelectorAll(".inf-edit").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(!e) return; var cur=e.items?e.items.map(function(x){ return x.t; }).join("\n"):(e.text||""); var t=prompt(e.items?"Listenpunkte (eine Zeile je Punkt):":"Text bearbeiten:",cur); if(t===null) return; if(e.items){ var old=e.items; e.items=t.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){ var o=old.find(function(x){ return x.t===l; }); return {t:l,done:!!(o&&o.done)}; }); } else e.text=t.trim(); e.edited=Date.now(); save(); renderDispo(); }; });
   el.querySelectorAll(".inf-foto").forEach(function(box){
@@ -5486,6 +5490,65 @@ function infoPrint(d){
   };
   if(!pending.length){ go(); return; }
   var n=0; toast(pending.length+" Foto"+(pending.length>1?"s werden":" wird")+" geladen …"); pending.forEach(function(fid){ infoPhotoLoad(fid,function(){ n++; if(n>=pending.length) go(); }); });
+}
+/* ---- Aus einem Info-Eintrag Daten in andere Reiter übernehmen (Eckdaten, Hotel, Bauzeitenplan, Crew-Sheet-Notizen) ---- */
+var INFO_TARGETS=[
+  {k:"eck:location",label:"Eckdaten · Location / Adresse"},{k:"eck:veranstaltung",label:"Eckdaten · Veranstaltung"},{k:"eck:zeitraum",label:"Eckdaten · Zeitraum"},
+  {k:"eck:aufbau",label:"Eckdaten · Aufbau"},{k:"eck:probe",label:"Eckdaten · Probe"},{k:"eck:datum",label:"Eckdaten · Datum (Show)"},{k:"eck:showzeit",label:"Eckdaten · Showzeit"},{k:"eck:abbau",label:"Eckdaten · Abbau"},
+  {k:"eck:inhalte",label:"Eckdaten · Inhalte"},{k:"eck:notizen",label:"Eckdaten · Notizen"},{k:"crew:notizen",label:"Crew Sheet · Notizen"},
+  {k:"hotel",label:"Hotelplanung · neues Hotel"},{k:"bauzeit",label:"Bauzeitenplan · neuer Eintrag"}];
+function infoTargetLabel(k){ for(var i=0;i<INFO_TARGETS.length;i++) if(INFO_TARGETS[i].k===k) return INFO_TARGETS[i].label; return k; }
+/* Erkennung im Text: Datum, Uhrzeiten, Adresse (PLZ Ort / Straße), Hotelname */
+function infoDetect(text){
+  var t=String(text||""), out={dates:[],times:[],addr:"",hotel:""};
+  (t.match(/\b\d{1,2}\.\d{1,2}\.(?:\d{4}|\d{2})\b/g)||[]).forEach(function(x){ if(out.dates.indexOf(x)<0) out.dates.push(x); });
+  (t.match(/\b([01]?\d|2[0-3])[:.]([0-5]\d)\b(?!\.\d)/g)||[]).forEach(function(x){ x=x.replace(".",":"); if(x.length===4) x="0"+x; if(out.times.indexOf(x)<0) out.times.push(x); });
+  (t.match(/(?<![\d:.])\b(\d{1,2})\s*(?:Uhr|h)\b/gi)||[]).forEach(function(x){ var h=x.match(/\d{1,2}/)[0]; var v=("0"+h).slice(-2)+":00"; if(out.times.indexOf(v)<0) out.times.push(v); });
+  var lines=t.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  lines.forEach(function(l){ if(!out.addr&&(/\b\d{5}\s+[A-ZÄÖÜ][\wäöüß-]+/.test(l)||/\b(str(\.|aße|asse)|weg|platz|allee|gasse|ring)\b.*\d/i.test(l))) out.addr=l.replace(/^(adresse|location|ort)\s*:\s*/i,""); });
+  lines.forEach(function(l){ if(!out.hotel&&/hotel|pension|gasthof|motel/i.test(l)) out.hotel=l.replace(/^(hotel|unterkunft)\s*:\s*/i,""); });
+  return out;
+}
+function openInfoTake(d,e){
+  var bg=document.getElementById("inftake-bg");
+  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="inftake-bg";
+    bg.innerHTML='<div class="modal sm"><div class="modal-head"><h3>Aus Eintrag übernehmen</h3><button class="x" data-close="inftake-bg">×</button></div><div class="modal-body" id="inftake-body"></div><div class="modal-foot"><button class="btn" data-close="inftake-bg">Abbrechen</button><button class="btn primary" id="inftake-go">Übernehmen</button></div></div>';
+    document.body.appendChild(bg); bg.onclick=function(ev){ if(ev.target===bg) closeModal("inftake-bg"); };
+    bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("inftake-bg"); }; });
+  }
+  var text=e.text||(e.items?e.items.map(function(x){ return (x.done?"☑ ":"☐ ")+x.t; }).join("\n"):""), det=infoDetect(text), f=d.fields||{};
+  var guess="eck:notizen"; if(det.hotel) guess="hotel"; else if(det.addr) guess="eck:location"; else if(/show/i.test(text)&&det.times.length) guess="eck:showzeit"; else if(/aufbau/i.test(text)&&det.times.length) guess="eck:aufbau"; else if(/abbau/i.test(text)&&det.times.length) guess="eck:abbau"; else if(det.dates.length&&det.times.length>=2) guess="bauzeit";
+  var body=document.getElementById("inftake-body");
+  var chip=function(v,cls){ return '<button type="button" class="btn sm inft-chip" data-v="'+esc(v)+'" data-cls="'+cls+'" style="margin:2px 4px 2px 0">'+esc(v)+'</button>'; };
+  body.innerHTML='<div class="muted" style="font-size:12px;margin-bottom:8px">Eintrag von <b>'+esc(infoNameOf(e))+'</b> · '+infoWhen(e.ts)+'</div>'+
+    '<div style="white-space:pre-wrap;background:#fbfaf7;border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px;max-height:140px;overflow:auto;margin-bottom:10px">'+esc(text||"(kein Text)")+'</div>'+
+    ((det.dates.length||det.times.length||det.addr||det.hotel)?('<div class="muted" style="font-size:11.5px;margin-bottom:2px">Erkannt – anklicken, um es ins Feld zu setzen:</div><div style="margin-bottom:8px">'+det.dates.map(function(x){ return chip(x,"date"); }).join("")+det.times.map(function(x){ return chip(x,"time"); }).join("")+(det.addr?chip(det.addr,"addr"):"")+(det.hotel?chip(det.hotel,"hotel"):"")+'</div>'):'')+
+    '<div class="field"><label>Ziel</label><select id="inft-target" style="width:100%">'+INFO_TARGETS.map(function(t){ return '<option value="'+t.k+'"'+(t.k===guess?' selected':'')+'>'+esc(t.label)+'</option>'; }).join("")+'</select></div>'+
+    '<div id="inft-fields"></div>';
+  var fields=document.getElementById("inft-fields"), sel=document.getElementById("inft-target");
+  var renderFields=function(){
+    var k=sel.value, h="";
+    if(k.indexOf("eck:")===0||k==="crew:notizen"){ var key=k.split(":")[1], cur=String(f[key]||""), pre=(k==="eck:location"&&det.addr)?det.addr:(k==="eck:showzeit"||k==="eck:aufbau"||k==="eck:abbau"||k==="eck:probe")?(det.times.length?(det.dates[0]?(det.dates[0]+" "):"")+det.times.slice(0,2).join(" – "):text):(k==="eck:datum"||k==="eck:zeitraum")?(det.dates.slice(0,2).join(" – ")||text):text;
+      h+='<div class="field"><label>Wert</label><textarea id="inft-val" style="min-height:64px">'+esc(pre)+'</textarea></div>'+(cur?('<div class="muted" style="font-size:11.5px;margin:-4px 0 6px">Bisher: '+esc(cur.slice(0,120))+'</div><label style="display:flex;gap:6px;align-items:center;font-size:12.5px"><input type="checkbox" id="inft-append"'+((k==="eck:notizen"||k==="crew:notizen"||k==="eck:inhalte")?' checked':'')+'> an bisherigen Wert anhängen statt ersetzen</label>'):''); }
+    else if(k==="hotel"){ h+='<div class="field"><label>Hotelname</label><input id="inft-hname" value="'+esc(det.hotel||"")+'"></div><div class="field"><label>Adresse</label><input id="inft-haddr" value="'+esc(det.addr||"")+'"></div><div class="field"><label>Kontakt / Buchung (optional)</label><input id="inft-hkont" value=""></div>'; }
+    else if(k==="bauzeit"){ h+='<div class="grid3"><div class="field"><label>Datum (TT.MM.JJJJ)</label><input id="inft-bdat" value="'+esc(det.dates[0]||"")+'"></div><div class="field"><label>von</label><input id="inft-bvon" value="'+esc(det.times[0]||"")+'"></div><div class="field"><label>bis</label><input id="inft-bbis" value="'+esc(det.times[1]||"")+'"></div></div><div class="field"><label>Beschreibung</label><input id="inft-bbez" value="'+esc(text.split(/\n/)[0].slice(0,80))+'"></div><div class="field"><label>Phase</label><select id="inft-bph"><option value="aufbau">Aufbau</option><option value="probe">Probe</option><option value="show">Show</option><option value="abbau">Abbau</option></select></div>'; }
+    fields.innerHTML=h;
+    if(k==="bauzeit"&&det.dates.length===0&&/abbau/i.test(text)) fields.querySelector("#inft-bph").value="abbau";
+  };
+  sel.onchange=renderFields; renderFields();
+  body.querySelectorAll(".inft-chip").forEach(function(c){ c.onclick=function(){ var v=c.dataset.v, cls=c.dataset.cls, k=sel.value, q=function(id){ return document.getElementById(id); };
+    if(k==="bauzeit"){ if(cls==="date"&&q("inft-bdat")) q("inft-bdat").value=v; else if(cls==="time"){ if(q("inft-bvon")&&!q("inft-bvon").value) q("inft-bvon").value=v; else if(q("inft-bbis")) q("inft-bbis").value=v; } else if(q("inft-bbez")) q("inft-bbez").value=v; }
+    else if(k==="hotel"){ if(cls==="addr"&&q("inft-haddr")) q("inft-haddr").value=v; else if(q("inft-hname")) q("inft-hname").value=v; }
+    else { var ta=q("inft-val"); if(ta){ ta.value=(ta.value&&ta.value!==text?(ta.value+" "):"")+v; ta.focus(); } } }; });
+  document.getElementById("inftake-go").onclick=function(){
+    var k=sel.value, q=function(id){ var x=document.getElementById(id); return x?x.value.trim():""; }, ziel=infoTargetLabel(k);
+    if(k.indexOf("eck:")===0||k==="crew:notizen"){ var key=k.split(":")[1], v=q("inft-val"); if(!v){ toast("Wert fehlt"); return; } var ap=document.getElementById("inft-append"); if(!d.fields) d.fields={}; d.fields[key]=(ap&&ap.checked&&d.fields[key])?(String(d.fields[key])+"\n"+v):v; }
+    else if(k==="hotel"){ var nm=q("inft-hname"); if(!nm){ toast("Hotelname fehlt"); return; } if(!d.hotels) d.hotels=[]; var maxId=d.hotels.reduce(function(m,h){ return Math.max(m,+h.id||0); },0), cols=["#0078d4","#2d7a4f","#b4493f","#7d5ba6","#e0a800"]; d.hotels.push({id:maxId+1,color:cols[d.hotels.length%cols.length],name:nm,adresse:q("inft-haddr"),kontakt:q("inft-hkont"),booking:""}); }
+    else if(k==="bauzeit"){ var dt=q("inft-bdat"); if(!dt){ toast("Datum fehlt"); return; } if(!d.bauzeit) d.bauzeit=[]; d.bauzeit.push({datum:dt,von:q("inft-bvon"),bis:q("inft-bbis"),beschreibung:q("inft-bbez"),gewerke:"",maschinen:"",phase:q("inft-bph")||"aufbau"}); if(d.schichttage&&!d.schichttage.find(function(t){ return t.datum===dt; })) d.schichttage.push({datum:dt,phase:q("inft-bph")||"aufbau"}); }
+    if(!e.uebernommen) e.uebernommen=[]; e.uebernommen.push({ziel:ziel,ts:Date.now()}); e.edited=Date.now();
+    save(); closeModal("inftake-bg"); toast("Übernommen → "+ziel); renderDispo();
+  };
+  openModal("inftake-bg");
 }
 /* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
