@@ -1016,7 +1016,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-26.1";
+var APP_VERSION="2026-09-29.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1509,7 +1509,8 @@ function renderGroup(job,g){
     <div class="grp-foot">
       <button class="btn sm" data-addmat>+ Material</button>
       <button class="btn sm" data-addfree>+ Freitext</button>
-      <button class="btn sm" data-movesel title="Ausgewählte Zeilen in andere Gruppe verschieben">⇄ Auswahl verschieben</button>
+      <button class="btn sm" data-movesel title="Ausgewählte Zeilen in eine andere Gruppe verschieben – auch in ein anderes Angebot oder Projekt">⇄ Auswahl verschieben</button>
+      <button class="btn sm" data-copysel title="Ausgewählte Zeilen kopieren – in eine andere Gruppe dieses Angebots, in ein anderes Angebot oder Projekt">⧉ Auswahl kopieren</button>
       <button class="btn sm danger" data-delzero title="Alle Zeilen mit 0 € EK aus dieser Positionsgruppe löschen">🗑 0-EK-Artikel</button>
       <div class="priceinp" title="Einkauf für die komplette Gruppe (intern — erscheint nie im Kundenangebot). Leer/0 = Summe der Zeilen-EKs."><span class="muted">EK Pauschale:</span>
         <input type="number" step="0.01" value="${g.ek||0}" data-gek> <span class="muted">€</span></div>
@@ -1530,7 +1531,8 @@ function renderGroup(job,g){
   var _so=el.querySelector("[data-showdetail]"); _so.checked=!!g.showDetail; _so.onchange=e=>{ g.showDetail=e.target.checked; };
   el.querySelector("[data-addmat]").onclick=()=>openPicker(job.id,g.id);
   el.querySelector("[data-addfree]").onclick=()=>{ g.lines.push({id:uid(),anz:1,bez:"",einheit:"",wg:""}); renderJobs(); };
-  el.querySelector("[data-movesel]").onclick=()=>{ var cbs=el.querySelectorAll("tbody input.lsel:checked"); if(!cbs.length){ toast("Keine Zeilen ausgewählt (Häkchen links setzen)"); return; } var lines=[].map.call(cbs,function(cb){return g.lines[+cb.dataset.li];}).filter(Boolean); openMoveLines(job,g,lines); };
+  el.querySelector("[data-movesel]").onclick=()=>{ var cbs=el.querySelectorAll("tbody input.lsel:checked"); if(!cbs.length){ toast("Keine Zeilen ausgewählt (Häkchen links setzen)"); return; } var lines=[].map.call(cbs,function(cb){return g.lines[+cb.dataset.li];}).filter(Boolean); openMoveLines(job,g,lines,"move"); };
+  el.querySelector("[data-copysel]").onclick=()=>{ var cbs=el.querySelectorAll("tbody input.lsel:checked"); if(!cbs.length){ toast("Keine Zeilen ausgewählt (Häkchen links setzen)"); return; } var lines=[].map.call(cbs,function(cb){return g.lines[+cb.dataset.li];}).filter(Boolean); openMoveLines(job,g,lines,"copy"); };
   el.querySelector("[data-delzero]").onclick=()=>{
     var zeros=(g.lines||[]).filter(function(l){ return lek(l)===0; });
     if(!zeros.length){ toast("Keine Zeilen mit 0 € EK in dieser Gruppe"); return; }
@@ -1558,25 +1560,59 @@ function ensureMoveModal(){
   bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("movegrp-bg"); }; });
   return bg;
 }
-function moveLinesTo(srcG,lines,targetG){ srcG.lines=srcG.lines.filter(function(l){return lines.indexOf(l)<0;}); if(!targetG.lines)targetG.lines=[]; targetG.lines=targetG.lines.concat(lines); save(); renderJobs(); toast(lines.length+" Zeile(n) verschoben"); }
-function openMoveLines(srcJob,srcG,lines){
+function moveLinesTo(srcG,lines,targetG,mode,targetOffer,targetProj){
+  var copy=(mode==="copy");
+  if(!targetG.lines) targetG.lines=[];
+  if(copy){ var cl=lines.map(function(l){ var c=JSON.parse(JSON.stringify(l)); c.id=uid(); return c; }); targetG.lines=targetG.lines.concat(cl); }
+  else { srcG.lines=srcG.lines.filter(function(l){return lines.indexOf(l)<0;}); targetG.lines=targetG.lines.concat(lines); }
+  save(); renderJobs(); if(typeof renderSummary==="function") renderSummary();
+  var where=(targetProj&&targetProj!==curProject)?(" nach "+(targetProj.nummer||"")+" · "+(targetOffer?(targetOffer.titel||"Angebot"):"")):((targetOffer&&targetOffer!==curOffer)?(" nach „"+(targetOffer.titel||"Angebot")+"“"):"");
+  toast(lines.length+" Zeile(n) "+(copy?"kopiert":"verschoben")+where+" → "+(targetG.name||"Gruppe"));
+}
+var _mlProj=null, _mlMode="move";
+function openMoveLines(srcJob,srcG,lines,mode){
+  _mlProj=curProject; _mlMode=mode||"move";
   var bg=document.getElementById("moveln-bg");
   if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="moveln-bg";
-    bg.innerHTML='<div class="modal sm"><div class="modal-head"><h3>Material in andere Gruppe verschieben</h3><button class="x" data-close="moveln-bg">×</button></div><div class="modal-body" id="moveln-body"></div><div class="modal-foot"><button class="btn" data-close="moveln-bg">Abbrechen</button></div></div>';
+    bg.innerHTML='<div class="modal sm"><div class="modal-head"><h3 id="moveln-title">Material in andere Gruppe verschieben</h3><button class="x" data-close="moveln-bg">×</button></div><div class="modal-body" id="moveln-body" style="max-height:70vh;overflow:auto"></div><div class="modal-foot"><button class="btn" data-close="moveln-bg">Abbrechen</button></div></div>';
     document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("moveln-bg"); };
     bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("moveln-bg"); }; });
   }
-  var body=document.getElementById("moveln-body");
-  var h='<div class="muted" style="margin-bottom:10px"><b>'+lines.length+'</b> Zeile(n) verschieben nach:</div>';
-  (curOffer.jobs||[]).forEach(function(j){
-    h+='<div style="margin:10px 0 4px;font-weight:600;font-size:12px">'+(j.nummer?esc(j.nummer)+" ":"")+esc(j.name||"Job")+'</div>';
-    (j.groups||[]).forEach(function(tg){ var cur=(tg===srcG);
-      h+='<button class="btn sm" style="display:block;width:100%;text-align:left;margin:3px 0"'+(cur?' disabled':'')+' data-jt="'+j.id+'" data-gt="'+tg.id+'">→ '+esc(tg.name||"Gruppe")+(cur?' (aktuelle Gruppe)':'')+'</button>';
+  renderMoveLinesTargets(srcJob,srcG,lines);
+  openModal("moveln-bg");
+}
+function renderMoveLinesTargets(srcJob,srcG,lines){
+  var body=document.getElementById("moveln-body"), copy=(_mlMode==="copy"), p=_mlProj||curProject;
+  var tt=document.getElementById("moveln-title"); if(tt) tt.textContent=copy?"Ausgewählte Zeilen kopieren":"Ausgewählte Zeilen verschieben";
+  var h='<div style="display:flex;gap:14px;align-items:center;margin-bottom:10px;font-size:12.5px"><b>'+lines.length+'</b> Zeile(n)'+
+    '<label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="radio" name="ml-mode" value="copy"'+(copy?' checked':'')+'> kopieren</label>'+
+    '<label style="display:flex;gap:5px;align-items:center;cursor:pointer"><input type="radio" name="ml-mode" value="move"'+(copy?'':' checked')+'> verschieben</label></div>'+
+    '<div class="field" style="margin-bottom:10px"><label>Ziel-Projekt</label><select id="ml-proj" style="width:100%">'+
+    [].concat(DB.projects||[]).filter(function(x){ return projAktiv(x)||x===curProject; }).sort(function(a,b){return (b.nummer||"").localeCompare(a.nummer||"");}).map(function(x){ return '<option value="'+esc(x.id)+'"'+(x===p?' selected':'')+'>'+esc(x.nummer||"")+' · '+esc(x.name||"")+(x===curProject?' (dieses Projekt)':'')+'</option>'; }).join("")+'</select></div>';
+  var offers=(p.offers||[]);
+  if(!offers.length) h+='<div class="muted">Dieses Projekt hat noch kein Angebot.</div>';
+  offers.forEach(function(o){
+    var isCurO=(o===curOffer);
+    h+='<div style="margin:12px 0 4px;font-weight:600">'+esc(o.titel||"Angebot")+(isCurO?' <span class="muted">(aktuelles Angebot)</span>':'')+'</div>';
+    (o.jobs||[]).forEach(function(j){
+      h+='<div style="margin:6px 0 2px;font-size:12px;color:var(--ink-soft)">'+(j.nummer?esc(j.nummer)+" ":"")+esc(j.name||"Job")+'</div>';
+      (j.groups||[]).forEach(function(tg){ var cur=(tg===srcG); var dis=cur&&!copy;
+        h+='<button class="btn sm" style="display:block;width:100%;text-align:left;margin:3px 0"'+(dis?' disabled':'')+' data-mo="'+esc(o.id)+'" data-jt="'+esc(j.id)+'" data-gt="'+esc(tg.id)+'">'+(cur&&copy?'⧉ in dieser Gruppe duplizieren':('→ '+esc(tg.name||"Gruppe")))+(dis?' (aktuelle Gruppe)':'')+'</button>';
+      });
+      h+='<button class="btn sm" style="display:block;width:100%;text-align:left;margin:3px 0;color:var(--gold)" data-mo="'+esc(o.id)+'" data-jt="'+esc(j.id)+'" data-newgrp="1">+ neue Gruppe in diesem Job</button>';
     });
   });
   body.innerHTML=h;
-  body.querySelectorAll("[data-gt]").forEach(function(b){ b.onclick=function(){ var j=(curOffer.jobs||[]).filter(function(x){return x.id===b.dataset.jt;})[0]; var tg=j&&(j.groups||[]).filter(function(x){return x.id===b.dataset.gt;})[0]; if(tg){ moveLinesTo(srcG,lines,tg); closeModal("moveln-bg"); } }; });
-  openModal("moveln-bg");
+  body.querySelectorAll('input[name="ml-mode"]').forEach(function(r){ r.onchange=function(){ _mlMode=r.value; renderMoveLinesTargets(srcJob,srcG,lines); }; });
+  var mp=document.getElementById("ml-proj"); if(mp) mp.onchange=function(){ _mlProj=(DB.projects||[]).find(function(x){return x.id===mp.value;})||curProject; renderMoveLinesTargets(srcJob,srcG,lines); };
+  body.querySelectorAll("[data-jt]").forEach(function(b){ b.onclick=function(){
+    var o=(p.offers||[]).find(function(x){return x.id===b.dataset.mo;}); var j=o&&(o.jobs||[]).find(function(x){return x.id===b.dataset.jt;}); if(!j) return;
+    var tg;
+    if(b.dataset.newgrp){ var nm=prompt("Name der neuen Positionsgruppe:",srcG.name||"Position"); if(nm===null) return; tg={id:uid(),name:(nm||"Position").trim(),kat:srcG.kat||"miete",preis:0,ek:0,lines:[]}; if(!j.groups) j.groups=[]; j.groups.push(tg); }
+    else tg=(j.groups||[]).find(function(x){return x.id===b.dataset.gt;});
+    if(!tg) return;
+    moveLinesTo(srcG,lines,tg,_mlMode,o,p); closeModal("moveln-bg");
+  }; });
 }
 function openMoveGroup(job,g){
   _moveProj=curProject;
