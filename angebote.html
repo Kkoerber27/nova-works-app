@@ -174,6 +174,31 @@
   .an-donehead{margin:6px 0 8px;font-size:12px}.an-donehead a{color:var(--ink-soft);text-decoration:none}
   .an-list.done .an-item{background:#faf9f6}
   @media (min-width:1500px){ body.anruf-open main{margin-left:360px} }
+  .inf-wrap{max-width:820px}
+  .inf-compose{background:#fbfaf7;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px}
+  .inf-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+  .inf-compose textarea{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:16px;line-height:1.45;resize:vertical;min-height:64px;background:#fff}
+  .inf-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:8px}
+  .inf-actions .btn{cursor:pointer}
+  .inf-list{display:flex;flex-direction:column;gap:10px}
+  .inf-entry{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px}
+  .inf-entry.mine{background:#f6f9f4;border-color:#cfe0c9}
+  .inf-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;margin-bottom:4px}
+  .inf-head button{background:transparent;border:0;cursor:pointer;font-size:14px;color:#777;padding:2px 4px}
+  .inf-badge{background:var(--gold-bg);color:#8a6d3b;border-radius:10px;padding:1px 8px;font-size:11px;font-weight:700}
+  .inf-text{white-space:pre-wrap;line-height:1.5}
+  .inf-items{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+  .inf-item{display:flex;gap:8px;align-items:center;cursor:pointer;line-height:1.4}
+  .inf-item input{width:18px;height:18px}
+  .inf-item.done span{text-decoration:line-through;color:#999}
+  .inf-fotos{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+  .inf-foto{width:120px;height:120px;border-radius:8px;overflow:hidden;background:#eee;cursor:zoom-in;display:flex;align-items:center;justify-content:center}
+  .inf-foto img{width:100%;height:100%;object-fit:cover;display:block}
+  .inf-foto-ph{color:#999;font-size:20px}
+  #inf-view{position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:100001;display:none;flex-direction:column;align-items:center;justify-content:center;cursor:zoom-out}
+  #inf-view img{max-width:96vw;max-height:88vh;object-fit:contain}
+  .inf-view-x{color:#fff;margin-top:10px;font-size:14px}
+  @media(max-width:820px){ .inf-actions .btn{flex:1 1 auto;text-align:center;padding:10px 8px;font-size:14px} .inf-chips .btn{padding:8px 10px;font-size:13px} .inf-foto{width:calc(33.3% - 4px);height:auto;aspect-ratio:1} .inf-entry{font-size:15px} .inf-item input{width:22px;height:22px} }
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;
     padding:11px 20px;border-radius:24px;font-size:13px;z-index:90;opacity:0;transition:.25s;pointer-events:none}
   .toast.show{opacity:1}
@@ -1020,7 +1045,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-29.4";
+var APP_VERSION="2026-09-30.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -2746,7 +2771,7 @@ function openDispoCopy(){
   openModal("dcopy-bg");
 }
 function dispoOf(p){ if(!p.dispo) p.dispo={}; var d=p.dispo;
-  if(!d.fields)d.fields={}; ["positions","personnel","hotels","einsatztage","bauzeit","schichttage","funk","venues"].forEach(function(k){ if(!d[k])d[k]=[]; });
+  if(!d.fields)d.fields={}; ["positions","personnel","hotels","einsatztage","bauzeit","schichttage","funk","venues","infos"].forEach(function(k){ if(!d[k])d[k]=[]; });
   if(!d.bauzeit.length && d.einsatztage.length){ d.bauzeit=d.einsatztage.map(function(s){return {datum:s.datum||"",von:s.von||"",bis:s.bis||"",beschreibung:s.gewerk||"",gewerke:"",maschinen:"",phase:s.phase||"aufbau"};}); }
   if(!d.schichttage.length){ var seen={}; d.bauzeit.forEach(function(b){ if(b.datum && !seen[b.datum]){ seen[b.datum]=1; d.schichttage.push({datum:b.datum,phase:b.phase||"aufbau"}); } }); }
   if(!d._hotelV2){ (d.personnel||[]).forEach(function(p){ if(p.hotelId!=null) p.needsHotel=true; });
@@ -2893,7 +2918,7 @@ function renderDispo(){
   if(typeof dispoSharePull==="function"){ try{ dispoSharePull(curProject); }catch(e){} }
   var d=dispoOf(curProject);
   var hb=document.getElementById("pd-add-assign"); if(hb) hb.style.display="none";
-  var tabs=[["crew","Crew Sheet"],["schichten","Schichtplan"],["daysheet","Day Sheet"],["tec","Tec Specs"],["bauzeit","Bauzeitenplan"],["hotels","Hotelplanung"],["catering","Crew Catering"],["funk","Funkgeräte"],["eck","Eckdaten"],["tour","Tour"],["leitung","Leitung"]];
+  var tabs=[["infos","Infos/VB"],["crew","Crew Sheet"],["schichten","Schichtplan"],["daysheet","Day Sheet"],["tec","Tec Specs"],["bauzeit","Bauzeitenplan"],["hotels","Hotelplanung"],["catering","Crew Catering"],["funk","Funkgeräte"],["eck","Eckdaten"],["tour","Tour"],["leitung","Leitung"]];
   var bar='<div class="toolbar" style="margin-bottom:14px;border-bottom:1px solid var(--line);padding-bottom:10px">'+
     tabs.map(function(t){return '<button class="btn sm dispo-tab'+(dispoTab===t[0]?' primary':'')+'" data-tab="'+t[0]+'">'+t[1]+'</button>';}).join("")+'</div>';
   var body="";
@@ -2908,6 +2933,7 @@ function renderDispo(){
   else if(dispoTab==="eck") body=dispoEck(d);
   else if(dispoTab==="tour") body=dispoTour(d);
   else if(dispoTab==="leitung") body=dispoLeitung(d);
+  else if(dispoTab==="infos") body=dispoInfos(d);
   el.innerHTML=bar+body;
   el.querySelectorAll(".dispo-tab").forEach(function(b){ b.onclick=function(){ dispoTab=b.dataset.tab; renderDispo(); }; });
   wireDispo(d);
@@ -3435,6 +3461,7 @@ function dispoLeitung(d){
 function wireDispo(d){
   var el=document.getElementById("pd-crewplan"); if(!el) return;
   if(dispoTab==="tour"){ tourWireCtx(el,(d.tour=d.tour||[]),"tt",{rerender:renderDispo}); return; }
+  if(dispoTab==="infos"){ infoWire(d); return; }
   // Crew
   el.querySelectorAll("tr[data-i] .dp-name").forEach(function(inp){ var i=+inp.closest("tr").dataset.i; inp.oninput=function(){ var was=(d.personnel[i].name||"").trim(); d.personnel[i].name=inp.value; if(!was && inp.value.trim() && (!d.personnel[i].status||d.personnel[i].status==="angefragt")){ d.personnel[i].status="angedacht"; var sel=inp.closest("tr").querySelector(".dp-status"); if(sel){ sel.value="angedacht"; sel.style.borderLeft="4px solid "+DSTATUS_COLORS.angedacht; } } save(); }; inp.onchange=function(){ var nm=inp.value.trim().toLowerCase(); var m=(DB.crew||[]).find(function(x){return (x.name||"").toLowerCase()===nm;}); if(m){ var p=d.personnel[i]; p.tel=m.tel||""; p.email=m.email||""; if(m.firma!=null) p.firma=m.firma||""; save(); renderDispo(); } }; });
   el.querySelectorAll(".dp-tel").forEach(function(inp){ var i=+inp.closest("tr").dataset.i; inp.oninput=function(){ d.personnel[i].tel=inp.value; save(); }; });
@@ -5338,6 +5365,128 @@ function renderAnrufe(){
 }
 /* Aus dem CRM heraus: Anruf für den gewählten Kunden merken */
 function anrufFromCustomer(c){ if(!c) return; var lbl=c.firma+(c.ap?(" – "+c.ap):""); anrufToggle(true); var i=document.getElementById("an-name"), n=document.getElementById("an-note"); if(i){ i.value=lbl; } if(n){ n.value=""; setTimeout(function(){ n.focus(); },60); } }
+/* =========================================================================
+   INFOS / VB – Projekt-Journal in der Disposition (Notizen, Telefonate, Videocalls,
+   Vorbesichtigungen, Fotos, Checklisten). Jeder Eintrag trägt Name, Datum und Uhrzeit
+   des Verfassers – wie ein Chat. Fotos kommen direkt von der Gerätekamera und liegen
+   als eigene Cloud-Zeilen (app_state „pinfo-<id>“), nicht im Projekt selbst.
+   Abgleich im Team: Einträge werden vereinigt (kein Überschreiben), siehe mergeDispo.
+   ========================================================================= */
+var INFO_TYPES=[["notiz","📝","Notiz"],["tel","📞","Telefonat"],["video","🎥","Videocall"],["vb","👀","Vorbesichtigung"],["liste","☑️","Liste"],["foto","📷","Foto"]];
+var infoTyp="notiz", _pinfoCache={}, _infoFiles=[];
+function infoTypInfo(k){ for(var i=0;i<INFO_TYPES.length;i++) if(INFO_TYPES[i][0]===k) return {icon:INFO_TYPES[i][1],label:INFO_TYPES[i][2]}; return {icon:"📝",label:"Notiz"}; }
+function infoUserName(){
+  var n=(typeof TEAM_USERNAME!=="undefined"&&TEAM_USERNAME)?TEAM_USERNAME:"";
+  if(typeof TEAM_UID!=="undefined"&&TEAM_UID&&typeof teamList==="function"){ var t=teamList().find(function(x){ return x.uid===TEAM_UID; }); if(t&&t.name) n=t.name; }
+  if(!n) n=(typeof IS_ADMIN!=="undefined"&&IS_ADMIN)?"Admin":"Team";
+  return n.charAt(0).toUpperCase()+n.slice(1);
+}
+function infoNameOf(e){ if(e.uid&&typeof teamList==="function"){ var t=teamList().find(function(x){ return x.uid===e.uid; }); if(t&&t.name) return t.name; } return e.name||"?"; }
+function infoMine(e){ return (typeof IS_ADMIN!=="undefined"&&IS_ADMIN)||(e.uid&&typeof TEAM_UID!=="undefined"&&e.uid===TEAM_UID)||(!e.uid&&e.name===infoUserName()); }
+function infoWhen(ts){ var d=new Date(ts||0); if(isNaN(d.getTime())) return ""; var z=function(n){ return (n<10?"0":"")+n; }; return z(d.getDate())+"."+z(d.getMonth()+1)+"."+d.getFullYear()+" · "+z(d.getHours())+":"+z(d.getMinutes()); }
+function infoList(d){ if(!d.infos) d.infos=[]; return d.infos; }
+/* Foto: verkleinern, in die Cloud legen (Fallback: im Eintrag) */
+function infoShrink(file,max){
+  return new Promise(function(res,rej){ var img=new Image(); img.onload=function(){ var s=Math.min(1,(max||1400)/Math.max(img.width,img.height)); var cv=document.createElement("canvas"); cv.width=Math.round(img.width*s); cv.height=Math.round(img.height*s); var cx=cv.getContext("2d"); cx.fillStyle="#fff"; cx.fillRect(0,0,cv.width,cv.height); cx.drawImage(img,0,0,cv.width,cv.height); res({dataUrl:cv.toDataURL("image/jpeg",0.82),w:cv.width,h:cv.height}); }; img.onerror=function(){ rej(new Error("Bild nicht lesbar")); }; img.src=URL.createObjectURL(file); });
+}
+async function infoPhotoStore(pid,fid,dataUrl){
+  if(typeof SB!=="undefined"&&SB){ try{ var up=await SB.from("app_state").upsert({id:"pinfo-"+fid,data:{pid:pid,dataUrl:dataUrl},updated_at:new Date().toISOString()}); if(!up.error){ _pinfoCache[fid]=dataUrl; return true; } }catch(e){} }
+  return false;
+}
+function infoPhotoLoad(fid,cb){
+  if(_pinfoCache[fid]){ cb(_pinfoCache[fid]); return; }
+  if(typeof SB==="undefined"||!SB){ cb(null); return; }
+  SB.from("app_state").select("data").eq("id","pinfo-"+fid).maybeSingle().then(function(r){ var du=r&&r.data&&r.data.data&&r.data.data.dataUrl; if(du) _pinfoCache[fid]=du; cb(du||null); }).catch(function(){ cb(null); });
+}
+function infoPhotoSrc(f){ return f.inline||_pinfoCache[f.id]||""; }
+/* Eintrag anlegen */
+async function infoAdd(d,typ,text,files){
+  text=String(text||"").trim();
+  var items=null;
+  if(typ==="liste"){ items=text.split(/\n/).map(function(l){ return l.replace(/^[-*•☐☑\[\]x ]+/i,"").trim(); }).filter(Boolean).map(function(t){ return {t:t,done:false}; }); text=""; if(!items.length&&!(files&&files.length)){ toast("Listenpunkte eintippen (eine Zeile je Punkt)"); return null; } }
+  else if(!text&&!(files&&files.length)){ toast("Text eingeben oder Foto wählen"); return null; }
+  var e={id:uid(),ts:Date.now(),uid:(typeof TEAM_UID!=="undefined"?TEAM_UID:null)||null,name:infoUserName(),typ:typ,text:text,items:items||undefined,fotos:[]};
+  if(files&&files.length){
+    toast(files.length+" Foto"+(files.length>1?"s werden":" wird")+" verarbeitet …");
+    for(var i=0;i<files.length;i++){ var f=files[i]; if(!/^image\//.test(f.type)) continue;
+      try{ var sh=await infoShrink(f,1400); var fid=uid(); var ok=await infoPhotoStore(curProject.id,fid,sh.dataUrl); var foto={id:fid,w:sh.w,h:sh.h,name:f.name||""}; if(!ok){ var small=await infoShrink(f,900); foto.inline=small.dataUrl; } e.fotos.push(foto); }catch(err){ toast("Foto übersprungen: "+(err&&err.message||err)); }
+    }
+    if(!e.text&&!e.items&&e.typ==="notiz") e.typ="foto";
+  }
+  infoList(d).push(e); save(); return e;
+}
+function infoDelete(d,e){ var L=infoList(d); var i=L.indexOf(e); if(i>=0) L.splice(i,1); (e.fotos||[]).forEach(function(f){ if(!f.inline&&typeof SB!=="undefined"&&SB){ try{ SB.from("app_state").delete().eq("id","pinfo-"+f.id); }catch(x){} } }); save(); }
+/* Ansicht */
+function dispoInfos(d){
+  var L=infoList(d).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  var chips=INFO_TYPES.filter(function(t){ return t[0]!=="foto"; }).map(function(t){ return '<button type="button" class="btn sm inf-typ'+(infoTyp===t[0]?' primary':'')+'" data-t="'+t[0]+'">'+t[1]+' '+t[2]+'</button>'; }).join("");
+  var h='<div class="inf-wrap">'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><div class="muted" style="font-size:12px">Alles zum Projekt an einem Ort – Telefonate, Videocalls, Vorbesichtigungen, Fotos, Listen. Jeder Eintrag mit Name, Datum und Uhrzeit.</div><button class="btn sm" id="inf-print">🖨 Protokoll</button></div>'+
+    '<div class="inf-compose">'+
+      '<div class="inf-chips">'+chips+'</div>'+
+      '<textarea id="inf-text" placeholder="'+(infoTyp==="liste"?"Ein Listenpunkt je Zeile …":(infoTyp==="tel"?"Telefonat: mit wem, was besprochen …":(infoTyp==="vb"?"Vorbesichtigung: Ort, Ansprechpartner, Maße, Strom, Zufahrt …":"Notiz …")))+'" rows="3"></textarea>'+
+      '<div class="inf-actions">'+
+        '<label class="btn sm" title="Foto mit der Kamera aufnehmen">📷 Kamera<input type="file" id="inf-cam" accept="image/*" capture="environment" style="display:none"></label>'+
+        '<label class="btn sm" title="Fotos aus der Mediathek / Dateien">🖼 Fotos<input type="file" id="inf-files" accept="image/*" multiple style="display:none"></label>'+
+        '<span id="inf-pending" class="muted" style="font-size:11.5px;flex:1"></span>'+
+        '<button class="btn sm primary" id="inf-send">➤ Eintragen</button></div>'+
+      '<div class="muted" style="font-size:11px;margin-top:4px">Als <b>'+esc(infoUserName())+'</b> · '+infoWhen(Date.now())+'</div>'+
+    '</div>'+
+    '<div class="inf-list">'+(L.length?L.map(function(e){ return infoEntryHtml(d,e); }).join(""):'<div class="muted" style="padding:16px 4px">Noch keine Einträge. Oben eine Notiz schreiben, ein Foto aufnehmen oder eine Liste anlegen.</div>')+'</div></div>';
+  return h;
+}
+function infoEntryHtml(d,e){
+  var ti=infoTypInfo(e.typ), mine=infoMine(e);
+  var body='';
+  if(e.text) body+='<div class="inf-text">'+esc(e.text).replace(/\n/g,"<br>")+'</div>';
+  if(e.items&&e.items.length){ var done=e.items.filter(function(x){ return x.done; }).length; body+='<div class="inf-items">'+e.items.map(function(it,i){ return '<label class="inf-item'+(it.done?' done':'')+'"><input type="checkbox" class="inf-chk" data-eid="'+esc(e.id)+'" data-i="'+i+'"'+(it.done?' checked':'')+'><span>'+esc(it.t)+'</span></label>'; }).join("")+'<div class="muted" style="font-size:11px;margin-top:2px">'+done+' von '+e.items.length+' erledigt</div></div>'; }
+  if(e.fotos&&e.fotos.length) body+='<div class="inf-fotos">'+e.fotos.map(function(f){ var src=infoPhotoSrc(f); return '<div class="inf-foto" data-fid="'+esc(f.id)+'"'+(src?'':' data-load="1"')+'>'+(src?('<img src="'+src+'" alt="">'):'<div class="inf-foto-ph">⏳</div>')+'</div>'; }).join("")+'</div>';
+  return '<div class="inf-entry'+(mine?' mine':'')+'" data-eid="'+esc(e.id)+'"><div class="inf-head"><span class="inf-badge">'+ti.icon+' '+esc(ti.label)+'</span><b>'+esc(infoNameOf(e))+'</b><span class="muted">'+infoWhen(e.ts)+(e.edited?' · bearbeitet':'')+'</span><span style="flex:1"></span>'+
+    (mine?('<button class="inf-edit" title="Bearbeiten">✎</button><button class="inf-del" title="Löschen">🗑</button>'):'')+'</div>'+body+'</div>';
+}
+function infoWire(d){
+  var el=document.getElementById("pd-crewplan"); if(!el) return;
+  var ta=document.getElementById("inf-text"), pend=document.getElementById("inf-pending"), files=_infoFiles;
+  var showPend=function(){ if(pend) pend.innerHTML=files.length?(files.length+" Foto"+(files.length>1?"s":"")+" ausgewählt <a href=\"#\" id=\"inf-clearf\" style=\"color:var(--ink-soft)\">×</a>"):""; var cl=document.getElementById("inf-clearf"); if(cl) cl.onclick=function(e){ e.preventDefault(); files.length=0; showPend(); }; };
+  showPend();
+  el.querySelectorAll(".inf-typ").forEach(function(b){ b.onclick=function(){ infoTyp=b.dataset.t; var t=ta?ta.value:""; renderDispo(); var ta2=document.getElementById("inf-text"); if(ta2){ ta2.value=t; ta2.focus(); } }; });
+  var cam=document.getElementById("inf-cam"), fl=document.getElementById("inf-files");
+  var addFiles=function(list){ [].forEach.call(list||[],function(f){ files.push(f); }); showPend(); };
+  if(cam) cam.onchange=function(){ addFiles(cam.files); cam.value=""; };
+  if(fl) fl.onchange=function(){ addFiles(fl.files); fl.value=""; };
+  if(ta){ ta.addEventListener("input",function(){ ta.style.height="auto"; ta.style.height=Math.min(320,ta.scrollHeight)+"px"; }); ta.addEventListener("keydown",function(ev){ if((ev.metaKey||ev.ctrlKey)&&ev.key==="Enter"){ ev.preventDefault(); document.getElementById("inf-send").click(); } }); }
+  var send=document.getElementById("inf-send");
+  if(send) send.onclick=async function(){ send.disabled=true; try{ var e=await infoAdd(d,infoTyp,ta?ta.value:"",files.slice()); if(e){ files.length=0; if(infoTyp==="foto") infoTyp="notiz"; renderDispo(); toast("Eingetragen"); } }finally{ send.disabled=false; } };
+  var pr=document.getElementById("inf-print"); if(pr) pr.onclick=function(){ infoPrint(d); };
+  el.querySelectorAll(".inf-chk").forEach(function(cb){ cb.onchange=function(){ var e=infoList(d).find(function(x){ return x.id===cb.dataset.eid; }); if(!e||!e.items) return; e.items[+cb.dataset.i].done=cb.checked; e.edited=Date.now(); save(); renderDispo(); }; });
+  el.querySelectorAll(".inf-del").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(!e) return; if(!confirm("Eintrag von "+infoNameOf(e)+" ("+infoWhen(e.ts)+") löschen?")) return; infoDelete(d,e); renderDispo(); }; });
+  el.querySelectorAll(".inf-edit").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(!e) return; var cur=e.items?e.items.map(function(x){ return x.t; }).join("\n"):(e.text||""); var t=prompt(e.items?"Listenpunkte (eine Zeile je Punkt):":"Text bearbeiten:",cur); if(t===null) return; if(e.items){ var old=e.items; e.items=t.split(/\n/).map(function(l){ return l.trim(); }).filter(Boolean).map(function(l){ var o=old.find(function(x){ return x.t===l; }); return {t:l,done:!!(o&&o.done)}; }); } else e.text=t.trim(); e.edited=Date.now(); save(); renderDispo(); }; });
+  el.querySelectorAll(".inf-foto").forEach(function(box){
+    var fid=box.dataset.fid;
+    if(box.dataset.load){ infoPhotoLoad(fid,function(src){ if(src) box.innerHTML='<img src="'+src+'" alt="">'; else box.innerHTML='<div class="inf-foto-ph" title="Foto nicht geladen">✕</div>'; }); }
+    box.onclick=function(){ var img=box.querySelector("img"); if(!img) return; infoPhotoView(img.src); };
+  });
+}
+function infoPhotoView(src){
+  var bg=document.getElementById("inf-view"); if(!bg){ bg=document.createElement("div"); bg.id="inf-view"; bg.onclick=function(){ bg.style.display="none"; }; document.body.appendChild(bg); }
+  bg.innerHTML='<img src="'+src+'" alt=""><div class="inf-view-x">× schließen</div>'; bg.style.display="flex";
+}
+/* Protokoll (PDF/Druck): alle Einträge chronologisch inkl. Fotos */
+function infoPrint(d){
+  var p=curProject, L=infoList(d).slice().sort(function(a,b){ return (a.ts||0)-(b.ts||0); });
+  if(!L.length){ toast("Keine Einträge"); return; }
+  var pending=[]; L.forEach(function(e){ (e.fotos||[]).forEach(function(f){ if(!infoPhotoSrc(f)) pending.push(f.id); }); });
+  var go=function(){
+    var body='<div class="phead">'+((typeof logoDataUrl!=="undefined"&&logoDataUrl)?('<img src="'+logoDataUrl+'">'):'<div style="font-size:16px;font-weight:700;letter-spacing:.14em">NOVA WORKS</div>')+'<div class="ptitle"><div class="t">Infos / VB – Protokoll</div><div class="s">'+esc((p.nummer||"")+" · "+(p.name||""))+' · Stand '+fmtDate(today())+'</div></div></div>'+
+      L.map(function(e){ var ti=infoTypInfo(e.typ); return '<div style="border-bottom:1px solid #e5e1d8;padding:7px 0;page-break-inside:avoid"><div style="font-size:9px;color:#888"><b style="color:#3d3d3d">'+esc(ti.icon+" "+ti.label)+'</b> · '+esc(infoNameOf(e))+' · '+infoWhen(e.ts)+'</div>'+
+        (e.text?('<div style="margin-top:3px;white-space:pre-wrap">'+esc(e.text)+'</div>'):'')+
+        (e.items?('<div style="margin-top:3px">'+e.items.map(function(it){ return '<div>'+(it.done?"☑":"☐")+' '+esc(it.t)+'</div>'; }).join("")+'</div>'):'')+
+        ((e.fotos&&e.fotos.length)?('<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">'+e.fotos.map(function(f){ var s=infoPhotoSrc(f); return s?('<img src="'+s+'" style="max-width:62mm;max-height:62mm;border:1px solid #ddd">'):''; }).join("")+'</div>'):'')+'</div>'; }).join("");
+    printDoc("Infos-VB "+(p.nummer||""), body, "");
+  };
+  if(!pending.length){ go(); return; }
+  var n=0; toast(pending.length+" Foto"+(pending.length>1?"s werden":" wird")+" geladen …"); pending.forEach(function(fid){ infoPhotoLoad(fid,function(){ n++; if(n>=pending.length) go(); }); });
+}
 /* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
    iPhone/Mac exportieren. Teilen-Dialog (AirDrop, Nachrichten, Mail) über
@@ -9850,8 +9999,8 @@ function teamMap(){ var m={}; teamList().forEach(function(t){ if(t.active===fals
 
 /* --- Dispo-Zeitstempel je BEREICH + Merge (verhindert Ueberschreiben mit altem Stand) --- */
 var _dispoJsonCache={}, _dispoGrpCache={};
-var DISPO_GROUPS=["fields","positions","personnel","hotels","einsatztage","bauzeit","schichttage","catering","helfer","daysheets","dsLogo","venues"];
-var DISPO_TAB_GROUPS={crew:["personnel","fields","helfer"],schichten:["schichttage","venues"],bauzeit:["bauzeit","schichttage"],daysheet:["daysheets","dsLogo"],hotels:["hotels","personnel"],catering:["catering"],funk:["personnel"],eck:["fields"],leitung:["positions"]};
+var DISPO_GROUPS=["fields","positions","personnel","hotels","einsatztage","bauzeit","schichttage","catering","helfer","daysheets","dsLogo","venues","infos"];
+var DISPO_TAB_GROUPS={crew:["personnel","fields","helfer"],schichten:["schichttage","venues"],bauzeit:["bauzeit","schichttage"],daysheet:["daysheets","dsLogo"],hotels:["hotels","personnel"],catering:["catering"],funk:["personnel"],eck:["fields"],leitung:["positions"],infos:["infos"]};
 function dispoAllGroups(){ var m={}; DISPO_GROUPS.forEach(function(g){m[g]=1;}); for(var i=0;i<arguments.length;i++){ var o=arguments[i]; if(o) Object.keys(o).forEach(function(k){ if(k!=="_ts"&&k!=="_gts") m[k]=1; }); } return Object.keys(m); }
 function seedDispoCache(p,force){
   if(!p||!p.dispo) return;
@@ -9886,6 +10035,7 @@ function mergeDispo(remote, local){
   var rg=remote._gts||{}, lg=local._gts||{};
   if(!out._gts) out._gts={};
   dispoAllGroups(remote,local).forEach(function(g){
+    if(g==="infos"){ out.infos=mergeInfos(remote.infos,local.infos); out._gts.infos=Math.max(lg.infos||0,rg.infos||0); return; }
     var lokalNeuer=(lg[g]||0)>(rg[g]||0);
     var nurLokal=(remote[g]===undefined)&&(local[g]!==undefined);
     if(lokalNeuer||nurLokal){
@@ -9896,12 +10046,19 @@ function mergeDispo(remote, local){
   out._ts=Math.max(Number(remote._ts)||0, Number(local._ts)||0);
   return out;
 }
+/* Journal-Einträge beider Seiten vereinigen: je id der zuletzt bearbeitete Stand; gelöschte (auf einer Seite fehlende,
+   aber älter als 2 Min. bekannte) Einträge bleiben nur, wenn sie auf der anderen Seite neuer sind → praktisch: Löschung gewinnt nicht gegen Neuere */
+function mergeInfos(a,b){
+  var m={}, order=[];
+  [a||[],b||[]].forEach(function(L){ L.forEach(function(e){ if(!e||!e.id) return; var cur=m[e.id]; if(!cur||((e.edited||e.ts||0)>(cur.edited||cur.ts||0))){ if(!cur) order.push(e.id); m[e.id]=e; } }); });
+  return order.map(function(id){ try{ return JSON.parse(JSON.stringify(m[id])); }catch(e){ return m[id]; } }).sort(function(x,y){ return (x.ts||0)-(y.ts||0); });
+}
 function applyMergedInPlace(target, merged){
   dispoAllGroups(target,merged).forEach(function(g){ if(merged[g]===undefined){ delete target[g]; } else { target[g]=merged[g]; } });
   target._gts=merged._gts; target._ts=merged._ts;
 }
 /* --- Team-Verwaltung (Admin) --- */
-function tabLabel(k){ var M={crew:"Crew Sheet",schichten:"Schichtplan",bauzeit:"Bauzeitenplan",hotels:"Hotelplanung",catering:"Crew Catering",funk:"Funkgeräte",eck:"Eckdaten",leitung:"Leitung"}; return M[k]||k||"Disposition"; }
+function tabLabel(k){ var M={crew:"Crew Sheet",schichten:"Schichtplan",bauzeit:"Bauzeitenplan",hotels:"Hotelplanung",catering:"Crew Catering",funk:"Funkgeräte",eck:"Eckdaten",leitung:"Leitung",infos:"Infos/VB"}; return M[k]||k||"Disposition"; }
 function rstLog(p){
   if(!p) return;
   if(!p.changelog) p.changelog=[];
