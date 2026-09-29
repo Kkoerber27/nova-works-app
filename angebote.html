@@ -1020,7 +1020,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-29.3";
+var APP_VERSION="2026-09-29.4";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -9510,7 +9510,8 @@ function buildPDF(project,offer){
     jobs:(offer.jobs||[]).filter(function(j){ return j.status!=="abgesagt"; }),
     crew:(offer.crew||[]).filter(function(c){ return !(c.jobId&&(offer.jobs||[]).some(function(j){ return j.id===c.jobId&&j.status==="abgesagt"; })); }),
     transport:(offer.transport||[]).filter(function(t){ return !(t.jobId&&(offer.jobs||[]).some(function(j){ return j.id===t.jobId&&j.status==="abgesagt"; })); }),
-    pdfOpts:offer.pdfOpts, titel:offer.titel, tour:offer.tour
+    pdfOpts:offer.pdfOpts, titel:offer.titel, tour:offer.tour,
+    steuerOn:!!offer.steuerOn, steuerhinweis:offer.steuerhinweis||"", steuerAuto:!!offer.steuerAuto, pauschale:offer.pauschale||null
   };
   const clean=offerHTML(merged);
   const html=clean.replace("</body>",
