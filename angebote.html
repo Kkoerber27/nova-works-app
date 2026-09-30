@@ -1047,7 +1047,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-30.3";
+var APP_VERSION="2026-09-30.4";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5423,7 +5423,7 @@ function dispoInfos(d){
   var L=infoList(d).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   var chips=INFO_TYPES.filter(function(t){ return t[0]!=="foto"; }).map(function(t){ return '<button type="button" class="btn sm inf-typ'+(infoTyp===t[0]?' primary':'')+'" data-t="'+t[0]+'">'+t[1]+' '+t[2]+'</button>'; }).join("");
   var h='<div class="inf-wrap">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><div class="muted" style="font-size:12px">Alles zum Projekt an einem Ort – Telefonate, Videocalls, Vorbesichtigungen, Fotos, Listen. Jeder Eintrag mit Name, Datum und Uhrzeit.</div><button class="btn sm" id="inf-print">🖨 Protokoll</button></div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px"><div class="muted" style="font-size:12px">Alles zum Projekt an einem Ort – Telefonate, Videocalls, Vorbesichtigungen, Fotos, Listen. Jeder Eintrag mit Name, Datum und Uhrzeit.</div><button class="btn sm" id="inf-print">🖨 Protokoll</button><button class="btn sm" id="inf-recover" title="Fehlende Einträge aus lokalen Sicherungen dieses Geräts und Fotos aus der Cloud zurückholen">🛟 Verlorene Einträge suchen</button></div>'+
     '<div class="inf-compose">'+
       '<div class="inf-chips">'+chips+'</div>'+
       '<textarea id="inf-text" placeholder="'+(infoTyp==="liste"?"Ein Listenpunkt je Zeile …":(infoTyp==="tel"?"Telefonat: mit wem, was besprochen …":(infoTyp==="vb"?"Vorbesichtigung: Ort, Ansprechpartner, Maße, Strom, Zufahrt …":"Notiz …")))+'" rows="3"></textarea>'+
@@ -5461,6 +5461,7 @@ function infoWire(d){
   var send=document.getElementById("inf-send");
   if(send) send.onclick=async function(){ send.disabled=true; try{ var e=await infoAdd(d,infoTyp,ta?ta.value:"",files.slice()); if(e){ files.length=0; if(infoTyp==="foto") infoTyp="notiz"; renderDispo(); toast("Eingetragen"); } }finally{ send.disabled=false; } };
   var pr=document.getElementById("inf-print"); if(pr) pr.onclick=function(){ infoPrint(d); };
+  var rc=document.getElementById("inf-recover"); if(rc) rc.onclick=function(){ infoRecover(d); };
   el.querySelectorAll(".inf-chk").forEach(function(cb){ cb.onchange=function(){ var e=infoList(d).find(function(x){ return x.id===cb.dataset.eid; }); if(!e||!e.items) return; e.items[+cb.dataset.i].done=cb.checked; e.edited=Date.now(); save(); renderDispo(); }; });
   el.querySelectorAll(".inf-take").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(e) openInfoTake(d,e); }; });
   el.querySelectorAll(".inf-del").forEach(function(b){ b.onclick=function(){ var e=infoList(d).find(function(x){ return x.id===b.closest(".inf-entry").dataset.eid; }); if(!e) return; if(!confirm("Eintrag von "+infoNameOf(e)+" ("+infoWhen(e.ts)+") löschen?")) return; infoDelete(d,e); renderDispo(); }; });
@@ -5549,6 +5550,57 @@ function openInfoTake(d,e){
     save(); closeModal("inftake-bg"); toast("Übernommen → "+ziel); renderDispo();
   };
   openModal("inftake-bg");
+}
+/* ---- Wiederherstellung: Infos/VB-Einträge aus lokalen Sicherungsständen und Fotos aus der Cloud zurückholen ---- */
+function infoSnapshotSources(pid){
+  var out=[];
+  var push=function(label,infos){ if(infos&&infos.length) out.push({label:label,infos:infos}); };
+  try{
+    var keys=[]; for(var i=0;i<localStorage.length;i++) keys.push(localStorage.key(i));
+    keys.forEach(function(k){ try{
+      if(k.indexOf(STORE)!==0) return;
+      var raw=localStorage.getItem(k); if(!raw||raw.length<20) return;
+      var obj; try{ obj=JSON.parse(raw); }catch(e){ return; }
+      var when=function(o){ return (o&&o.at)?(" · "+String(o.at).slice(0,16).replace("T"," ")):""; };
+      if(k===STORE+"_stash"&&obj&&obj.projects){ var sp=obj.projects[pid]; if(sp&&sp.dispo) push("Zwischenspeicher vor Neuladen"+when(obj),sp.dispo.infos); return; }
+      if(k===STORE+"_disposnap_"+pid&&obj&&obj.dispo){ push("Dispo-Sicherung"+when(obj),obj.dispo.infos); return; }
+      var db=(obj&&obj.data&&Array.isArray(obj.data.projects))?obj.data:((obj&&Array.isArray(obj.projects))?obj:null);
+      if(db){ var p=db.projects.find(function(x){ return x&&x.id===pid; }); if(p&&p.dispo) push((k===STORE?"aktueller lokaler Stand":k.replace(STORE+"_","Sicherung "))+when(obj),p.dispo.infos); }
+    }catch(e){} });
+  }catch(e){}
+  return out;
+}
+async function infoRecoverPhotos(pid){
+  if(typeof SB==="undefined"||!SB) return [];
+  try{ var r=await SB.from("app_state").select("id,data,updated_at").like("id","pinfo-%"); var rows=(r&&r.data)||[]; return rows.filter(function(x){ return x.data&&x.data.pid===pid&&x.data.dataUrl; }).map(function(x){ return {id:x.id.replace("pinfo-",""),dataUrl:x.data.dataUrl,at:x.updated_at}; }); }catch(e){ return []; }
+}
+async function infoRecover(d){
+  var pid=curProject.id, have={}; infoList(d).forEach(function(e){ have[e.id]=1; (e.fotos||[]).forEach(function(f){ have["f:"+f.id]=1; }); });
+  var srcs=infoSnapshotSources(pid), cand={}, order=[];
+  srcs.forEach(function(s){ s.infos.forEach(function(e){ if(!e||!e.id||have[e.id]) return; var c=cand[e.id]; if(!c||((e.edited||e.ts||0)>(c.edited||c.ts||0))){ if(!c) order.push(e.id); cand[e.id]=e; } }); });
+  toast("Suche Fotos in der Cloud …");
+  var photos=await infoRecoverPhotos(pid);
+  var refd={}; order.forEach(function(id){ (cand[id].fotos||[]).forEach(function(f){ refd[f.id]=1; }); });
+  var orphan=photos.filter(function(ph){ return !have["f:"+ph.id]&&!refd[ph.id]; });
+  photos.forEach(function(ph){ _pinfoCache[ph.id]=ph.dataUrl; });
+  var bg=document.getElementById("infrec-bg");
+  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="infrec-bg"; bg.innerHTML='<div class="modal"><div class="modal-head"><h3>Verlorene Einträge wiederherstellen</h3><button class="x" data-close="infrec-bg">×</button></div><div class="modal-body" id="infrec-body" style="max-height:70vh;overflow:auto"></div><div class="modal-foot"><button class="btn" data-close="infrec-bg">Schließen</button><button class="btn primary" id="infrec-go">Ausgewählte übernehmen</button></div></div>'; document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("infrec-bg"); }; bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("infrec-bg"); }; }); }
+  var body=document.getElementById("infrec-body"), h='';
+  h+='<div class="muted" style="font-size:12px;margin-bottom:10px">Durchsucht wurden '+srcs.length+' lokale Sicherungsstände dieses Geräts'+(srcs.length?(' ('+srcs.map(function(s){ return esc(s.label); }).join(", ")+')'):'')+' und die Fotos in der Cloud. <b>Wichtig:</b> Lokale Sicherungen liegen nur auf dem Gerät, auf dem die Einträge gemacht wurden – diese Suche also dort ausführen.</div>';
+  if(order.length){ h+='<div style="font-weight:600;margin:6px 0">Einträge, die im Projekt fehlen ('+order.length+')</div>'+order.map(function(id){ var e=cand[id], ti=infoTypInfo(e.typ); return '<label style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--line)"><input type="checkbox" class="infrec-e" data-id="'+esc(id)+'" checked style="margin-top:3px"><div><div style="font-size:11.5px" class="muted">'+ti.icon+' '+esc(ti.label)+' · '+esc(e.name||"?")+' · '+infoWhen(e.ts)+((e.fotos&&e.fotos.length)?(' · '+e.fotos.length+' Foto'+(e.fotos.length>1?'s':'')):'')+'</div><div style="font-size:13px;white-space:pre-wrap">'+esc(e.text||(e.items?e.items.map(function(x){ return "• "+x.t; }).join("\n"):""))+'</div></div></label>'; }).join(""); }
+  else h+='<div class="muted" style="margin:8px 0">Keine fehlenden Text-Einträge in den lokalen Sicherungen dieses Geräts gefunden.</div>';
+  if(orphan.length){ h+='<div style="font-weight:600;margin:12px 0 6px">Fotos in der Cloud ohne Eintrag ('+orphan.length+')</div><div class="muted" style="font-size:11.5px;margin-bottom:6px">Werden als Foto-Einträge mit dem Zeitpunkt des Uploads neu angelegt.</div><div style="display:flex;flex-wrap:wrap;gap:6px">'+orphan.map(function(ph){ return '<label style="position:relative;width:96px;height:96px;border-radius:8px;overflow:hidden;background:#eee"><img src="'+ph.dataUrl+'" style="width:100%;height:100%;object-fit:cover"><input type="checkbox" class="infrec-f" data-id="'+esc(ph.id)+'" data-at="'+esc(ph.at||"")+'" checked style="position:absolute;left:6px;top:6px;width:18px;height:18px"></label>'; }).join("")+'</div>'; }
+  if(!order.length&&!orphan.length) h+='<div style="margin-top:10px;padding:10px;background:#fff4e0;border-radius:8px;font-size:12.5px">Nichts gefunden. Bitte diese Suche auf dem iPhone/iPad ausführen, auf dem die Einträge gemacht wurden – dort liegen die lokalen Sicherungen. Wenn dort die Einträge noch im Projekt sichtbar sind, reicht dort ein Klick auf „➤ Eintragen“ bei einer kurzen Notiz, damit alles neu hochgeladen wird.</div>';
+  body.innerHTML=h;
+  document.getElementById("infrec-go").onclick=function(){
+    var n=0;
+    body.querySelectorAll(".infrec-e:checked").forEach(function(cb){ var e=cand[cb.dataset.id]; if(!e) return; try{ e=JSON.parse(JSON.stringify(e)); }catch(x){} infoList(d).push(e); n++; });
+    body.querySelectorAll(".infrec-f:checked").forEach(function(cb){ var ts=cb.dataset.at?Date.parse(cb.dataset.at):Date.now(); infoList(d).push({id:uid(),ts:isNaN(ts)?Date.now():ts,uid:(typeof TEAM_UID!=="undefined"?TEAM_UID:null)||null,name:infoUserName(),typ:"foto",text:"",fotos:[{id:cb.dataset.id}],restored:true}); n++; });
+    if(!n){ toast("Nichts ausgewählt"); return; }
+    save(); if(typeof cloudForce!=="undefined"){ cloudForce=true; } if(typeof cloudSave==="function"){ try{ cloudSave(); }catch(e){} }
+    closeModal("infrec-bg"); renderDispo(); toast(n+" Eintr"+(n===1?"ag":"äge")+" wiederhergestellt und in die Cloud gespeichert");
+  };
+  openModal("infrec-bg");
 }
 /* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
@@ -9976,6 +10028,7 @@ async function afterLogin(){
   if(!IS_ADMIN){ await restrictedStart(); return; }
   var nt=document.getElementById("nav-team"); if(nt) nt.style.display="";
   var hadCloud=await cloudPull(); cloudReady=true; hideLogin(); startApp(); setCloudStatus(true); if(typeof awCloudLoad==="function") awCloudLoad(); setupCloudFlush();
+  try{ var stRaw=localStorage.getItem(STORE+"_stash"); if(stRaw){ var st=JSON.parse(stRaw); var nSt=absorbJournal({projects:Object.keys(st.projects||{}).map(function(k){ return st.projects[k]; }),anrufe:st.anrufe||[]},DB); localStorage.removeItem(STORE+"_stash"); if(nSt){ save(); toast(nSt+" Infos/VB-Einträge nach dem Neuladen übernommen"); } } }catch(e){}
   if(!hadCloud && DB && ((DB.projects&&DB.projects.length)||(DB.customers&&DB.customers.length)||(DB.crew&&DB.crew.length))){ cloudSave(); }
   syncDispoShares();
   startDispoLivePoll();
@@ -10012,19 +10065,27 @@ async function cloudPull(){
         cloudForce=true; setTimeout(function(){ cloudSave(); },600);   // lokaler Stand -> Cloud
         return true;                                                    // DB bleibt = lokaler Stand
       }
-      DB=d; if(!DB.projects)DB.projects=[]; if(!DB.customers)DB.customers=[]; return true;
+      var nLoc=localHas?absorbJournal(localDB,d):0;
+      DB=d; if(!DB.projects)DB.projects=[]; if(!DB.customers)DB.customers=[];
+      if(nLoc){ console.warn("Infos/VB: "+nLoc+" lokale Einträge in den Cloud-Stand übernommen"); setTimeout(function(){ try{ save(); }catch(e){} },1500); }
+      return true;
     }
   }catch(e){}
   return false;
 }
 /* Infos/VB-Einträge (und Anrufliste) aus einem anderen Stand vereinigen, bevor ein Stand den anderen überschreibt –
    Einträge von Handy/iPad gehen so auch bei „Meinen Stand speichern“ oder lokal-neuer nicht verloren. */
+function absorbJournal(src,dst){
+  var n=0; if(!src||!dst) return 0;
+  try{
+    (src.projects||[]).forEach(function(cp){ var ci=cp&&cp.dispo&&cp.dispo.infos; if(!ci||!ci.length) return; var lp=(dst.projects||[]).find(function(x){ return x.id===cp.id; }); if(!lp) return; if(!lp.dispo) lp.dispo={}; var before=(lp.dispo.infos||[]).length; lp.dispo.infos=mergeInfos(ci,lp.dispo.infos||[]); n+=Math.max(0,lp.dispo.infos.length-before); });
+    if(src.anrufe&&src.anrufe.length){ var seen={}; (dst.anrufe||[]).forEach(function(a){ seen[a.id]=1; }); src.anrufe.forEach(function(a){ if(a&&a.id&&!seen[a.id]){ (dst.anrufe=dst.anrufe||[]).push(a); n++; } }); }
+  }catch(e){}
+  return n;
+}
 function absorbCloudJournal(cloudDB){
   var n=0; if(!cloudDB||!DB) return 0;
-  try{
-    (cloudDB.projects||[]).forEach(function(cp){ var ci=cp&&cp.dispo&&cp.dispo.infos; if(!ci||!ci.length) return; var lp=(DB.projects||[]).find(function(x){ return x.id===cp.id; }); if(!lp) return; if(!lp.dispo) lp.dispo={}; var before=(lp.dispo.infos||[]).length; lp.dispo.infos=mergeInfos(ci,lp.dispo.infos||[]); n+=Math.max(0,lp.dispo.infos.length-before); });
-    if(cloudDB.anrufe&&cloudDB.anrufe.length){ var seen={}; (DB.anrufe||[]).forEach(function(a){ seen[a.id]=1; }); cloudDB.anrufe.forEach(function(a){ if(a&&a.id&&!seen[a.id]){ (DB.anrufe=DB.anrufe||[]).push(a); n++; } }); }
-  }catch(e){}
+  try{ n=absorbJournal(cloudDB,DB); }catch(e){}
   if(n){ try{ localStorage.setItem(storeKey(), JSON.stringify(DB)); }catch(e){} if(typeof curProject!=="undefined"&&curProject&&typeof dispoTab!=="undefined"&&dispoTab==="infos"&&document.getElementById("pd-crewplan")){ try{ renderDispo(); }catch(e){} } }
   return n;
 }
@@ -10059,7 +10120,7 @@ function showCloudConflict(){
    +'<button class="btn primary" id="cc-reload">Neu laden (empfohlen)</button>'
    +'<button class="btn sm" id="cc-force">Meinen Stand speichern</button></div></div>';
   document.body.appendChild(bg);
-  document.getElementById("cc-reload").onclick=function(){ location.reload(); };
+  document.getElementById("cc-reload").onclick=function(){ try{ var st={at:new Date().toISOString(),projects:{},anrufe:DB.anrufe||[]}; (DB.projects||[]).forEach(function(p){ if(p.dispo&&p.dispo.infos&&p.dispo.infos.length) st.projects[p.id]={id:p.id,dispo:{infos:p.dispo.infos}}; }); localStorage.setItem(STORE+"_stash",JSON.stringify(st)); }catch(e){} location.reload(); };
   document.getElementById("cc-force").onclick=function(){ var b=document.getElementById("cloud-conflict-bg"); if(b) b.remove(); cloudForce=true; cloudConflict=false; cloudSave(); };
 }
 function setCloudStatus(ok){ var d=document.getElementById("cloud-dot"); if(d){ d.style.background=ok?"#5a7d52":"#b4493f"; d.title=ok?"Mit Cloud synchronisiert":"Nicht synchronisiert"; } }
