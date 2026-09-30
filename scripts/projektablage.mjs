@@ -284,6 +284,11 @@ async function main() {
     const token = await login(cfg);
     const db = api(cfg, token);
     const rows = await db.jobs();
+    if (PROBE) {
+      const n = readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
+      log(`OneDrive-Ordner: ${root} (${n} Projektordner)`);
+      log(`Anmeldung an der Angebots-App: OK · ${rows.filter((r) => (r.data || {}).status !== "abgelegt").length} Datei(en) offen`);
+    }
     let done = 0;
     let waiting = 0;
     let failed = 0;

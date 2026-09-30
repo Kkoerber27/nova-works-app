@@ -19,6 +19,8 @@ log() { echo "[$(date "+%Y-%m-%d %H:%M:%S")] $*" >>"$LOG"; }
 
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# Im Terminal gesetzte Werte gelten, wenn die Datei für sie leer ist.
+_pre_mail="${NOVA_ANGEBOTE_EMAIL:-}"; _pre_pw="${NOVA_ANGEBOTE_PASSWORD:-}"; _pre_root="${PROJEKT_ABLAGE_ROOT:-}"
 if [ -f "$ENV_FILE" ]; then
   if ! bash -n "$ENV_FILE" 2>/dev/null; then
     log "FEHLER $ENV_FILE ist syntaktisch fehlerhaft — meist ein nicht geschlossenes Anführungszeichen."
@@ -28,6 +30,9 @@ if [ -f "$ENV_FILE" ]; then
   # shellcheck source=/dev/null
   . "$ENV_FILE"
 fi
+[ -z "${NOVA_ANGEBOTE_EMAIL:-}" ] && NOVA_ANGEBOTE_EMAIL="$_pre_mail"
+[ -z "${NOVA_ANGEBOTE_PASSWORD:-}" ] && NOVA_ANGEBOTE_PASSWORD="$_pre_pw"
+[ -z "${PROJEKT_ABLAGE_ROOT:-}" ] && PROJEKT_ABLAGE_ROOT="$_pre_root"
 export NOVA_ANGEBOTE_EMAIL NOVA_ANGEBOTE_PASSWORD NOVA_ANGEBOTE_SERVICE_KEY \
        PROJEKT_ABLAGE_ROOT PROJEKT_ABLAGE_WEB 2>/dev/null || true
 

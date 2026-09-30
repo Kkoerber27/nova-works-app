@@ -39,7 +39,10 @@ eine gleichnamige bekommt „ (2)“ angehängt.
 ./scripts/install-projektablage.sh
 ```
 
-Danach in `~/.nova-works/env` die Anmeldung eintragen:
+Das Skript fragt beim ersten Mal E-Mail und Passwort der Angebots-App ab
+(Passwort unsichtbar), speichert beides in `~/.nova-works/env` und macht gleich
+einen Probelauf. Neue Anmeldung: `./scripts/install-projektablage.sh --login`.
+Die Einträge in `~/.nova-works/env` sehen so aus:
 
 ```bash
 export NOVA_ANGEBOTE_EMAIL="…"
