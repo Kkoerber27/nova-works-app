@@ -1047,7 +1047,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-30.2";
+var APP_VERSION="2026-09-30.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -10008,6 +10008,7 @@ async function cloudPull(){
       }
       if(keepLocal){
         try{ localStorage.setItem(STORE+"_cloudsnap", JSON.stringify({at:cloudUA,data:d})); }catch(e){}
+        var nJ=absorbCloudJournal(d); if(nJ) console.warn("Infos/VB: "+nJ+" Einträge aus der Cloud übernommen");
         cloudForce=true; setTimeout(function(){ cloudSave(); },600);   // lokaler Stand -> Cloud
         return true;                                                    // DB bleibt = lokaler Stand
       }
@@ -10015,6 +10016,17 @@ async function cloudPull(){
     }
   }catch(e){}
   return false;
+}
+/* Infos/VB-Einträge (und Anrufliste) aus einem anderen Stand vereinigen, bevor ein Stand den anderen überschreibt –
+   Einträge von Handy/iPad gehen so auch bei „Meinen Stand speichern“ oder lokal-neuer nicht verloren. */
+function absorbCloudJournal(cloudDB){
+  var n=0; if(!cloudDB||!DB) return 0;
+  try{
+    (cloudDB.projects||[]).forEach(function(cp){ var ci=cp&&cp.dispo&&cp.dispo.infos; if(!ci||!ci.length) return; var lp=(DB.projects||[]).find(function(x){ return x.id===cp.id; }); if(!lp) return; if(!lp.dispo) lp.dispo={}; var before=(lp.dispo.infos||[]).length; lp.dispo.infos=mergeInfos(ci,lp.dispo.infos||[]); n+=Math.max(0,lp.dispo.infos.length-before); });
+    if(cloudDB.anrufe&&cloudDB.anrufe.length){ var seen={}; (DB.anrufe||[]).forEach(function(a){ seen[a.id]=1; }); cloudDB.anrufe.forEach(function(a){ if(a&&a.id&&!seen[a.id]){ (DB.anrufe=DB.anrufe||[]).push(a); n++; } }); }
+  }catch(e){}
+  if(n){ try{ localStorage.setItem(storeKey(), JSON.stringify(DB)); }catch(e){} if(typeof curProject!=="undefined"&&curProject&&typeof dispoTab!=="undefined"&&dispoTab==="infos"&&document.getElementById("pd-crewplan")){ try{ renderDispo(); }catch(e){} } }
+  return n;
 }
 function scheduleCloudSave(){ if(typeof RESTRICTED!=="undefined"&&RESTRICTED) return; if(!cloudReady||!SB) return; clearTimeout(cloudTimer); cloudTimer=setTimeout(cloudSave,1200); }
 async function cloudSave(){
@@ -10024,7 +10036,12 @@ async function cloudSave(){
     if(!cloudForce){
       var chk=await SB.from("app_state").select("updated_at").eq("id","angebote").maybeSingle();
       var cua=(chk&&chk.data)?chk.data.updated_at:null;
-      if(cua && cloudBaseUA && cua!==cloudBaseUA){ cloudConflict=true; setCloudStatus(false); showCloudConflict(); return; }
+      if(cua && cloudBaseUA && cua!==cloudBaseUA){
+        try{ var rr=await SB.from("app_state").select("data").eq("id","angebote").maybeSingle(); var nJ2=absorbCloudJournal(rr&&rr.data&&rr.data.data); if(nJ2) toast(nJ2+" Infos/VB-Einträge von anderen Geräten übernommen"); }catch(e){}
+        cloudConflict=true; setCloudStatus(false); showCloudConflict(); return;
+      }
+    } else {
+      try{ var rr2=await SB.from("app_state").select("data").eq("id","angebote").maybeSingle(); absorbCloudJournal(rr2&&rr2.data&&rr2.data.data); }catch(e){}
     }
     var res=await SB.from("app_state").upsert({id:"angebote",data:DB,updated_at:new Date().toISOString()}).select("updated_at").single();
     if(!res.error){ cloudBaseUA=(res.data?res.data.updated_at:cloudBaseUA); cloudConflict=false; cloudForce=false; }
@@ -10037,7 +10054,7 @@ function showCloudConflict(){
   bg.style.cssText="position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100000;display:flex;align-items:center;justify-content:center";
   bg.innerHTML='<div style="background:#fff;border-radius:12px;padding:22px;max-width:460px;box-shadow:0 12px 44px rgba(0,0,0,.35);font-family:inherit;color:#333">'
    +'<div style="font-weight:700;font-size:16px;margin-bottom:8px">⚠️ Daten wurden woanders geändert</div>'
-   +'<div style="font-size:13px;color:#555;line-height:1.5;margin-bottom:18px">Dein Angebote-Stand wurde zwischenzeitlich in einem anderen Tab oder auf einem anderen Gerät verändert. Um Datenverlust zu vermeiden: <b>neu laden</b> (empfohlen) – oder bewusst mit deinem aktuellen Stand überschreiben.</div>'
+   +'<div style="font-size:13px;color:#555;line-height:1.5;margin-bottom:18px">Dein Angebote-Stand wurde zwischenzeitlich in einem anderen Tab oder auf einem anderen Gerät verändert. Um Datenverlust zu vermeiden: <b>neu laden</b> (empfohlen) – oder bewusst mit deinem aktuellen Stand überschreiben. Einträge unter Infos/VB und die Anrufliste werden in beiden Fällen zusammengeführt.</div>'
    +'<div style="display:flex;gap:8px;justify-content:flex-end">'
    +'<button class="btn primary" id="cc-reload">Neu laden (empfohlen)</button>'
    +'<button class="btn sm" id="cc-force">Meinen Stand speichern</button></div></div>';
