@@ -65,7 +65,7 @@ if [ -t 0 ]; then
   CUR_PW="$(env_value NOVA_ANGEBOTE_PASSWORD)"
   if [ -z "$CUR_MAIL" ] || [ -z "$CUR_PW" ] || [ "$CUR_PW" = "…" ] || [ "${1:-}" = "--login" ]; then
     echo "Anmeldung für die Angebots-App (wie beim Login auf angebote.nova-works.de):"
-    read -r -p "  E-Mail${CUR_MAIL:+ [$CUR_MAIL]}: " NEW_MAIL
+    read -r -p "  E-Mail oder Benutzername${CUR_MAIL:+ [$CUR_MAIL]}: " NEW_MAIL
     NEW_MAIL="${NEW_MAIL:-$CUR_MAIL}"
     read -r -s -p "  Passwort (wird nicht angezeigt): " NEW_PW; echo
     if [ -z "$NEW_MAIL" ] || [ -z "$NEW_PW" ]; then

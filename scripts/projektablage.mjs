@@ -130,7 +130,9 @@ async function withTimeout(fn) {
 async function login(cfg) {
   const service = process.env.NOVA_ANGEBOTE_SERVICE_KEY;
   if (service) return service;
-  const email = process.env.NOVA_ANGEBOTE_EMAIL;
+  let email = (process.env.NOVA_ANGEBOTE_EMAIL || "").trim();
+  // Wie im Login der App: Benutzername ohne „@“ → <name>@team.nova-works.de
+  if (email && !email.includes("@")) email = `${email.toLowerCase()}@team.nova-works.de`;
   const password = process.env.NOVA_ANGEBOTE_PASSWORD;
   if (!email || !password) {
     throw new Error("Keine Anmeldung konfiguriert. In ~/.nova-works/env NOVA_ANGEBOTE_EMAIL und NOVA_ANGEBOTE_PASSWORD eintragen.");
@@ -145,7 +147,11 @@ async function login(cfg) {
   );
   const body = await res.json().catch(() => ({}));
   if (!res.ok || !body.access_token) {
-    throw new Error(`Anmeldung bei der Angebots-App fehlgeschlagen (HTTP ${res.status}): ${body.error_description || body.msg || body.error || ""}`);
+    const why = body.error_description || body.msg || body.error || "";
+    const hint = /invalid login/i.test(why)
+      ? ` – E-Mail „${email}“ oder Passwort stimmt nicht. Neu eingeben mit: ./scripts/install-projektablage.sh --login`
+      : "";
+    throw new Error(`Anmeldung bei der Angebots-App fehlgeschlagen (HTTP ${res.status}): ${why}${hint}`);
   }
   return body.access_token;
 }
