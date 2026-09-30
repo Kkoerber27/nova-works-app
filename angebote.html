@@ -174,6 +174,15 @@
   .an-donehead{margin:6px 0 8px;font-size:12px}.an-donehead a{color:var(--ink-soft);text-decoration:none}
   .an-list.done .an-item{background:#faf9f6}
   @media (min-width:1500px){ body.anruf-open main{margin-left:360px} }
+  .abl-drop{border:2px dashed var(--line);border-radius:12px;padding:16px;text-align:center;background:#fbfaf7;transition:background .15s,border-color .15s}
+  .abl-drop.over{background:var(--gold-bg);border-color:var(--gold)}
+  .abl-grp{margin-top:10px}
+  .abl-gh{font-weight:700;font-size:12.5px;margin:6px 0 4px}
+  .abl-row{display:flex;gap:10px;align-items:flex-start;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin-bottom:4px;background:#fff}
+  .abl-n{flex:1;min-width:0;font-size:13px;word-break:break-word}
+  .abl-s{flex:0 0 220px;font-size:12px}
+  .abl-x{background:transparent;border:0;color:#999;cursor:pointer;font-size:16px}
+  @media(max-width:820px){ .abl-row{flex-wrap:wrap} .abl-s{flex-basis:100%} }
   .inf-wrap{max-width:820px}
   .inf-compose{background:#fbfaf7;border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:14px}
   .inf-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
@@ -401,6 +410,11 @@
     <div class="card panel-pad" id="pd-summary-card" style="margin-bottom:22px">
       <div class="section-title">Projektübersicht</div>
       <div id="pd-summary"></div>
+    </div>
+
+    <div class="card" style="margin-bottom:22px">
+      <div class="page-head" style="padding:16px 18px 0;margin-bottom:0;align-items:center"><div class="section-title" style="margin:0">Projektablage <span class="muted" style="font-weight:400;font-size:12px;text-transform:none;letter-spacing:0">Dokumente → OneDrive-Projektordner</span></div></div>
+      <div class="panel-pad" id="pd-ablage"></div>
     </div>
 
     <div class="card" style="margin-bottom:22px">
@@ -1047,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-30.4";
+var APP_VERSION="2026-09-30.5";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -1200,6 +1214,7 @@ function renderProjectDetail(){
   renderProjectSummary();
   renderProjectCrewPlan();
   renderZusaetze();
+  if(typeof renderProjektablage==="function"){ try{ renderProjektablage(); }catch(e){} }
   renderProjectAuswertung();
   renderKostenWidget();
 }
@@ -4214,12 +4229,14 @@ function parseInvoicePdf(lines, fileName){
   var subject=(rn?("Rechnung "+rn):"Rechnung")+(fileName?(" · "+String(fileName).replace(/\.pdf$/i,"")):"");
   return { senderName:sender, subject:subject, invoiceDate:datum, netto:(netto!=null?+(+netto).toFixed(2):0), brutto:(brutto!=null?+(+brutto).toFixed(2):null), vat:(vat!=null?+(+vat).toFixed(2):null), invoiceNumber:rn };
 }
-function addManualInvoice(o){
+function addManualInvoice(o,file){
   if(!DB.rechManual) DB.rechManual=[];
-  DB.rechManual.push({ id:"man-"+uid(), status:"neu", senderName:o.senderName||"", senderEmail:"", subject:o.subject||"Rechnung", invoiceDate:o.invoiceDate||"", received:awTodayDE(), amount:(Number(o.netto)||0), gross:(o.brutto!=null?Number(o.brutto):null), vat:(o.vat!=null?Number(o.vat):null), mailbox:"manuell", _manual:true, fileName:o.fileName||"" });
+  var _mid="man-"+uid();
+  if(file&&typeof ablageEnqueue==="function"){ ablageEnqueue(file,{ziel:"Rechnungen/In",quelle:"rechnung",invId:_mid}).then(function(doc){ if(!doc) return; var inv=(DB.rechManual||[]).find(function(x){ return x.id===_mid; }); if(inv){ inv._docId=doc.id; save(); if(inv.assignType==="project"&&inv.projektNr) ablageAttachInvoice(inv,inv.projektNr); } }); }
+  DB.rechManual.push({ id:_mid, status:"neu", senderName:o.senderName||"", senderEmail:"", subject:o.subject||"Rechnung", invoiceDate:o.invoiceDate||"", received:awTodayDE(), amount:(Number(o.netto)||0), gross:(o.brutto!=null?Number(o.brutto):null), vat:(o.vat!=null?Number(o.vat):null), mailbox:"manuell", _manual:true, fileName:o.fileName||"" });
   save(); if(typeof renderRechnungen==="function") renderRechnungen(); toast("Rechnung hinzugefügt – jetzt zuordnen");
 }
-function delManualInvoice(id){ if(!DB.rechManual) return; DB.rechManual=DB.rechManual.filter(function(x){return x.id!==id;}); if(DB.rechEdits) delete DB.rechEdits[id]; save(); if(typeof renderRechnungen==="function") renderRechnungen(); toast("Rechnung gelöscht"); }
+function delManualInvoice(id){ if(!DB.rechManual) return; var _dm=DB.rechManual.find(function(x){return x.id===id;}); if(_dm&&typeof ablageDropInvoice==="function") ablageDropInvoice(_dm); DB.rechManual=DB.rechManual.filter(function(x){return x.id!==id;}); if(DB.rechEdits) delete DB.rechEdits[id]; save(); if(typeof renderRechnungen==="function") renderRechnungen(); toast("Rechnung gelöscht"); }
 function openInvoiceReviewModal(pref, onSave, onCancel, opts){
   opts=opts||{};
   var bg=document.getElementById("re-pdf-bg");
@@ -4316,7 +4333,7 @@ function handleInvoicePdfImport(fileList){
     cgsExtractLines(f).then(function(lines){
       var pref=parseInvoicePdf(lines, f.name); pref.fileName=f.name;
       if((Number(pref.netto)||0)>0){
-        openInvoiceReviewModal(pref, function(obj){ obj.fileName=f.name; addManualInvoice(obj); next(); }, next);
+        openInvoiceReviewModal(pref, function(obj){ obj.fileName=f.name; addManualInvoice(obj,f); next(); }, next);
         return;
       }
       // Kein auswertbarer Betrag im Text-Layer (z. B. Tabelle als Bild) → KI-Erkennung
@@ -4327,14 +4344,14 @@ function handleInvoicePdfImport(fileList){
           subject:(ki.subject||((ki.invoiceNumber?("Rechnung "+ki.invoiceNumber):"")||pref.subject||("Rechnung · "+String(f.name).replace(/\.pdf$/i,"")))),
           invoiceDate:(ki.invoiceDate||pref.invoiceDate||""),
           netto:(Number(ki.netto)||0), brutto:(ki.brutto!=null?Number(ki.brutto):null), vat:(ki.vat!=null?Number(ki.vat):null) };
-        openInvoiceReviewModal(merged, function(obj){ obj.fileName=f.name; addManualInvoice(obj); next(); }, next);
+        openInvoiceReviewModal(merged, function(obj){ obj.fileName=f.name; addManualInvoice(obj,f); next(); }, next);
       }).catch(function(e2){
         toast("KI-Erkennung nicht möglich ("+(e2&&e2.message||e2)+") – bitte manuell erfassen");
-        openInvoiceReviewModal(pref, function(obj){ obj.fileName=f.name; addManualInvoice(obj); next(); }, next);
+        openInvoiceReviewModal(pref, function(obj){ obj.fileName=f.name; addManualInvoice(obj,f); next(); }, next);
       });
     }).catch(function(e){
       toast("PDF nicht lesbar – bitte manuell erfassen");
-      openInvoiceReviewModal({fileName:f.name, subject:"Rechnung · "+String(f.name).replace(/\.pdf$/i,""), netto:0}, function(obj){ obj.fileName=f.name; addManualInvoice(obj); next(); }, next);
+      openInvoiceReviewModal({fileName:f.name, subject:"Rechnung · "+String(f.name).replace(/\.pdf$/i,""), netto:0}, function(obj){ obj.fileName=f.name; addManualInvoice(obj,f); next(); }, next);
     });
   }
   next();
@@ -5603,6 +5620,203 @@ async function infoRecover(d){
   openModal("infrec-bg");
 }
 /* =========================================================================
+   PROJEKTABLAGE – zentrale Dokumentenablage je Projekt.
+   Dateien werden in der App hochgeladen (Cloud-Zeilen „docjob-<id>“ + „docchunk-<id>-<n>“)
+   und vom Mac-Dienst scripts/projektablage.mjs in den OneDrive-Projektordner
+   „Angebote/<Nummer>_<Name>/<Unterordner>“ geschrieben. Der Dienst meldet Status und Pfad
+   an die Job-Zeile zurück; die App übernimmt das in p.dokumente.
+   Ordnernamen entsprechen der bestehenden Struktur – nichts wird umbenannt.
+   ========================================================================= */
+var ABLAGE_ZIELE=[
+  ["Auftragsabwicklung/Ausschreibung Briefing Kunde","Ausschreibung & Briefing (Kunde)"],
+  ["Auftragsabwicklung/Angebote an Kunden","Angebote an Kunden"],
+  ["Auftragsabwicklung/Auftragsbestätigungen","Auftragsbestätigungen"],
+  ["Auftragsabwicklung/Rechnungen an Kunde","Rechnungen an Kunde"],
+  ["Externe Lieferanten","Lieferanten (Angebote & Unterlagen)"],
+  ["Rechnungen/In","Eingangsrechnungen"],
+  ["Rechnungen/Out","Ausgangsrechnungen"],
+  ["Technik/Beleuchtungstechnik","Technik · Licht"],
+  ["Technik/Beschallungstechnik","Technik · Ton"],
+  ["Technik/AV Medientechnik","Technik · AV / Video / LED"],
+  ["Technik/Rigging","Technik · Rigging"],
+  ["Technik/Deko Messebau","Technik · Deko / Messebau"],
+  ["Technik/Kommunikationsmittel","Technik · Kommunikation / Funk"],
+  ["CAD","CAD / Pläne"],
+  ["Visualisierungen","Visualisierungen"],
+  ["Zeitpläne","Zeitpläne"],
+  ["Locationinfos","Locationinfos"],
+  ["Disposition","Disposition"],
+  ["Crew","Crew"],
+  ["Kommunikation","Kommunikation (Mails, Protokolle)"],
+  ["Bilder Vorbesichtigung","Bilder Vorbesichtigung"],
+  ["Bilder VA","Bilder Veranstaltung"],
+  ["Schäden","Schäden"],
+  ["Dokumente","Dokumente (sonstige)"],
+  ["Vorlagen","Vorlagen"]
+];
+var ABLAGE_CHUNK=1500000;          /* Bytes je Cloud-Zeile (≈ 2 MB Base64) */
+var ABLAGE_MAX=60*1024*1024;       /* Obergrenze je Datei */
+function ablageLabel(z){ for(var i=0;i<ABLAGE_ZIELE.length;i++) if(ABLAGE_ZIELE[i][0]===z) return ABLAGE_ZIELE[i][1]; return z; }
+function pDokumente(p){ if(!p.dokumente) p.dokumente=[]; return p.dokumente; }
+/* Zielvorschlag aus Dateiname und Typ */
+function ablageGuess(name,mime){
+  var n=String(name||"").toLowerCase();
+  var has=function(re){ return re.test(n); };
+  if(has(/ausschreib|briefing|leistungsverz|\blv\b|anfrage|tender|pflichtenheft/)) return "Auftragsabwicklung/Ausschreibung Briefing Kunde";
+  if(has(/auftragsbest|\bab[\s_-]?\d|bestellung/)) return "Auftragsabwicklung/Auftragsbestätigungen";
+  if(has(/rechnung|invoice|\bre[\s_-]?\d|gutschrift/)) return "Rechnungen/In";
+  if(has(/angebot|quote|kostenvoranschlag|\bkva\b|offer/)) return "Externe Lieferanten";
+  if(has(/\.(dwg|dxf|vwx|skp|mvr|gdtf)$|lageplan|grundriss|bühnenplan|buehnenplan|hallenplan|\bcad\b/)) return "CAD";
+  if(has(/visual|rendering|render|3d/)) return "Visualisierungen";
+  if(has(/zeitplan|ablauf|timetable|laufplan|schedule|running ?order/)) return "Zeitpläne";
+  if(has(/location|venue|anfahrt|hausordnung|technische ?daten|hallen/)) return "Locationinfos";
+  if(has(/licht|light|lighting|lx|grandma|\.mvr$/)) return "Technik/Beleuchtungstechnik";
+  if(has(/ton|audio|sound|input ?list|stage ?plot|monitor|pa-/)) return "Technik/Beschallungstechnik";
+  if(has(/video|led|beamer|projekt(ion|or)|medien/)) return "Technik/AV Medientechnik";
+  if(has(/rigging|motor|truss|traverse|statik|hängepunkt|haengepunkt/)) return "Technik/Rigging";
+  if(has(/funk|intercom|kommunikationsmittel/)) return "Technik/Kommunikationsmittel";
+  if(has(/rider/)) return "Technik/Beleuchtungstechnik";
+  if(has(/schaden|defekt|damage/)) return "Schäden";
+  if(has(/crew|dienstplan|personal/)) return "Crew";
+  if(has(/protokoll|mail|\.eml$|\.msg$/)) return "Kommunikation";
+  if(/^image\//.test(mime||"")||has(/\.(jpe?g|png|heic|webp)$/)) return "Bilder Vorbesichtigung";
+  return "Dokumente";
+}
+function ablageSafeName(n){ n=String(n||"Datei").replace(/[\\/:*?"<>|\u0000-\u001f]+/g,"-").replace(/\s+/g," ").trim(); if(n.length>150){ var ext=(n.match(/\.[a-z0-9]{1,6}$/i)||[""])[0]; n=n.slice(0,150-ext.length)+ext; } return n||"Datei"; }
+function ablageB64(buf){ var bytes=new Uint8Array(buf), s="", CH=0x8000; for(var i=0;i<bytes.length;i+=CH){ s+=String.fromCharCode.apply(null,bytes.subarray(i,i+CH)); } return btoa(s); }
+function ablageSize(b){ return b>=1048576?((Math.round(b/104857.6)/10).toLocaleString("de-DE")+" MB"):(Math.max(1,Math.round(b/1024))+" KB"); }
+/* Datei in die Cloud-Warteschlange legen. opts: {project, ziel, quelle, name, invId} */
+async function ablageEnqueue(file,opts){
+  opts=opts||{};
+  if(typeof SB==="undefined"||!SB){ toast("Projektablage nur in der Cloud-Version"); return null; }
+  if(!file) return null;
+  if(file.size>ABLAGE_MAX){ toast("„"+file.name+"“ ist zu groß ("+ablageSize(file.size)+", max. "+ablageSize(ABLAGE_MAX)+")"); return null; }
+  var p=opts.project||null, id=uid(), name=ablageSafeName(opts.name||file.name), ziel=opts.ziel||ablageGuess(file.name,file.type);
+  var buf=await file.arrayBuffer(), n=Math.max(1,Math.ceil(buf.byteLength/ABLAGE_CHUNK)), now=new Date().toISOString();
+  for(var i=0;i<n;i++){
+    var part=buf.slice(i*ABLAGE_CHUNK,Math.min(buf.byteLength,(i+1)*ABLAGE_CHUNK));
+    var up=await SB.from("app_state").upsert({id:"docchunk-"+id+"-"+i,data:{b64:ablageB64(part)},updated_at:now});
+    if(up.error){ toast("Upload fehlgeschlagen: "+(up.error.message||up.error)); try{ await SB.from("app_state").delete().like("id","docchunk-"+id+"-%"); }catch(e){} return null; }
+    if(n>2) toast("„"+name+"“ wird hochgeladen … "+Math.round((i+1)/n*100)+" %");
+  }
+  var job={docId:id,pid:p?p.id:"",nummer:p?String(p.nummer||""):"",projekt:p?String(p.name||""):"",ordner:(p&&p.ablageOrdner)||"",ziel:ziel,name:name,mime:file.type||"",size:buf.byteLength,chunks:n,ts:now,user:(typeof infoUserName==="function"?infoUserName():""),status:"neu",invId:opts.invId||""};
+  var jr=await SB.from("app_state").upsert({id:"docjob-"+id,data:job,updated_at:now});
+  if(jr.error){ toast("Upload fehlgeschlagen: "+(jr.error.message||jr.error)); return null; }
+  var doc={id:id,name:name,size:buf.byteLength,mime:file.type||"",ziel:ziel,ts:Date.now(),user:job.user,quelle:opts.quelle||"upload",status:p?"wartet":"projekt-fehlt",invId:opts.invId||""};
+  if(p){ pDokumente(p).push(doc); save(); }
+  return doc;
+}
+/* Rechnung (manuell hochgeladen) nachträglich einem Projekt zuordnen */
+async function ablageAttachInvoice(inv,projNr){
+  if(!inv||!inv._docId||typeof SB==="undefined"||!SB) return;
+  var p=(DB.projects||[]).find(function(x){ return x.nummer===projNr; }); if(!p) return;
+  try{
+    var r=await SB.from("app_state").select("data").eq("id","docjob-"+inv._docId).maybeSingle(); var d=r&&r.data&&r.data.data; if(!d) return;
+    if(d.status==="abgelegt"){ if(d.nummer!==p.nummer) toast("Rechnungs-PDF liegt schon in "+(d.nummer||"")+" – bitte dort in OneDrive verschieben"); return; }
+    d.pid=p.id; d.nummer=String(p.nummer||""); d.projekt=String(p.name||""); d.ordner=p.ablageOrdner||""; d.status="neu";
+    await SB.from("app_state").update({data:d,updated_at:new Date().toISOString()}).eq("id","docjob-"+inv._docId);
+    (DB.projects||[]).forEach(function(q){ if(q.dokumente) q.dokumente=q.dokumente.filter(function(x){ return x.id!==inv._docId; }); });
+    pDokumente(p).push({id:inv._docId,name:d.name,size:d.size,mime:d.mime,ziel:d.ziel,ts:Date.now(),user:d.user,quelle:"rechnung",status:"wartet",invId:inv.id});
+    save();
+  }catch(e){}
+}
+/* Rechnung geht nicht (mehr) an ein Projekt → hochgeladenes PDF nicht ablegen */
+function ablageDropInvoice(inv){
+  if(!inv||!inv._docId||typeof SB==="undefined"||!SB) return;
+  var id=inv._docId;
+  SB.from("app_state").select("data").eq("id","docjob-"+id).maybeSingle().then(function(r){
+    var d=r&&r.data&&r.data.data; if(!d||d.status==="abgelegt") return;
+    SB.from("app_state").delete().eq("id","docjob-"+id).then(function(){}); SB.from("app_state").delete().like("id","docchunk-"+id+"-%").then(function(){});
+    var ch=false; (DB.projects||[]).forEach(function(q){ if(q.dokumente&&q.dokumente.some(function(x){ return x.id===id; })){ q.dokumente=q.dokumente.filter(function(x){ return x.id!==id; }); ch=true; } }); if(ch) save();
+  }).catch(function(){});
+  delete inv._docId;
+}
+/* Status aller noch offenen Ablagen des Projekts vom Mac-Dienst holen */
+var _ablagePollAt={};
+async function ablageRefresh(p,force){
+  if(!p||typeof SB==="undefined"||!SB) return;
+  var open=pDokumente(p).filter(function(d){ return d.status!=="abgelegt"; }); if(!open.length) return;
+  if(!force&&Date.now()-(_ablagePollAt[p.id]||0)<8000) return; _ablagePollAt[p.id]=Date.now();
+  try{
+    var r=await SB.from("app_state").select("id,data").in("id",open.map(function(d){ return "docjob-"+d.id; }));
+    var rows=(r&&r.data)||[], changed=false, byId={}; rows.forEach(function(x){ byId[x.id.replace("docjob-","")]=x.data||{}; });
+    open.forEach(function(d){ var j=byId[d.id]; if(!j) return; ["status","pfad","webUrl","fehler","kandidaten","ordnerName"].forEach(function(k){ if(j[k]!==undefined&&JSON.stringify(d[k])!==JSON.stringify(j[k])){ d[k]=j[k]; changed=true; } }); if(j.status==="neu"&&d.status!=="wartet"){ d.status="wartet"; changed=true; } });
+    if(changed){ var ab=open.find(function(d){ return d.status==="abgelegt"&&d.ordnerName; }); if(ab&&!p.ablageOrdner) p.ablageOrdner=ab.ordnerName; save(); if(curProject===p) renderProjektablage(); }
+  }catch(e){}
+}
+async function ablageChooseFolder(p,d,ordner){
+  p.ablageOrdner=ordner; save();
+  var ids=pDokumente(p).filter(function(x){ return x.status==="mehrdeutig"; }).map(function(x){ return x.id; });
+  for(var i=0;i<ids.length;i++){ try{ var r=await SB.from("app_state").select("data").eq("id","docjob-"+ids[i]).maybeSingle(); var j=r&&r.data&&r.data.data; if(!j) continue; j.ordner=ordner; j.status="neu"; delete j.kandidaten; await SB.from("app_state").update({data:j,updated_at:new Date().toISOString()}).eq("id","docjob-"+ids[i]); }catch(e){} }
+  pDokumente(p).forEach(function(x){ if(x.status==="mehrdeutig"){ x.status="wartet"; delete x.kandidaten; } });
+  save(); renderProjektablage(); toast("Projektordner festgelegt: "+ordner);
+}
+async function ablageRetry(p,d){
+  try{
+    var r=await SB.from("app_state").select("data").eq("id","docjob-"+d.id).maybeSingle(); var j=r&&r.data&&r.data.data;
+    if(!j){ toast("Upload nicht mehr in der Cloud – Datei bitte neu hochladen"); return; }
+    j.status="neu"; delete j.fehler; j.ordner=p.ablageOrdner||j.ordner||""; j.nummer=String(p.nummer||j.nummer||""); j.projekt=String(p.name||j.projekt||"");
+    var u=await SB.from("app_state").update({data:j,updated_at:new Date().toISOString()}).eq("id","docjob-"+d.id);
+    if(u&&u.error){ toast("Fehler: "+(u.error.message||u.error)); return; }
+    d.status="wartet"; delete d.fehler; save(); renderProjektablage(); toast("Wird in der nächsten Runde erneut abgelegt");
+  }catch(e){ toast("Fehler: "+(e.message||e)); }
+}
+async function ablageRemove(p,d){
+  if(d.status!=="abgelegt"){ if(!confirm("„"+d.name+"“ ist noch nicht abgelegt. Upload abbrechen und entfernen?")) return; try{ await SB.from("app_state").delete().eq("id","docjob-"+d.id); await SB.from("app_state").delete().like("id","docchunk-"+d.id+"-%"); }catch(e){} }
+  else if(!confirm("„"+d.name+"“ aus der Liste entfernen? Die Datei bleibt im OneDrive-Projektordner.")) return;
+  p.dokumente=pDokumente(p).filter(function(x){ return x!==d; }); save(); renderProjektablage();
+}
+/* Mehrere Dateien: Zielordner je Datei bestätigen */
+function ablageDialog(p,files){
+  files=[].slice.call(files||[]).filter(Boolean); if(!files.length) return;
+  var bg=document.getElementById("ablage-bg");
+  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="ablage-bg"; bg.innerHTML='<div class="modal"><div class="modal-head"><h3>In Projektordner ablegen</h3><button class="x" data-close="ablage-bg">×</button></div><div class="modal-body" id="ablage-body" style="max-height:70vh;overflow:auto"></div><div class="modal-foot"><button class="btn" data-close="ablage-bg">Abbrechen</button><button class="btn primary" id="ablage-go">Ablegen</button></div></div>'; document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("ablage-bg"); }; bg.querySelectorAll("[data-close]").forEach(function(b){ b.onclick=function(){ closeModal("ablage-bg"); }; }); }
+  var opts=function(sel){ return ABLAGE_ZIELE.map(function(z){ return '<option value="'+esc(z[0])+'"'+(z[0]===sel?' selected':'')+'>'+esc(z[1])+'</option>'; }).join(""); };
+  document.getElementById("ablage-body").innerHTML='<div class="muted" style="font-size:12px;margin-bottom:10px">Projekt <b>'+esc((p.nummer||"")+" · "+(p.name||""))+'</b> · Zielordner je Datei prüfen – vorgeschlagen nach Dateiname.</div>'+
+    files.map(function(f,i){ return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)"><div style="flex:1;min-width:180px;font-size:13px;word-break:break-all">'+esc(f.name)+' <span class="muted" style="font-size:11px">'+ablageSize(f.size)+'</span></div><select class="abl-z" data-i="'+i+'" style="min-width:230px">'+opts(ablageGuess(f.name,f.type))+'</select></div>'; }).join("")+
+    '<div style="margin-top:10px;display:flex;gap:8px;align-items:center;font-size:12.5px"><span class="muted">Alle auf:</span><select id="abl-all" style="min-width:230px"><option value="">–</option>'+opts("")+'</select></div>';
+  var all=document.getElementById("abl-all"); all.onchange=function(){ if(!all.value) return; document.querySelectorAll("#ablage-body .abl-z").forEach(function(s){ s.value=all.value; }); };
+  document.getElementById("ablage-go").onclick=async function(){
+    var sels=[].slice.call(document.querySelectorAll("#ablage-body .abl-z")), go=document.getElementById("ablage-go"); go.disabled=true;
+    closeModal("ablage-bg"); var ok=0;
+    for(var i=0;i<files.length;i++){ var z=(sels[i]||{}).value; var d=await ablageEnqueue(files[i],{project:p,ziel:z,quelle:"upload"}); if(d) ok++; if(curProject===p) renderProjektablage(); }
+    go.disabled=false; if(ok) toast(ok+" Datei"+(ok>1?"en":"")+" hochgeladen – wird vom Mac in den Projektordner gelegt");
+  };
+  openModal("ablage-bg");
+}
+function ablageStatusHtml(p,d){
+  if(d.status==="abgelegt") return '<span style="color:#2d7a4f;font-weight:600">✓ abgelegt</span>'+(d.webUrl?(' <a href="'+esc(d.webUrl)+'" target="_blank" rel="noopener">öffnen</a>'):'')+(d.pfad?('<div class="muted" style="font-size:10.5px;word-break:break-all">'+esc(d.pfad)+'</div>'):'');
+  if(d.status==="mehrdeutig") return '<span style="color:#b4632e;font-weight:600">⚠ mehrere Projektordner</span><div><select class="abl-pick" data-id="'+esc(d.id)+'" style="font-size:12px;max-width:240px"><option value="">Ordner wählen …</option>'+(d.kandidaten||[]).map(function(k){ return '<option value="'+esc(k)+'">'+esc(k)+'</option>'; }).join("")+'</select></div>';
+  if(d.status==="fehler") return '<span style="color:#c0392b;font-weight:600">✕ Fehler</span> <button class="btn sm abl-retry" data-id="'+esc(d.id)+'" style="padding:1px 7px;font-size:11px">Erneut versuchen</button><div class="muted" style="font-size:10.5px">'+esc(d.fehler||"")+'</div>';
+  if(d.status==="projekt-fehlt") return '<span class="muted">wartet auf Projektzuordnung</span>';
+  return '<span style="color:#b8860b">⏳ wartet auf Ablage</span>';
+}
+function renderProjektablage(){
+  var el=document.getElementById("pd-ablage"); if(!el||typeof curProject==="undefined"||!curProject) return;
+  var p=curProject, L=pDokumente(p).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
+  var wait=L.filter(function(d){ return d.status!=="abgelegt"; }).length;
+  var groups={}; L.forEach(function(d){ (groups[d.ziel]=groups[d.ziel]||[]).push(d); });
+  var h='<div class="abl-drop" id="abl-drop"><div style="font-size:14px;font-weight:600">Dateien hierher ziehen</div><div class="muted" style="font-size:12px;margin:2px 0 8px">Ausschreibungen, Lieferanten-Angebote, Pläne, Rider, Fotos … – landen im OneDrive-Projektordner <b>'+esc((p.ablageOrdner||((p.nummer||"")+"_"+(p.name||""))))+'</b></div>'+
+    '<div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap"><label class="btn sm primary" style="cursor:pointer">＋ Dateien wählen<input type="file" id="abl-files" multiple style="display:none"></label><label class="btn sm" style="cursor:pointer">📷 Foto<input type="file" id="abl-cam" accept="image/*" capture="environment" style="display:none"></label></div></div>';
+  if(L.length){
+    h+='<div class="muted" style="font-size:12px;margin:10px 0 6px">'+L.length+' Dokument'+(L.length>1?'e':'')+(wait?(' · <span style="color:#b8860b">'+wait+' wartet auf Ablage durch den Mac</span>'):'')+'</div>';
+    h+=ABLAGE_ZIELE.filter(function(z){ return groups[z[0]]; }).concat(Object.keys(groups).filter(function(k){ return !ABLAGE_ZIELE.some(function(z){ return z[0]===k; }); }).map(function(k){ return [k,k]; })).map(function(z){
+      return '<div class="abl-grp"><div class="abl-gh">📁 '+esc(z[1])+' <span class="muted" style="font-weight:400;font-size:11px">'+esc(z[0])+'</span></div>'+groups[z[0]].map(function(d){
+        return '<div class="abl-row" data-id="'+esc(d.id)+'"><div class="abl-n">'+esc(d.name)+'<div class="muted" style="font-size:10.5px">'+ablageSize(d.size||0)+' · '+esc(d.user||"")+' · '+(typeof infoWhen==="function"?infoWhen(d.ts):"")+(d.quelle==="lieferant"?' · aus Lieferanten-Import':(d.quelle==="rechnung"?' · aus Rechnungen':''))+'</div></div><div class="abl-s">'+ablageStatusHtml(p,d)+'</div><button class="abl-x" title="Aus der Liste entfernen">×</button></div>'; }).join("")+'</div>'; }).join("");
+  } else h+='<div class="muted" style="font-size:12px;margin-top:10px">Noch keine Dokumente über die App abgelegt.</div>';
+  el.innerHTML=h;
+  var drop=document.getElementById("abl-drop");
+  ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
+  ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
+  drop.addEventListener("drop",function(e){ var fs=e.dataTransfer&&e.dataTransfer.files; if(fs&&fs.length) ablageDialog(p,fs); });
+  var fi=document.getElementById("abl-files"); fi.onchange=function(){ var fs=[].slice.call(fi.files); fi.value=""; ablageDialog(p,fs); };
+  var ca=document.getElementById("abl-cam"); ca.onchange=function(){ var fs=[].slice.call(ca.files); ca.value=""; ablageDialog(p,fs); };
+  el.querySelectorAll(".abl-x").forEach(function(b){ b.onclick=function(){ var d=pDokumente(p).find(function(x){ return x.id===b.closest(".abl-row").dataset.id; }); if(d) ablageRemove(p,d); }; });
+  el.querySelectorAll(".abl-retry").forEach(function(b){ b.onclick=function(){ var d=pDokumente(p).find(function(x){ return x.id===b.dataset.id; }); if(d) ablageRetry(p,d); }; });
+  el.querySelectorAll(".abl-pick").forEach(function(s){ s.onchange=function(){ if(!s.value) return; ablageChooseFolder(p,null,s.value); }; });
+  ablageRefresh(p);
+}
+/* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
    iPhone/Mac exportieren. Teilen-Dialog (AirDrop, Nachrichten, Mail) über
    die Web-Share-API, sonst Download der .vcf-Datei. Mehrere Kontakte in
@@ -6268,18 +6482,21 @@ function awRecordEdit(inv){ awRechEdits()[inv.id]={status:inv.status,assignType:
 function awReconcileRech(){ var ov=DB.rechEdits; if(!ov) return; var byId={}; (DB.rechnungen||[]).forEach(function(r){ byId[r.id]=r; }); Object.keys(ov).forEach(function(iid){ var r=byId[iid], e=ov[iid]; if(!r) return; var same=(r.status===e.status)&&((r.assignType||"")===(e.assignType||""))&&(String(r.projektNr||"")===String(e.projektNr||""))&&((r.generalCat||"")===(e.generalCat||"")); if(same){ delete ov[iid]; } else { r.status=e.status; r.assignType=e.assignType; r.projektNr=e.projektNr; r.generalCat=e.generalCat; } }); }
 function projNameByNr(nr){ var x=(DB.projects||[]).filter(function(p){return p.nummer===nr;})[0]; return x?(x.name||""):""; }
 function assignInvoiceProject(inv,projNr){
+  if(inv&&inv._docId&&typeof ablageAttachInvoice==="function") ablageAttachInvoice(inv,projNr);
   inv.status="zugewiesen"; inv.assignType="project"; inv.projektNr=projNr; inv.generalCat="";
   awRecordEdit(inv);
   awEnqueue({type:"invoiceAssign",invId:inv.id,target:"project",projektNr:projNr,projName:projNameByNr(projNr)});
   renderRechnungen();
 }
 function assignInvoiceSparte(inv,slug){
+  if(inv&&inv._docId&&typeof ablageDropInvoice==="function") ablageDropInvoice(inv);
   inv.status="zugewiesen"; inv.assignType="general"; inv.generalCat=slug; inv.projektNr="";
   awRecordEdit(inv);
   awEnqueue({type:"invoiceAssign",invId:inv.id,target:"general",generalCat:slug});
   renderRechnungen();
 }
 function ignoreInvoice(inv,ig){
+  if(ig&&inv&&inv._docId&&typeof ablageDropInvoice==="function") ablageDropInvoice(inv);
   inv.status=ig?"ignoriert":"neu"; if(ig){ inv.assignType=""; }
   awRecordEdit(inv);
   awEnqueue({type:"invoiceIgnore",invId:inv.id,ignore:!!ig});
@@ -9063,6 +9280,7 @@ function handleCgsImport(file){
     save(); renderJobs(); renderSummary();
     var nl=groups.reduce(function(s,g){return s+g.lines.length;},0);
     toast(parsed.length+" Gruppen, "+nl+" Positionen importiert (Preise als EK)");
+    if(typeof ablageEnqueue==="function"){ ablageEnqueue(file,{project:curProject,ziel:"Externe Lieferanten",quelle:"lieferant",name:(/cgs/i.test(file.name)?file.name:("CGS – "+file.name))}); }
   }).catch(function(e){ toast("CGS-Import-Fehler: "+(e&&e.message||e)); });
 }
 async function handleSupplierOfferImport(file){
@@ -9099,6 +9317,7 @@ async function handleSupplierOfferImport(file){
     save(); renderJobs(); renderSummary();
     var nl=gs.reduce(function(s,g){return s+g.lines.length;},0);
     toast("✓ "+gs.length+" Gruppen, "+nl+" Positionen von "+(fix(d.lieferant)||"Lieferant")+" importiert (EK übernommen)");
+    if(typeof ablageEnqueue==="function"){ var lf=fix(d.lieferant), nm=(lf&&file.name.toLowerCase().indexOf(lf.toLowerCase().split(" ")[0])<0)?(lf+" – "+file.name):file.name; ablageEnqueue(file,{project:curProject,ziel:"Externe Lieferanten",quelle:"lieferant",name:nm}).then(function(doc){ if(doc) toast("Lieferanten-Angebot wird im Projektordner unter „Externe Lieferanten“ abgelegt"); }); }
   }catch(e){ toast("Lieferanten-Import-Fehler: "+(e&&e.message||e)); }
 }
 /* ===== PLAN-IMPORT (Lichtpläne & Tonlisten als PDF per Drag&Drop → Typen + Stückzahlen → Positionsgruppen im Angebot) =====

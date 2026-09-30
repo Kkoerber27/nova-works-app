@@ -1,6 +1,6 @@
 # Geplante Aufgaben auf dem Mac
 
-Drei LaunchAgents. Alle lesen ihre Zugangsdaten aus `~/.nova-works/env`
+Vier LaunchAgents. Alle lesen ihre Zugangsdaten aus `~/.nova-works/env`
 (Rechte 600, liegt bewusst außerhalb des Repositories) und schreiben ein
 Protokoll nach `~/.nova-works/`.
 
@@ -8,11 +8,48 @@ Protokoll nach `~/.nova-works/`.
 |---|---|---|---|
 | Rechnungsablage | alle 15 Min | `rechnungsablage.sh` | `~/.nova-works/rechnungsablage.log` |
 | NAS-Sicherung | nachts 03:15 | `nas-backup.sh` | `~/.nova-works/nas-backup.log` |
+| Projektablage | alle 2 Min | `projektablage.sh` | `~/.nova-works/projektablage.log` |
 | Scheinwerfer-Protokoll | nachts 01:00 | `protokoll-nacht.sh` | `~/.nova-works/protokoll.log` |
 
 Von Hand dazu: `nas-restore.sh` für das Zurückspielen und
 `protokoll-whatsapp.sh` für das Scheinwerfer-Protokoll aus einem
 WhatsApp-Export.
+
+## Projektablage
+
+In der Angebots-App gibt es im Projekt die Karte **Projektablage**. Dort
+hochgeladene Dokumente (Ausschreibung, Lieferantenangebote, Pläne, Fotos …)
+landen zuerst als Auftrag in Supabase (`app_state`, Zeilen `docjob-*` und
+`docchunk-*`). Dieses Skript holt sie ab und legt sie im synchronisierten
+OneDrive ab:
+
+```
+Angebote/<Nummer>_<Projektname>/<Unterordner>/<Datei>
+```
+
+Die Unterordner sind die bestehende Projektstruktur (`Externe Lieferanten`,
+`Auftragsabwicklung/Ausschreibung Briefing Kunde`, `Rechnungen/In`, `CAD` …).
+Lieferantenangebote und Rechnungen, die in der App eingelesen werden, gehen
+automatisch mit. Gibt es noch keinen Projektordner, legt das Skript ihn mit der
+vollständigen Grundstruktur an. Passen mehrere Ordner zur Projektnummer, fragt
+die App nach, welcher gemeint ist. Vorhandene Dateien werden nie überschrieben,
+eine gleichnamige bekommt „ (2)“ angehängt.
+
+```bash
+./scripts/install-projektablage.sh
+```
+
+Danach in `~/.nova-works/env` die Anmeldung eintragen:
+
+```bash
+export NOVA_ANGEBOTE_EMAIL="…"
+export NOVA_ANGEBOTE_PASSWORD="…"
+export PROJEKT_ABLAGE_ROOT=""   # leer = OneDrive-Ordner „Angebote“ automatisch finden
+export PROJEKT_ABLAGE_WEB="https://novaworksgmbh-my.sharepoint.com/personal/kk_nova-works_de/Documents/Angebote"
+```
+
+Prüfen: `./scripts/projektablage.sh --probe` zeigt, was abgelegt würde, ohne
+etwas zu schreiben. Entfernen: `./scripts/install-projektablage.sh --remove`.
 
 ## NAS-Sicherung
 

@@ -21,3 +21,7 @@ Weitere Dateien: `scripts/` (Mac-/NAS-Skripte, Scheinwerfer-Protokoll, Rechnungs
 ## Kalkulations-Assistent
 
 Im Angebots-Editor (`angebote.html`, Block `/* ===== KALKULATIONS-ASSISTENT`): Projektprofil (`project.profil`), Erfahrungswerte aus vergangenen Projekten (Angebots-EK, Ist-Kosten aus Rechnungen, Margen, Crew-Tage) und Empfehlungen für das aktuelle Angebot laufen komplett im Browser. Die optionale KI-Einschätzung ruft die Edge Function `supabase/functions/kalk-advisor` auf (Anthropic-SDK, Secret `ANTHROPIC_API_KEY`); Deployment siehe `supabase/functions/README.md`.
+
+## Projektablage
+
+Karte „Projektablage“ im Projekt (`angebote.html`, Block „PROJEKTABLAGE“): Dateien werden in Teilen als `docchunk-<id>-<n>` plus Auftrag `docjob-<id>` in `app_state` hochgeladen; `scripts/projektablage.mjs` (LaunchAgent auf dem Mac, siehe `scripts/README.md`) legt sie in `OneDrive/Angebote/<Nummer>_<Name>/<Unterordner>` ab und meldet Status/Pfad zurück. Die Unterordnernamen (`ABLAGE_ZIELE` in der App, `ZIELE` im Skript) entsprechen der bestehenden Projektstruktur und dürfen nur gemeinsam geändert werden – `Rechnungen/Out` nutzt auch die Rechnungsablage.
