@@ -47,7 +47,7 @@ export NOVA_ANGEBOTE_EMAIL NOVA_ANGEBOTE_PASSWORD NOVA_ANGEBOTE_SERVICE_KEY \
 command -v node >/dev/null 2>&1 || { log "FEHLER 'node' nicht im PATH. PATH=$PATH"; exit 1; }
 
 # Beim Aufruf von Hand zusätzlich auf dem Bildschirm zeigen.
-if [ -t 1 ]; then
+if [ -t 1 ] || [ "${NOVA_SHOW:-}" = "1" ]; then
   node "$REPO/scripts/projektablage.mjs" "$@" 2>&1 | tee -a "$LOG"
   STATUS=${PIPESTATUS[0]}
 else

@@ -1061,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-10-01.1";
+var APP_VERSION="2026-10-01.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5762,7 +5762,9 @@ function ablageFilerHtml(){
   var min=Math.round((Date.now()-Date.parse(f.at))/60000), wann=min<1?"gerade eben":("vor "+(min<120?(min+" Min"):(Math.round(min/60)+" Std")));
   if(f.ok===false) return '<span style="color:#c0392b">✕ Mac-Dienst meldet Fehler ('+wann+'): '+esc(f.fehler||"")+'</span>';
   if(min>10) return '<span style="color:#b4632e">⚠ Mac-Dienst zuletzt aktiv '+wann+(f.host?(' auf '+esc(f.host)):'')+' – Mac aus oder Dienst gestoppt?</span>';
-  return '<span style="color:#2d7a4f">● Mac-Dienst aktiv ('+wann+(f.host?(', '+esc(f.host)):'')+')</span>';
+  var mine=(typeof curProject!=="undefined"&&curProject)?pDokumente(curProject).filter(function(d){ return d.status==="wartet"; }).length:0;
+  var warn=(mine&&f.offen===0)?' <span style="color:#c0392b">– sieht aber keine wartenden Dateien. Wurden sie unter einem anderen App-Benutzer hochgeladen als dem, der auf dem Mac eingetragen ist?</span>':'';
+  return '<span style="color:#2d7a4f">● Mac-Dienst aktiv ('+wann+(f.host?(', '+esc(f.host)):'')+(typeof f.offen==="number"?(' · sieht '+f.offen+' offene Datei'+(f.offen===1?'':'en')):'')+')</span>'+warn;
 }
 async function ablageChooseFolder(p,d,ordner){
   p.ablageOrdner=ordner; save();

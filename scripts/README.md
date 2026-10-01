@@ -57,6 +57,10 @@ Der Dienst meldet nach jeder Runde ein Lebenszeichen (`app_state`-Zeile
 OneDrive verweigert. Dann in Systemeinstellungen → Datenschutz & Sicherheit →
 Festplattenvollzugriff das Programm `node` hinzufügen.
 
+Hängt etwas: `./scripts/projektablage-check.sh` zeigt den Zustand des
+Hintergrunddienstes, die letzten Protokollzeilen und arbeitet die Warteschlange
+einmal sichtbar im Vordergrund ab.
+
 Prüfen: `./scripts/projektablage.sh --probe` zeigt, was abgelegt würde, ohne
 etwas zu schreiben. Entfernen: `./scripts/install-projektablage.sh --remove`.
 

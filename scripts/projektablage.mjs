@@ -23,6 +23,7 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const PROBE = process.argv.includes("--probe");
+const VERBOSE = process.argv.includes("--verbose");
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const TIMEOUT_MS = 60000;
 const KEEP_DONE_DAYS = 30;
@@ -319,6 +320,15 @@ async function main() {
       log(`OneDrive-Ordner: ${root} (${n} Projektordner)`);
       log(`Anmeldung an der Angebots-App: OK · ${rows.filter((r) => (r.data || {}).status !== "abgelegt").length} Datei(en) offen`);
     }
+    const offen = rows.filter((r) => (r.data || {}).status !== "abgelegt");
+    if (VERBOSE) {
+      log(`Angemeldet, OneDrive-Ordner ${root}`);
+      log(`${offen.length} offene Datei(en) in der Warteschlange sichtbar:`);
+      for (const r of offen) {
+        const j = r.data || {};
+        log(`  ${j.nummer || "(ohne Projekt)"} · ${j.status || "?"} · „${j.name || "?"}“ → ${j.ziel || "?"}${j.user ? ` · von ${j.user}` : ""}${j.fehler ? ` · ${j.fehler}` : ""}`);
+      }
+    }
     let done = 0;
     let waiting = 0;
     let failed = 0;
@@ -425,10 +435,10 @@ async function main() {
         await db.update(id, { ...job, status: "fehler", fehler: msg }).catch(() => {});
       }
     }
-    if (done || PROBE) log(`Runde fertig: ${done} abgelegt, ${waiting} warten, ${failed} Fehler.`);
+    if (done || PROBE || VERBOSE) log(`Runde fertig: ${done} abgelegt, ${waiting} warten, ${failed} Fehler.`);
     if (!PROBE) {
       await db
-        .status({ ok: true, at: new Date().toISOString(), host: hostname(), done, waiting, failed, node: process.version })
+        .status({ ok: true, at: new Date().toISOString(), host: hostname(), done, waiting, failed, offen: offen.length, node: process.version })
         .catch(() => {});
     }
   } catch (err) {
