@@ -16,8 +16,9 @@
  * Aufgerufen wird es von scripts/projektablage.sh (LaunchAgent, jede Minute).
  */
 
-import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
-import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { existsSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { homedir, hostname } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -290,19 +291,70 @@ function explain(err) {
 
 /* ── Eine Runde ──────────────────────────────────────────────────────────── */
 
-async function lock() {
-  const file = join(homedir(), ".nova-works", "projektablage.lock");
-  await mkdir(dirname(file), { recursive: true });
+/** Läuft der Prozess noch, und ist es wirklich eine Projektablage-Runde? */
+function runningAblage(pid) {
+  if (!(pid > 0) || pid === process.pid) return false;
   try {
-    const st = statSync(file);
-    if (Date.now() - st.mtimeMs < 15 * 60 * 1000) die("Eine andere Runde läuft noch (Sperrdatei jünger als 15 Min).");
+    process.kill(pid, 0);
+  } catch (err) {
+    if (!err || err.code !== "EPERM") return false;
+  }
+  try {
+    return /projektablage/.test(execFileSync("ps", ["-p", String(pid), "-o", "command="], { encoding: "utf8" }));
+  } catch {
+    return false;
+  }
+}
+
+const LOCK_FILE = join(homedir(), ".nova-works", "projektablage.lock");
+const HANG_MS = 10 * 60 * 1000;
+
+/**
+ * Sperre gegen zwei gleichzeitige Runden. Eine Sperrdatei ohne laufenden
+ * Prozess (abgebrochene Runde) wird übernommen; eine Runde, die länger als
+ * 10 Minuten hängt, wird beendet.
+ */
+async function lock() {
+  await mkdir(dirname(LOCK_FILE), { recursive: true });
+  let pid = 0;
+  let age = 0;
+  try {
+    age = Date.now() - statSync(LOCK_FILE).mtimeMs;
+    pid = Number(readFileSync(LOCK_FILE, "utf8").trim());
   } catch {
     /* keine Sperre */
   }
-  const fh = await open(file, "w");
-  await fh.writeFile(String(process.pid));
-  await fh.close();
-  return () => rm(file, { force: true });
+  if (pid && runningAblage(pid)) {
+    if (age < HANG_MS) die(`Eine andere Runde läuft noch (Prozess ${pid}, seit ${Math.round(age / 1000)} s).`);
+    log(`Vorige Runde (Prozess ${pid}) hängt seit ${Math.round(age / 60000)} Min – wird beendet.`);
+    try {
+      process.kill(pid, "SIGKILL");
+    } catch {
+      /* schon weg */
+    }
+  }
+  await writeFile(LOCK_FILE, String(process.pid));
+  const release = () => {
+    try {
+      if (readFileSync(LOCK_FILE, "utf8").trim() === String(process.pid)) rmSync(LOCK_FILE, { force: true });
+    } catch {
+      /* schon weg */
+    }
+  };
+  // Auch bei Abbruch von außen (launchctl, Strg+C) die Sperre freigeben.
+  for (const sig of ["SIGTERM", "SIGINT", "SIGHUP"]) {
+    process.on(sig, () => {
+      release();
+      process.exit(1);
+    });
+  }
+  // Notbremse: eine Runde darf nicht ewig laufen.
+  setTimeout(() => {
+    log(`Runde nach ${HANG_MS / 60000} Min abgebrochen (hängt, etwa beim Zugriff auf OneDrive).`);
+    release();
+    process.exit(2);
+  }, HANG_MS).unref();
+  return async () => release();
 }
 
 async function main() {

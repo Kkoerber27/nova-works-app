@@ -20,11 +20,20 @@ rm -f /tmp/projektablage-check.$$
 
 echo
 echo "== Letzte Zeilen aus $LOG"
-if [ -f "$LOG" ]; then tail -n 12 "$LOG" | sed 's/^/  /'; else echo "  (noch kein Protokoll – der Dienst ist nie gelaufen)"; fi
+if [ -f "$LOG" ]; then grep -v "andere Runde läuft noch" "$LOG" | tail -n 15 | sed 's/^/  /'; else echo "  (noch kein Protokoll – der Dienst ist nie gelaufen)"; fi
 
 echo
 echo "== Sperrdatei"
-if [ -f "$HOME/.nova-works/projektablage.lock" ]; then ls -l "$HOME/.nova-works/projektablage.lock" | sed 's/^/  /'; else echo "  keine"; fi
+LOCK="$HOME/.nova-works/projektablage.lock"
+if [ -f "$LOCK" ]; then
+  ls -l "$LOCK" | sed 's/^/  /'
+  LPID="$(cat "$LOCK" 2>/dev/null)"
+  if [ -n "$LPID" ] && ps -p "$LPID" >/dev/null 2>&1; then
+    echo "  Prozess $LPID läuft: $(ps -p "$LPID" -o etime=,command= | cut -c1-120)"
+  else
+    echo "  verwaist (kein Prozess $LPID) – wird bei der nächsten Runde übernommen"
+  fi
+else echo "  keine"; fi
 
 echo
 echo "== Eine Runde jetzt im Vordergrund"

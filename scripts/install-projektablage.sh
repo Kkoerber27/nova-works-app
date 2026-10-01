@@ -130,8 +130,9 @@ if [ -t 0 ]; then
   "$RUNNER" --probe || true
   echo
   echo "Hintergrunddienst wird gestartet und geprüft …"
-  launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || true
-  sleep 8
+  # RunAtLoad hat schon eine Runde gestartet – nur abwarten, nicht neu starten
+  # (ein Neustart bricht die laufende Runde ab).
+  sleep 10
   if tail -n 15 "$LOG" 2>/dev/null | grep -q "FEHLER"; then
     echo "Der Hintergrunddienst meldet einen Fehler – letzte Zeilen aus $LOG:"
     tail -n 6 "$LOG"
