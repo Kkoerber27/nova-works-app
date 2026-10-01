@@ -8,7 +8,7 @@ Protokoll nach `~/.nova-works/`.
 |---|---|---|---|
 | Rechnungsablage | alle 15 Min | `rechnungsablage.sh` | `~/.nova-works/rechnungsablage.log` |
 | NAS-Sicherung | nachts 03:15 | `nas-backup.sh` | `~/.nova-works/nas-backup.log` |
-| Projektablage | alle 2 Min | `projektablage.sh` | `~/.nova-works/projektablage.log` |
+| Projektablage | jede Minute | `projektablage.sh` | `~/.nova-works/projektablage.log` |
 | Scheinwerfer-Protokoll | nachts 01:00 | `protokoll-nacht.sh` | `~/.nova-works/protokoll.log` |
 
 Von Hand dazu: `nas-restore.sh` für das Zurückspielen und
@@ -50,6 +50,12 @@ export NOVA_ANGEBOTE_PASSWORD="…"
 export PROJEKT_ABLAGE_ROOT=""   # leer = OneDrive-Ordner „Angebote“ automatisch finden
 export PROJEKT_ABLAGE_WEB="https://novaworksgmbh-my.sharepoint.com/personal/kk_nova-works_de/Documents/Angebote"
 ```
+
+Der Dienst meldet nach jeder Runde ein Lebenszeichen (`app_state`-Zeile
+`docfiler-status`). Die App zeigt es unten in der Karte an: „Mac-Dienst aktiv“,
+„zuletzt aktiv vor …“ oder die Fehlermeldung, etwa wenn macOS den Zugriff auf
+OneDrive verweigert. Dann in Systemeinstellungen → Datenschutz & Sicherheit →
+Festplattenvollzugriff das Programm `node` hinzufügen.
 
 Prüfen: `./scripts/projektablage.sh --probe` zeigt, was abgelegt würde, ohne
 etwas zu schreiben. Entfernen: `./scripts/install-projektablage.sh --remove`.

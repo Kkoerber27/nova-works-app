@@ -13,12 +13,12 @@
  * Job-Zeile zurück und löscht danach die Datenzeilen. OneDrive lädt die Datei
  * von dort selbst hoch.
  *
- * Aufgerufen wird es von scripts/projektablage.sh (LaunchAgent, alle 2 Minuten).
+ * Aufgerufen wird es von scripts/projektablage.sh (LaunchAgent, jede Minute).
  */
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { mkdir, open, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
+import { homedir, hostname } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -176,6 +176,18 @@ function api(cfg, token) {
       call("PATCH", `id=eq.${encodeURIComponent(id)}`, { data, updated_at: new Date().toISOString() }, { Prefer: "return=minimal" }),
     remove: (pattern) => call("DELETE", `id=like.${encodeURIComponent(pattern)}`, null, { Prefer: "return=minimal" }),
     removeOne: (id) => call("DELETE", `id=eq.${encodeURIComponent(id)}`, null, { Prefer: "return=minimal" }),
+    /** Lebenszeichen für die App: wann zuletzt gelaufen, mit welchem Ergebnis. */
+    status: async (data) => {
+      const res = await withTimeout((signal) =>
+        fetch(base, {
+          method: "POST",
+          headers: { ...headers, Prefer: "resolution=merge-duplicates,return=minimal" },
+          body: JSON.stringify([{ id: "docfiler-status", data, updated_at: new Date().toISOString() }]),
+          signal,
+        }),
+      );
+      if (!res.ok) throw new Error(`Supabase Status HTTP ${res.status}`);
+    },
   };
 }
 
@@ -185,7 +197,7 @@ function api(cfg, token) {
 function findRoot() {
   const fromEnv = process.env.PROJEKT_ABLAGE_ROOT;
   if (fromEnv) {
-    if (!existsSync(fromEnv) || !statSync(fromEnv).isDirectory()) die(`PROJEKT_ABLAGE_ROOT existiert nicht: ${fromEnv}`);
+    if (!existsSync(fromEnv) || !statSync(fromEnv).isDirectory()) throw new Error(`PROJEKT_ABLAGE_ROOT existiert nicht: ${fromEnv}`);
     return resolve(fromEnv);
   }
   const home = homedir();
@@ -203,8 +215,8 @@ function findRoot() {
   }
   const found = [...new Set(cands)].filter((c) => existsSync(c) && statSync(c).isDirectory());
   if (found.length === 1) return found[0];
-  if (!found.length) die("OneDrive-Ordner „Angebote“ nicht gefunden. In ~/.nova-works/env PROJEKT_ABLAGE_ROOT setzen.");
-  die(`Mehrere OneDrive-Ordner „Angebote“ gefunden, bitte PROJEKT_ABLAGE_ROOT setzen:\n  ${found.join("\n  ")}`);
+  if (!found.length) throw new Error("OneDrive-Ordner „Angebote“ nicht gefunden. In ~/.nova-works/env PROJEKT_ABLAGE_ROOT setzen.");
+  throw new Error(`Mehrere OneDrive-Ordner „Angebote“ gefunden, bitte PROJEKT_ABLAGE_ROOT setzen:\n  ${found.join("\n  ")}`);
 }
 
 function safeSegment(s) {
@@ -265,6 +277,16 @@ function webUrlFor(folder, sub, file) {
   return `${base.replace(/\/$/, "")}/${segs.join("/")}`;
 }
 
+/** Fehlermeldung mit Hinweis, wenn macOS den Zugriff auf OneDrive verweigert. */
+function explain(err) {
+  const msg = err instanceof Error ? err.message : String(err);
+  const code = err && typeof err === "object" ? err.code : "";
+  if (code === "EPERM" || code === "EACCES" || /operation not permitted/i.test(msg)) {
+    return `${msg} – macOS verweigert dem Hintergrunddienst den Zugriff auf OneDrive. Systemeinstellungen → Datenschutz & Sicherheit → Festplattenvollzugriff → „node“ hinzufügen (Pfad: ${process.execPath}).`;
+  }
+  return msg;
+}
+
 /* ── Eine Runde ──────────────────────────────────────────────────────────── */
 
 async function lock() {
@@ -284,11 +306,13 @@ async function lock() {
 
 async function main() {
   const cfg = appConfig();
-  const root = findRoot();
   const unlock = PROBE ? async () => {} : await lock();
+  let db = null;
   try {
     const token = await login(cfg);
-    const db = api(cfg, token);
+    db = api(cfg, token);
+    const root = findRoot();
+    readdirSync(root); // Zugriff früh prüfen (macOS-Datenschutz)
     const rows = await db.jobs();
     if (PROBE) {
       const n = readdirSync(root, { withFileTypes: true }).filter((e) => e.isDirectory()).length;
@@ -396,12 +420,21 @@ async function main() {
         log(`${job.nummer}: „${fileOnly}“ → ${folderName}/${sub}${target.existed ? " (lag schon dort)" : ""}`);
       } catch (err) {
         failed++;
-        const msg = err instanceof Error ? err.message : String(err);
+        const msg = explain(err);
         log(`${id}: ${msg}`);
         await db.update(id, { ...job, status: "fehler", fehler: msg }).catch(() => {});
       }
     }
     if (done || PROBE) log(`Runde fertig: ${done} abgelegt, ${waiting} warten, ${failed} Fehler.`);
+    if (!PROBE) {
+      await db
+        .status({ ok: true, at: new Date().toISOString(), host: hostname(), done, waiting, failed, node: process.version })
+        .catch(() => {});
+    }
+  } catch (err) {
+    const msg = explain(err);
+    if (db && !PROBE) await db.status({ ok: false, at: new Date().toISOString(), host: hostname(), fehler: msg }).catch(() => {});
+    throw new Error(msg);
   } finally {
     await unlock();
   }

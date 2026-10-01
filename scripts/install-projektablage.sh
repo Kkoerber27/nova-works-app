@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Richtet die Projektablage als LaunchAgent ein (macOS): alle 2 Minuten werden
+# Richtet die Projektablage als LaunchAgent ein (macOS): jede Minute werden
 # Dokumente, die in der Angebots-App hochgeladen wurden, im OneDrive-Projektordner
 # abgelegt.
 #
@@ -8,7 +8,7 @@
 #   ./scripts/install-projektablage.sh --login    Anmeldung neu eingeben
 #   ./scripts/install-projektablage.sh --remove   wieder entfernen
 #
-# Takt über NOVA_INTERVAL (Sekunden), Standard 120.
+# Takt über NOVA_INTERVAL (Sekunden), Standard 60.
 #
 set -euo pipefail
 
@@ -18,7 +18,7 @@ REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 RUNNER="$REPO/scripts/projektablage.sh"
 LOG="$HOME/.nova-works/projektablage.log"
 ENV_FILE="$HOME/.nova-works/env"
-INTERVAL="${NOVA_INTERVAL:-120}"
+INTERVAL="${NOVA_INTERVAL:-60}"
 
 if [ "${1:-}" = "--remove" ]; then
   launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null || true
@@ -28,6 +28,14 @@ if [ "${1:-}" = "--remove" ]; then
 fi
 
 [ -x "$RUNNER" ] || { echo "FEHLER: $RUNNER fehlt oder ist nicht ausführbar." >&2; exit 1; }
+# Node so finden, wie es im Terminal gefunden wird – der LaunchAgent bekommt
+# diesen Pfad mit, sonst sieht er nur /usr/bin:/bin.
+NODE_BIN="$(command -v node || true)"
+if [ -z "$NODE_BIN" ]; then
+  echo "FEHLER: 'node' nicht gefunden. Node.js installieren (https://nodejs.org) und erneut starten." >&2
+  exit 1
+fi
+NODE_DIR="$(cd "$(dirname "$NODE_BIN")" && pwd -P)"
 mkdir -p "$HOME/Library/LaunchAgents" "$HOME/.nova-works"
 touch "$ENV_FILE"; chmod 600 "$ENV_FILE"
 
@@ -91,6 +99,13 @@ cat > "$PLIST" <<PLISTEOF
     <string>/bin/bash</string>
     <string>$RUNNER</string>
   </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>$NODE_DIR:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>NOVA_NODE_DIR</key>
+    <string>$NODE_DIR</string>
+  </dict>
   <key>StartInterval</key>
   <integer>$INTERVAL</integer>
   <key>RunAtLoad</key>
@@ -108,11 +123,21 @@ PLISTEOF
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || launchctl unload "$PLIST" 2>/dev/null || true
 launchctl bootstrap "gui/$(id -u)" "$PLIST" 2>/dev/null || launchctl load "$PLIST"
 
-printf 'Eingerichtet: %s\n  Skript:    %s\n  Takt:      alle %s Sekunden\n  Protokoll: %s\n  Zugang:    aus %s\n\n' \
-  "$LABEL" "$RUNNER" "$INTERVAL" "$LOG" "$ENV_FILE"
+printf 'Eingerichtet: %s\n  Skript:    %s\n  Node:      %s\n  Takt:      alle %s Sekunden\n  Protokoll: %s\n  Zugang:    aus %s\n\n' \
+  "$LABEL" "$RUNNER" "$NODE_DIR/node" "$INTERVAL" "$LOG" "$ENV_FILE"
 if [ -t 0 ]; then
   echo "Probelauf (schreibt nichts, zeigt nur, was abgelegt würde):"
   "$RUNNER" --probe || true
+  echo
+  echo "Hintergrunddienst wird gestartet und geprüft …"
+  launchctl kickstart -k "gui/$(id -u)/$LABEL" 2>/dev/null || true
+  sleep 8
+  if tail -n 15 "$LOG" 2>/dev/null | grep -q "FEHLER"; then
+    echo "Der Hintergrunddienst meldet einen Fehler – letzte Zeilen aus $LOG:"
+    tail -n 6 "$LOG"
+  else
+    echo "Hintergrunddienst läuft. Status siehst du auch in der App in der Karte „Projektablage“."
+  fi
   echo
   echo "Anmeldung ändern: $0 --login"
 else

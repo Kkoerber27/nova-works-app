@@ -1061,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-09-30.5";
+var APP_VERSION="2026-10-01.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5731,18 +5731,38 @@ function ablageDropInvoice(inv){
   }).catch(function(){});
   delete inv._docId;
 }
-/* Status aller noch offenen Ablagen des Projekts vom Mac-Dienst holen */
-var _ablagePollAt={};
+/* Status aller noch offenen Ablagen des Projekts und Lebenszeichen des Mac-Dienstes holen */
+var _ablagePollAt={}, _ablageFiler=null, _ablageTimer=null;
 async function ablageRefresh(p,force){
   if(!p||typeof SB==="undefined"||!SB) return;
-  var open=pDokumente(p).filter(function(d){ return d.status!=="abgelegt"; }); if(!open.length) return;
-  if(!force&&Date.now()-(_ablagePollAt[p.id]||0)<8000) return; _ablagePollAt[p.id]=Date.now();
+  var open=pDokumente(p).filter(function(d){ return d.status!=="abgelegt"; });
+  var gap=open.length?8000:60000;
+  if(!force&&Date.now()-(_ablagePollAt[p.id]||0)<gap) return; _ablagePollAt[p.id]=Date.now();
   try{
-    var r=await SB.from("app_state").select("id,data").in("id",open.map(function(d){ return "docjob-"+d.id; }));
-    var rows=(r&&r.data)||[], changed=false, byId={}; rows.forEach(function(x){ byId[x.id.replace("docjob-","")]=x.data||{}; });
+    var ids=open.map(function(d){ return "docjob-"+d.id; }).concat(["docfiler-status"]);
+    var r=await SB.from("app_state").select("id,data,updated_at").in("id",ids);
+    var rows=(r&&r.data)||[], changed=false, byId={}, filerBefore=JSON.stringify(_ablageFiler);
+    rows.forEach(function(x){ if(x.id==="docfiler-status"){ _ablageFiler=x.data||null; return; } byId[x.id.replace("docjob-","")]=x.data||{}; });
     open.forEach(function(d){ var j=byId[d.id]; if(!j) return; ["status","pfad","webUrl","fehler","kandidaten","ordnerName"].forEach(function(k){ if(j[k]!==undefined&&JSON.stringify(d[k])!==JSON.stringify(j[k])){ d[k]=j[k]; changed=true; } }); if(j.status==="neu"&&d.status!=="wartet"){ d.status="wartet"; changed=true; } });
-    if(changed){ var ab=open.find(function(d){ return d.status==="abgelegt"&&d.ordnerName; }); if(ab&&!p.ablageOrdner) p.ablageOrdner=ab.ordnerName; save(); if(curProject===p) renderProjektablage(); }
+    if(changed){ var ab=open.find(function(d){ return d.status==="abgelegt"&&d.ordnerName; }); if(ab&&!p.ablageOrdner) p.ablageOrdner=ab.ordnerName; save(); }
+    if((changed||filerBefore!==JSON.stringify(_ablageFiler))&&curProject===p) renderProjektablage(true);
   }catch(e){}
+}
+/* Solange die Projektablage sichtbar ist: regelmäßig nachfragen */
+function ablageStartPolling(){
+  if(_ablageTimer) return;
+  _ablageTimer=setInterval(function(){
+    var el=document.getElementById("pd-ablage");
+    if(!el||!el.offsetParent||typeof curProject==="undefined"||!curProject||document.hidden) return;
+    ablageRefresh(curProject,false);
+  },15000);
+}
+function ablageFilerHtml(){
+  var f=_ablageFiler; if(!f||!f.at) return '<span style="color:#b4632e">⚠ Mac-Dienst hat sich noch nie gemeldet – läuft die Projektablage auf dem Mac?</span>';
+  var min=Math.round((Date.now()-Date.parse(f.at))/60000), wann=min<1?"gerade eben":("vor "+(min<120?(min+" Min"):(Math.round(min/60)+" Std")));
+  if(f.ok===false) return '<span style="color:#c0392b">✕ Mac-Dienst meldet Fehler ('+wann+'): '+esc(f.fehler||"")+'</span>';
+  if(min>10) return '<span style="color:#b4632e">⚠ Mac-Dienst zuletzt aktiv '+wann+(f.host?(' auf '+esc(f.host)):'')+' – Mac aus oder Dienst gestoppt?</span>';
+  return '<span style="color:#2d7a4f">● Mac-Dienst aktiv ('+wann+(f.host?(', '+esc(f.host)):'')+')</span>';
 }
 async function ablageChooseFolder(p,d,ordner){
   p.ablageOrdner=ordner; save();
@@ -5791,7 +5811,7 @@ function ablageStatusHtml(p,d){
   if(d.status==="projekt-fehlt") return '<span class="muted">wartet auf Projektzuordnung</span>';
   return '<span style="color:#b8860b">⏳ wartet auf Ablage</span>';
 }
-function renderProjektablage(){
+function renderProjektablage(noFetch){
   var el=document.getElementById("pd-ablage"); if(!el||typeof curProject==="undefined"||!curProject) return;
   var p=curProject, L=pDokumente(p).slice().sort(function(a,b){ return (b.ts||0)-(a.ts||0); });
   var wait=L.filter(function(d){ return d.status!=="abgelegt"; }).length;
@@ -5804,6 +5824,7 @@ function renderProjektablage(){
       return '<div class="abl-grp"><div class="abl-gh">📁 '+esc(z[1])+' <span class="muted" style="font-weight:400;font-size:11px">'+esc(z[0])+'</span></div>'+groups[z[0]].map(function(d){
         return '<div class="abl-row" data-id="'+esc(d.id)+'"><div class="abl-n">'+esc(d.name)+'<div class="muted" style="font-size:10.5px">'+ablageSize(d.size||0)+' · '+esc(d.user||"")+' · '+(typeof infoWhen==="function"?infoWhen(d.ts):"")+(d.quelle==="lieferant"?' · aus Lieferanten-Import':(d.quelle==="rechnung"?' · aus Rechnungen':''))+'</div></div><div class="abl-s">'+ablageStatusHtml(p,d)+'</div><button class="abl-x" title="Aus der Liste entfernen">×</button></div>'; }).join("")+'</div>'; }).join("");
   } else h+='<div class="muted" style="font-size:12px;margin-top:10px">Noch keine Dokumente über die App abgelegt.</div>';
+  h+='<div style="font-size:11.5px;margin-top:10px">'+ablageFilerHtml()+'</div>';
   el.innerHTML=h;
   var drop=document.getElementById("abl-drop");
   ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
@@ -5814,7 +5835,7 @@ function renderProjektablage(){
   el.querySelectorAll(".abl-x").forEach(function(b){ b.onclick=function(){ var d=pDokumente(p).find(function(x){ return x.id===b.closest(".abl-row").dataset.id; }); if(d) ablageRemove(p,d); }; });
   el.querySelectorAll(".abl-retry").forEach(function(b){ b.onclick=function(){ var d=pDokumente(p).find(function(x){ return x.id===b.dataset.id; }); if(d) ablageRetry(p,d); }; });
   el.querySelectorAll(".abl-pick").forEach(function(s){ s.onchange=function(){ if(!s.value) return; ablageChooseFolder(p,null,s.value); }; });
-  ablageRefresh(p);
+  if(!noFetch) ablageRefresh(p); ablageStartPolling();
 }
 /* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für

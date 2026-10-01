@@ -3,7 +3,7 @@
 # Projektablage: legt in der Angebots-App hochgeladene Dokumente im
 # OneDrive-Projektordner ab (Angebote/<Nummer>_<Name>/<Unterordner>).
 #
-# Wird vom LaunchAgent de.nova-works.projektablage alle 2 Minuten aufgerufen.
+# Wird vom LaunchAgent de.nova-works.projektablage jede Minute aufgerufen.
 # Zum Testen von Hand:
 #   ./scripts/projektablage.sh --probe   nur anzeigen, was abgelegt würde
 #   ./scripts/projektablage.sh           wirklich ablegen
@@ -18,6 +18,13 @@ mkdir -p "$(dirname "$LOG")"
 log() { echo "[$(date "+%Y-%m-%d %H:%M:%S")] $*" >>"$LOG"; }
 
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+# Der LaunchAgent startet mit einem kurzen PATH. Node aus nvm, Volta, fnm oder
+# dem bei der Einrichtung gemerkten Pfad zusätzlich suchen.
+if ! command -v node >/dev/null 2>&1; then
+  for d in "${NOVA_NODE_DIR:-}" "$HOME/.volta/bin" "$HOME"/.nvm/versions/node/*/bin "$HOME"/.local/share/fnm/aliases/default/bin "$HOME"/Library/Application\ Support/fnm/aliases/default/bin; do
+    if [ -n "$d" ] && [ -x "$d/node" ]; then PATH="$d:$PATH"; break; fi
+  done
+fi
 
 # Im Terminal gesetzte Werte gelten, wenn die Datei für sie leer ist.
 _pre_mail="${NOVA_ANGEBOTE_EMAIL:-}"; _pre_pw="${NOVA_ANGEBOTE_PASSWORD:-}"; _pre_root="${PROJEKT_ABLAGE_ROOT:-}"
