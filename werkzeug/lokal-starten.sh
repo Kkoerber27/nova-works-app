@@ -91,9 +91,66 @@ cat <<ENDE
 
 ENDE
 
-exec php \
+# --- Starten und nachsehen, ob es wirklich antwortet --------------------
+# Vorher endete das Skript mit exec: PHP uebernahm, und ob die Seite
+# tatsaechlich erreichbar war, erfuhr man erst im Browser. Faellt der
+# Start aus irgendeinem Grund aus, stand da nur "keine Verbindung" und
+# niemand wusste, woran es liegt. Jetzt laeuft PHP im Hintergrund, das
+# Skript fragt die eigene Adresse ab und sagt, was es bekommt.
+
+php \
   -d upload_max_filesize=32M \
   -d post_max_size=160M \
   -d memory_limit=512M \
   -d max_execution_time=180 \
-  -S "127.0.0.1:$PORT" -t "$SEITE"
+  -S "127.0.0.1:$PORT" -t "$SEITE" &
+PHP_PID=$!
+
+# Beim Beenden des Skripts (Strg+C) geht der Server mit.
+trap 'kill $PHP_PID 2>/dev/null' INT TERM EXIT
+
+holen() {
+  if command -v curl >/dev/null 2>&1; then
+    curl -s -o /dev/null -w '%{http_code}' --max-time 4 "http://127.0.0.1:$PORT$1" 2>/dev/null
+  else
+    echo '?'
+  fi
+}
+
+# Hoechstens fuenf Sekunden auf den Server warten.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+  [ "$(holen /)" != "000" ] && break
+  sleep 0.5
+done
+
+STARTSEITE="$(holen /)"
+BACKEND="$(holen /admin/)"
+IMPRESSUM="$(holen /impressum.php)"
+
+echo "  Prüfung:"
+printf '    %-28s %s\n' "Startseite" "$STARTSEITE"
+printf '    %-28s %s\n' "Backend /admin/" "$BACKEND"
+printf '    %-28s %s\n' "Impressum" "$IMPRESSUM"
+
+if [ "$STARTSEITE" = "200" ]; then
+  echo
+  echo "  Läuft. Im Browser öffnen:  http://127.0.0.1:$PORT"
+  echo
+else
+  cat <<ENDE
+
+  Der Server antwortet nicht (Status "$STARTSEITE").
+
+  Das sind die üblichen Gründe:
+    - Ein anderer Prozess hält den Port. Nachsehen mit:
+          lsof -nP -iTCP:$PORT -sTCP:LISTEN
+    - Die Dateien fehlen. Nachsehen mit:
+          ls "$SEITE/index.php"
+    - PHP ist zu alt oder es fehlt eine Erweiterung. Nachsehen mit:
+          php "$HIER/pruefe-php.php"
+
+ENDE
+fi
+
+# Hier bleibt das Skript stehen, bis der Server endet oder Strg+C kommt.
+wait $PHP_PID

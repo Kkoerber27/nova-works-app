@@ -508,8 +508,17 @@ Deshalb ist es jetzt zweiteilig:
 - Der Claim steht als echter Text darunter (`.marke__claim`).
 
 Damit hängt seine Größe nicht mehr an der Breite der Wortmarke. In der
-Kopfzeile ist er jetzt **10,4 px** statt 5,8, und die Wortmarke konnte von
-170 auf 200 px wachsen, ohne dass der Kopf auseinanderfällt.
+Kopfzeile ist er jetzt **14,4 px** statt 5,8, und die Wortmarke steht auf
+**300 px** statt 170.
+
+Der Platz war da: Neben der Marke stehen Navigation (444 px) und Schalter
+(161 px); bei 1320 px Schale bleiben 651 px übrig. Genutzt waren 200.
+
+Die Größe war auch der Grund für den „verpixelten" Eindruck. Bei 200 px
+ist der Trennstrich im Logo 1,76 px hoch und die Haarstriche der Schrift
+decken weniger als einen ganzen Pixel ab – was übrig bleibt, zeichnet der
+Browser grau statt weiß. Bei 300 px ist der Strich 2,65 px hoch und die
+Buchstaben decken. Der Claim steht zusätzlich in Schnitt 400 statt 300.
 
 `logo-weiss.svg` und `logo-schwarz.svg` bleiben unverändert liegen – für
 Druck, Fahrzeugbeschriftung und alles, wo das Logo groß genug ist.

@@ -317,23 +317,34 @@ a { color: inherit; }
 .marke:hover .marke__zeichen,
 .marke:hover .marke__claim { opacity: .72; }
 
-/* Gesperrt wie im Original, aber in einer Groesse, die man liest. Der
-   letzte Buchstabe traegt die Sperrung mit; ohne den negativen Abstand
-   am Ende saesse der Block sichtbar zu weit rechts. */
+/* Gesperrt wie im Original, aber in einer Groesse, die man liest.
+
+   Gewicht 400 statt 300: Ein Haarstrich-Schnitt deckt bei dieser Groesse
+   weniger als einen ganzen Pixel ab, und was uebrigbleibt, zeichnet der
+   Browser grau statt weiss - das sieht nach schlechter Aufloesung aus,
+   obwohl es Text ist. Ein Schnitt mehr kostet nichts und deckt.
+
+   Der letzte Buchstabe traegt die Sperrung mit; ohne den negativen
+   Abstand am Ende saesse der Block sichtbar zu weit rechts. */
 .marke__claim {
-  font-size: var(--claim-groesse, .7rem);
-  font-weight: 300;
+  font-size: var(--claim-groesse, .85rem);
+  font-weight: 400;
   letter-spacing: .2em;
   margin-right: -.2em;
   line-height: 1;
-  color: var(--text-dim);
+  color: rgba(244, 244, 242, .82);
   white-space: nowrap;
   transition: opacity .3s var(--ease);
 }
 
+/* Die Marke bekommt den Platz, der da ist: Neben ihr stehen Navigation
+   (444 px) und Schalter (161 px), bei 1320 px Schale bleiben 651 px
+   uebrig. Genutzt waren 200. Bei 300 px ist der Trennstrich 2,65 px hoch
+   statt 1,76 und die Buchstaben decken ganze Pixel - erst dadurch sind
+   sie weiss statt grau. */
 .masthead__logo { flex: none; margin-right: auto; }
-.masthead__logo .marke__zeichen { width: clamp(148px, 15vw, 200px); }
-.masthead__logo { --claim-groesse: clamp(.6rem, .72vw, .72rem); }
+.masthead__logo .marke__zeichen { width: clamp(190px, 21vw, 300px); }
+.masthead__logo { --claim-groesse: clamp(.75rem, 1vw, .95rem); }
 
 .nav { display: flex; gap: clamp(1.5rem, 2.5vw, 2.75rem); }
 
@@ -681,82 +692,6 @@ a { color: inherit; }
 .about__body { color: var(--text-dim); font-size: var(--fs-lead); }
 .about__body p + p { margin-top: 1.5rem; }
 .about__cta { margin-top: 2.5rem; }
-
-
-/* --- Gewerke-Tafel ---------------------------------------------------
-   Eine durchgehende Linie, an der die Gewerke haengen.
-
-   Das Bild ist nicht ausgedacht, es beschreibt die Sache: Auf einer
-   Produktion haengt buchstaeblich alles am selben Rig. Deshalb keine
-   Kaesten, keine Symbole, keine Nummern - eine Traverse und Abhaenger.
-
-   column-gap ist null und der Abstand steckt im Innenabstand der Zellen.
-   Nur so laeuft die Linie ueber die ganze Reihe durch; mit einer Luecke
-   zwischen den Spalten zerfiele sie in Stuecke und saehe aus wie ein
-   Rahmen statt wie eine Traverse. */
-
-.tafel {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  column-gap: 0;
-  row-gap: clamp(2.75rem, 6vh, 4.5rem);
-}
-
-/* Der Innenabstand oben folgt der Laenge des Abhaengers. Zwei Gruende:
-   Erstens stiess der Punkt am Ende des laengsten Abhaengers sonst in die
-   Ueberschrift - am Handy sichtbar in die Versalie hinein. Zweitens
-   sitzen die Gewerke dadurch tatsaechlich auf verschiedener Hoehe, statt
-   dass nur die Linie unterschiedlich lang ist. Erst damit liest sich der
-   Versatz als Absicht und nicht als Schluderei. */
-.gewerk {
-  position: relative;
-  padding: calc(var(--abhaenger, 2rem) + 1.1rem) clamp(1.25rem, 3vw, 3rem) 0 0;
-  border-top: 1px solid var(--line);
-}
-
-/* Der Abhaenger. Die Laenge kommt als --abhaenger aus der Vorlage und
-   wechselt von Zelle zu Zelle - wie Scheinwerfer auf unterschiedlichem
-   Trim. Ein Raster, in dem jede Zelle gleich aussieht, sieht aus wie ein
-   Baukasten; drei wechselnde Laengen kosten nichts und nehmen ihm das. */
-.gewerk::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 1px;
-  height: var(--abhaenger, 2rem);
-  background: var(--line-strong);
-}
-
-/* Der Punkt, an dem das Gewerk haengt. Klein, aber er macht aus einer
-   Linie einen Abhaengepunkt. */
-.gewerk::after {
-  content: '';
-  position: absolute;
-  top: calc(var(--abhaenger, 2rem) - 2px);
-  left: -2px;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--signal);
-}
-
-.gewerk__name {
-  margin: 0;
-  font-size: clamp(1.45rem, 2.9vw, 2.35rem);
-  font-weight: 600;
-  letter-spacing: -.025em;
-  line-height: 1.05;
-  text-wrap: balance;
-}
-
-.gewerk__was {
-  max-width: 34ch;
-  margin: .85rem 0 0;
-  color: var(--text-dim);
-  font-size: var(--fs-small);
-  line-height: 1.65;
-}
 
 
 /* --- Leistungen ------------------------------------------------------ */
@@ -1597,8 +1532,8 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   gap: 1.5rem 2rem;
 }
 
-.footer__logo { --claim-groesse: .66rem; opacity: .62; }
-.footer__logo .marke__zeichen { width: 168px; }
+.footer__logo { --claim-groesse: .8rem; opacity: .7; }
+.footer__logo .marke__zeichen { width: 238px; }
 .footer__logo:hover { opacity: 1; }
 
 .footer__meta {
@@ -2132,8 +2067,6 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   .about__grid,
   .contact__grid { grid-template-columns: 1fr; }
 
-  /* Zwei Gewerke nebeneinander statt drei. */
-  .tafel { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .hero__foot { grid-template-columns: 1fr; }
 }
@@ -2141,15 +2074,14 @@ textarea.field__input { min-height: 150px; resize: vertical; }
 @media (max-width: 620px) {
   .slider__spur > .card { flex-basis: calc(100vw - 2 * var(--gutter) - 2.5rem); }
 
-  /* Am Handy haengt eines unter dem anderen. Der rechte Innenabstand
-     entfaellt - sonst stuende der Text unnoetig schmal. */
-  .tafel { grid-template-columns: 1fr; row-gap: 2.25rem; }
-  .gewerk { padding-right: 0; }
-  .gewerk__was { max-width: none; }
 
-  /* Der Claim wird am Handy sonst breiter als der Kopfbereich. */
-  .masthead__logo { --claim-groesse: .58rem; }
-  .masthead__logo .marke__zeichen { width: 138px; }
+  /* Am Handy begrenzt die Schirmbreite, nicht der Geschmack: Wortmarke
+     und Claim duerfen zusammen nicht breiter werden als der Platz neben
+     der Menuetaste. */
+  .masthead__logo { --claim-groesse: .68rem; }
+  .masthead__logo .marke__zeichen { width: min(196px, 52vw); }
+  .footer__logo { --claim-groesse: .72rem; }
+  .footer__logo .marke__zeichen { width: min(200px, 56vw); }
 
   .form__row { grid-template-columns: 1fr; gap: 0; }
   .detail { padding-left: 1.15rem; }

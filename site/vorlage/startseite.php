@@ -93,35 +93,10 @@ require __DIR__ . '/kopf.php';
         </div>
       </div>
 
-    </div>
-  </section>
-
-  <!-- ================= Gewerke =================
-       Die Traverse: eine durchgehende Linie, an der die Gewerke hängen.
-       Das ist keine Zierde, sondern das Bild, das die Sache beschreibt -
-       auf einer Produktion hängt buchstäblich alles am selben Rig.
-
-       Die Abhänger sind verschieden lang, wie Scheinwerfer auf
-       unterschiedlichem Trim. Ein Raster, in dem jede Zelle gleich
-       aussieht, sieht aus wie ein Baukasten; drei wechselnde Längen
-       kosten nichts und nehmen ihm das.                              -->
-  <section class="section section--raised" id="gewerke">
-    <div class="shell">
-      <div class="section__head">
-        <h2 class="section__title"><?= h($i['gewerke']['titel']) ?></h2>
-<?php if (!empty($i['gewerke']['vorspann'])): ?>
-        <p class="section__vorspann"><?= hh($i['gewerke']['vorspann']) ?></p>
-<?php endif; ?>
-      </div>
-
-      <div class="tafel">
-<?php foreach ($i['gewerke']['eintraege'] as $nr => $g): ?>
-        <article class="gewerk" style="--abhaenger: <?= [2.1, 3.2, 1.5][$nr % 3] ?>rem">
-          <h3 class="gewerk__name"><?= h($g['name']) ?></h3>
-          <p class="gewerk__was"><?= hh($g['was']) ?></p>
-        </article>
-<?php endforeach; ?>
-      </div>
+      <dl class="gewerke gewerke--gross">
+        <dt><?= h($i['ueberUns']['gewerke']['titel']) ?></dt>
+        <dd><?= h($i['ueberUns']['gewerke']['leistungen']) ?></dd>
+      </dl>
     </div>
   </section>
 
