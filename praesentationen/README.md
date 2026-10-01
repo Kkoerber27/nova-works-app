@@ -28,3 +28,10 @@ node praesentationen/gesellschafterversammlung_2026-09-23.js                    
 
 Liegt Chromium an einem festen Pfad, `CHROMIUM_PATH=/pfad/zu/chrome` setzen. Ohne `daten.json` baut das Skript die Folien
 mit Platzhaltern („–“) und dem Deal-Stand vom 07.08.2026.
+
+## Kurz-BWA aus der Datensicherung (`bwa/`)
+
+`python3 praesentationen/bwa/kurz_bwa_aus_backup.py <Sicherung.json> praesentationen/daten.json` schreibt eine Excel-Datei
+`Kurz-BWA_<Datum>.xlsx` mit Monatsübersicht (Umsatz, Projektkosten, Personal, Betriebsausgaben je Sparte, Betriebsergebnis),
+offenen Forderungen und Auftragsbestand/Forecast. Vorläufige Sicht aus den App-Daten, keine Buchhaltungs-BWA
+(ohne AfA, Zinsen, Steuern, Sozialversicherung). Danach `recalc.py` aus dem xlsx-Skill oder LibreOffice zum Durchrechnen.
