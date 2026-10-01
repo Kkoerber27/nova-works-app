@@ -88,7 +88,7 @@ const STRUKTUR = [
 ];
 
 function log(msg) {
-  const ts = new Date().toISOString().replace("T", " ").slice(0, 19);
+  const ts = new Date().toLocaleString("sv-SE"); // Ortszeit, Format JJJJ-MM-TT hh:mm:ss
   console.log(`[${ts}] ${msg}`);
 }
 function die(msg) {
