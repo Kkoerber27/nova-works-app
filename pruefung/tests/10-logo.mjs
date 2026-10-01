@@ -77,4 +77,56 @@ export default async function ({ ort, browser, ok }) {
     await p.schliessen();
   }
   await lese.close();
+
+  /* --- Der Claim sitzt mittig unter der Wortmarke ---
+     Im Original liegen Wortmarke, Trennstrich und Claim alle drei auf
+     derselben Mitte - nachgemessen bei 600 px Breite: 299,5 / 300,5 /
+     300. Seit der Claim als eigener Text darunter steht, kann er
+     daneben rutschen, und genau das ist passiert: Er stand links
+     ausgerichtet statt zentriert.
+
+     Gemessen wird die Mitte der Schrift, nicht die ihres Kastens. Die
+     Sperrung sitzt auch hinter dem letzten Buchstaben; der Kasten ist
+     dadurch um ein halbes Sperrmaß breiter als das, was man sieht. */
+  for (const [wo, waehler] of [['Kopfzeile', '.masthead__logo'],
+                               ['Fußzeile',  '.footer__logo']]) {
+    const q = await seite(browser, ok, { viewport: { width: 1440, height: 900 } });
+    await q.goto(ort + '/index.php', { waitUntil: 'networkidle' });
+    await q.waitForTimeout(400);
+
+    const m = await q.evaluate((w) => {
+      const marke  = document.querySelector(w);
+      const bild   = marke.querySelector('.marke__zeichen');
+      const claim  = marke.querySelector('.marke__claim');
+      if (!bild || !claim) return null;
+
+      const b = bild.getBoundingClientRect();
+      const c = claim.getBoundingClientRect();
+      const sperre = parseFloat(getComputedStyle(claim).letterSpacing) || 0;
+
+      return {
+        bildMitte:  b.left + b.width / 2,
+        /* Kastenmitte, um die halbe Sperrung nach links korrigiert. */
+        textMitte:  c.left + (c.width - sperre) / 2,
+        claimBreite: c.width,
+        /* Die sichtbare Wortmarke füllt 87,7 % des Bildrahmens -
+           gemessen am Zuschnitt: 526 von 600 px. */
+        marke:      b.width * 0.877,
+      };
+    }, waehler);
+
+    if (!m) { ok.hinweis(`${wo}: keine Marke gefunden`); await q.schliessen(); continue; }
+
+    const ab = Math.abs(m.textMitte - m.bildMitte);
+    ok(ab <= 2, `${wo}: der Claim sitzt mittig unter der Wortmarke`,
+       `${ab.toFixed(1)} px daneben`);
+
+    /* Und er bleibt schmaler als die Wortmarke - sonst liest er sich
+       wie eine zweite Zeile Wortmarke statt wie eine Unterzeile. */
+    const anteil = m.claimBreite / m.marke;
+    ok(anteil < 0.95, `${wo}: und bleibt schmaler als sie`,
+       `${Math.round(anteil * 100)} %`);
+
+    await q.schliessen();
+  }
 }

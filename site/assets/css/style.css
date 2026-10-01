@@ -303,9 +303,18 @@ a { color: inherit; }
    Wortmarke. Beide lassen sich dadurch unabhaengig einstellen - und die
    Wortmarke konnte deutlich waschsen, ohne dass der Kopf auseinander
    faellt. */
+/* Mittig, wie im Original.
+
+   Nachgemessen am Original: Wortmarke, Trennstrich und Claim liegen dort
+   alle drei auf derselben Mitte (299,5 / 300,5 / 300 bei 600 px Breite).
+   In der beschnittenen Grafik steht die Wortmarke ebenfalls mittig im
+   Bildrahmen - es genuegt also, den Claim im selben Rahmen zu zentrieren.
+
+   Linksbuendig sass er sichtbar daneben; der Claim beginnt im Original
+   deutlich weiter innen als die Wortmarke.                             */
 .marke {
   display: inline-grid;
-  justify-items: start;
+  justify-items: center;
   gap: .34em;
   text-decoration: none;
   width: max-content;
@@ -324,13 +333,19 @@ a { color: inherit; }
    Browser grau statt weiss - das sieht nach schlechter Aufloesung aus,
    obwohl es Text ist. Ein Schnitt mehr kostet nichts und deckt.
 
-   Der letzte Buchstabe traegt die Sperrung mit; ohne den negativen
-   Abstand am Ende saesse der Block sichtbar zu weit rechts. */
+   Der negative Abstand am Ende nimmt die Sperrung hinter dem letzten
+   Buchstaben wieder weg. Ohne ihn waere der Kasten um .2em breiter als
+   die Schrift darin, und beim Zentrieren saesse der Text um die Haelfte
+   davon zu weit links.                                                 */
 .marke__claim {
   font-size: var(--claim-groesse, .85rem);
   font-weight: 400;
-  letter-spacing: .2em;
-  margin-right: -.2em;
+  /* Im Original ist der Claim 71 Prozent so breit wie die Wortmarke.
+     Mit .2em Sperrung und der groesseren Schrift waeren es 97 - er
+     saehe aus wie eine zweite Wortmarke statt wie eine Unterzeile.
+     .11em bringt ihn auf rund 82 Prozent, ohne ihn zu verkleinern. */
+  letter-spacing: .11em;
+  margin-right: -.11em;
   line-height: 1;
   color: rgba(244, 244, 242, .82);
   white-space: nowrap;
@@ -1532,7 +1547,7 @@ textarea.field__input { min-height: 150px; resize: vertical; }
   gap: 1.5rem 2rem;
 }
 
-.footer__logo { --claim-groesse: .8rem; opacity: .7; }
+.footer__logo { --claim-groesse: .72rem; opacity: .7; }
 .footer__logo .marke__zeichen { width: 238px; }
 .footer__logo:hover { opacity: 1; }
 
