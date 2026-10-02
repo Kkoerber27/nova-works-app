@@ -1061,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-10-02.2";
+var APP_VERSION="2026-10-02.3";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -6682,15 +6682,35 @@ function projInvoicesFor(project){ return (project&&project.ignoreRech)?[]:proje
 /* Lieferanten-Korrektur je Projekt: k.lfKorr[lieferant] = {betrag, grund}. Ersetzt für dieses Projekt die
    Summe der Rechnungen des Lieferanten (z. B. wenn eine Rechnung eine Forderung aus einer anderen erneut enthält).
    Die Rechnungen selbst bleiben unverändert; angerechnet wird anteilig je Rechnung. */
-function projLfKey(r){ return String((r&&(r.senderName||r.senderEmail))||"—").trim().toLowerCase()||"—"; }
+function projLfKey(r){
+  var n=awKey(r&&r.senderName);
+  if(n){ var t=n.replace(/(gmbhcokg|gmbhco|gmbh|mbh|ug|ag|kg|ohg|gbr|ek|ltd|inc|sarl|bv)$/,""); return t||n; }
+  var e=String((r&&r.senderEmail)||"").toLowerCase(); return e?("mail:"+(e.split("@")[1]||e)):"—";
+}
 function projLfKorr(p){ var k=pKosten(p); if(!k.lfKorr) k.lfKorr={}; return k.lfKorr; }
-function projLfRaw(p,key){ return projInvoicesFor(p).filter(function(r){ return projLfKey(r)===key; }).reduce(function(s,r){ return s+invNet(r); },0); }
-function projLfFactor(p,key){
-  var kk=p&&p.kosten&&p.kosten.lfKorr; if(!kk) return 1; var e=kk[key]; if(!e||e.betrag==null||e.betrag==="") return 1;
-  var raw=projLfRaw(p,key); return raw>0?(Number(e.betrag)||0)/raw:1;
+/* Rechnungen, für die ein Korrektur-Eintrag gilt: gespeicherte Auswahl, sonst (ältere Einträge) alle des Lieferanten */
+function projLfEntryInvs(p,key,e,invs){
+  invs=invs||projInvoicesFor(p);
+  if(e&&e.invIds&&e.invIds.length){ var set={}; e.invIds.forEach(function(id){ set[id]=1; }); return invs.filter(function(r){ return set[r.id]; }); }
+  var kk=projLfKey({senderName:key}); return invs.filter(function(r){ return projLfKey(r)===kk; });
+}
+var _lfMapCache={};
+function projLfReset(){ _lfMapCache={}; }
+/* Faktor je Rechnung (angerechnet / Rechnungsbetrag) für ein Projekt */
+function projLfMap(p){
+  var kk=p&&p.kosten&&p.kosten.lfKorr; if(!kk||!Object.keys(kk).length) return null;
+  var c=_lfMapCache[p.id]; if(c&&Date.now()-c.at<300) return c.map;
+  var invs=projInvoicesFor(p), map={};
+  Object.keys(kk).forEach(function(key){ var e=kk[key]; if(!e||e.betrag==null||e.betrag==="") return;
+    var list=projLfEntryInvs(p,key,e,invs).filter(function(r){ return map[r.id]==null; });
+    var raw=list.reduce(function(s2,r){ return s2+invNet(r); },0); if(!(raw>0)) return;
+    var f=(Number(e.betrag)||0)/raw; list.forEach(function(r){ map[r.id]=f; }); });
+  _lfMapCache[p.id]={at:Date.now(),map:map}; return map;
 }
 /* Netto einer Rechnung, wie sie in diesem Projekt angerechnet wird */
-function projInvNet(p,r){ var n=invNet(r); var kk=p&&p.kosten&&p.kosten.lfKorr; if(!kk||!Object.keys(kk).length) return n; return n*projLfFactor(p,projLfKey(r)); }
+function projInvNet(p,r){ var n=invNet(r); var m=projLfMap(p); if(!m||m[r.id]==null) return n; return n*m[r.id]; }
+/* Korrektur-Eintrag, der eine Rechnung erfasst */
+function projLfEntryFor(p,r){ var kk=(p.kosten&&p.kosten.lfKorr)||{}, hit=null; Object.keys(kk).some(function(key){ if(projLfEntryInvs(p,key,kk[key]).some(function(x){ return x.id===r.id; })){ hit={key:key,e:kk[key]}; return true; } return false; }); return hit; }
 /* Angerechnetes Netto einer Rechnung über alle Ansichten: bei Projektrechnungen mit Lieferanten-Korrektur
    der anteilige Betrag, sonst der Rechnungsbetrag. */
 var _lfAnyAt=0, _lfAny=false;
@@ -8050,7 +8070,7 @@ function rebuildKalkFromOffer(project){
 function kPosSoll(project,id,val){ var k=pKosten(project); var pos=k.positionen.filter(function(x){return x.id===id;})[0]; if(pos) pos.soll=awNumOr(val,null); save(); renderProjectAuswertung(); }
 function kPosLabel(project,id,val){ var k=pKosten(project); var pos=k.positionen.filter(function(x){return x.id===id;})[0]; if(pos) pos.label=val; save(); }
 function kPosKat(project,id,kat){ var k=pKosten(project); var pos=k.positionen.filter(function(x){return x.id===id;})[0]; if(pos) pos.kat=kat; save(); renderProjectAuswertung(); }
-function kPosPaid(project,id,paid,date){ var k=pKosten(project); var pos=k.positionen.filter(function(x){return x.id===id;})[0]; if(pos){ pos.paid=!!paid; pos.paidDate=date||(paid?awTodayDE():""); } save(); renderProjectAuswertung(); }
+function kPosPaid(project,id,paid,date){ var k=pKosten(project); var pos=k.positionen.filter(function(x){return x.id===id;})[0]; if(pos){ pos.paid=!!paid; pos.paidDate=date||(paid?awTodayDE():""); pos.paidManual=true; delete pos.paidAuto; } save(); renderProjectAuswertung(); }
 function kPosAdd(project,kat){ var k=pKosten(project); k.positionen.push({id:uid(),label:"",kat:kat||"sonstiges",soll:null,paid:false,paidDate:""}); save(); renderProjectAuswertung(); }
 function kPosDel(project,id){ if(!confirm("Position löschen?"))return; var k=pKosten(project); k.positionen=k.positionen.filter(function(x){return x.id!==id;}); Object.keys(k.rech).forEach(function(iid){ if(k.rech[iid].posId===id) k.rech[iid].posId=""; }); save(); renderProjectAuswertung(); }
 function kInvAssign(project,inv,posId){ var k=pKosten(project); if(!k.rech[inv.id]) k.rech[inv.id]={posId:"",paid:false,paidDate:""}; k.rech[inv.id].posId=posId||""; save(); renderProjectAuswertung(); }
@@ -8174,9 +8194,11 @@ async function lexpayApply(){
         n++;
       });
     });
-    if(n||korr||neuVerkn){
+    var posN=0; (DB.projects||[]).forEach(function(p){ if(p.kosten){ try{ if(syncPosPaid(p)) posN++; }catch(eS){} } });
+    if(n||korr||neuVerkn||posN){
       save();
       var teile=[];
+      if(posN) teile.push("Kostenpositionen in "+posN+" Projekt"+(posN>1?"en":"")+" als bezahlt abgeglichen");
       if(neuVerkn) teile.push(neuVerkn+" Lexware-Rechnung(en) mit Projekten verknüpft");
       if(n) teile.push(n+" als bezahlt übernommen");
       if(korr) teile.push(korr+" Zahldatum(e) korrigiert");
@@ -8347,31 +8369,62 @@ function renderZusaetze(){
   var el=document.getElementById("pd-zusaetze"); if(!el||!curProject) return;
   el.innerHTML=zusaetzeHtml(curProject); wireZusaetze(curProject, el);
 }
-function awLfKorrDialog(project,key,name,rawSum){
-  var kk=projLfKorr(project), cur=kk[key]||{};
+function awLfKorrDialog(project,name,groupIds){
+  var kk=projLfKorr(project), invs=projInvoicesFor(project);
+  // vorhandener Eintrag, der eine der Gruppen-Rechnungen erfasst
+  var hitKey=null; Object.keys(kk).some(function(key){ var ids=projLfEntryInvs(project,key,kk[key],invs).map(function(r){ return r.id; }); if(ids.some(function(id){ return groupIds.indexOf(id)>=0; })){ hitKey=key; return true; } return false; });
+  var cur=hitKey?kk[hitKey]:{}, pre={}; (hitKey?projLfEntryInvs(project,hitKey,cur,invs).map(function(r){ return r.id; }):groupIds).forEach(function(id){ pre[id]=1; });
   var bg=document.getElementById("lfkorr-bg");
-  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="lfkorr-bg"; bg.innerHTML='<div class="modal" style="max-width:460px"><div class="modal-head"><h3>Lieferanten-Summe anpassen</h3><button class="x" data-close="lfkorr-bg">×</button></div><div class="modal-body" id="lfkorr-body"></div><div class="modal-foot"><button class="btn danger" id="lfkorr-del" style="margin-right:auto">Korrektur entfernen</button><button class="btn" data-close="lfkorr-bg">Abbrechen</button><button class="btn primary" id="lfkorr-go">Übernehmen</button></div></div>'; document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("lfkorr-bg"); }; bg.querySelectorAll("[data-close]").forEach(function(x){ x.onclick=function(){ closeModal("lfkorr-bg"); }; }); }
-  document.getElementById("lfkorr-body").innerHTML='<div style="font-size:13px;margin-bottom:10px"><b>'+esc(name)+'</b> · Projekt '+esc((project.nummer||"")+" "+(project.name||""))+'</div>'+
-    '<div class="muted" style="font-size:12px;margin-bottom:10px">Summe der zugeordneten Rechnungen: <b>'+eur(rawSum)+'</b> netto. Hier eintragen, was für dieses Projekt tatsächlich als Kosten zählt. Die Rechnungen selbst bleiben unverändert.</div>'+
-    '<div class="field"><label>Angerechnete Summe netto (€)</label><input id="lfkorr-betrag" inputmode="decimal" value="'+(cur.betrag!=null&&cur.betrag!==""?Number(cur.betrag).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"")+'" placeholder="'+esc(rawSum.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}))+'"></div>'+
+  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="lfkorr-bg"; bg.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-head"><h3>Summe anpassen</h3><button class="x" data-close="lfkorr-bg">×</button></div><div class="modal-body" id="lfkorr-body" style="max-height:70vh;overflow:auto"></div><div class="modal-foot"><button class="btn danger" id="lfkorr-del" style="margin-right:auto">Korrektur entfernen</button><button class="btn" data-close="lfkorr-bg">Abbrechen</button><button class="btn primary" id="lfkorr-go">Übernehmen</button></div></div>'; document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("lfkorr-bg"); }; bg.querySelectorAll("[data-close]").forEach(function(x){ x.onclick=function(){ closeModal("lfkorr-bg"); }; }); }
+  var sorted=invs.slice().sort(function(a,b2){ var x=pre[a.id]?0:1, y=pre[b2.id]?0:1; if(x!==y) return x-y; return String(a.senderName||a.senderEmail||"").localeCompare(String(b2.senderName||b2.senderEmail||""),"de"); });
+  document.getElementById("lfkorr-body").innerHTML='<div style="font-size:13px;margin-bottom:8px"><b>'+esc(name)+'</b> · Projekt '+esc((project.nummer||"")+" "+(project.name||""))+'</div>'+
+    '<div class="muted" style="font-size:12px;margin-bottom:8px">Rechnungen wählen, für die zusammen ein anderer Betrag zählt (z. B. alle Rechnungen des Lieferanten, auch bei abweichender Schreibweise). Die Rechnungen selbst bleiben unverändert.</div>'+
+    '<div style="border:1px solid var(--line);border-radius:8px;padding:4px 8px;margin-bottom:10px">'+sorted.map(function(r){ return '<label style="display:flex;gap:8px;align-items:center;padding:5px 0;border-bottom:1px solid #f0ede6;font-size:12.5px;cursor:pointer"><input type="checkbox" class="lfk-inv" value="'+esc(r.id)+'"'+(pre[r.id]?' checked':'')+'><span style="flex:1">'+esc(r.senderName||r.senderEmail||"—")+'<span class="muted" style="font-size:11px"> · '+esc(String(r.subject||"").slice(0,40))+(r.invoiceNumber?(' · '+esc(r.invoiceNumber)):'')+'</span></span><b class="nowrap">'+eur(invNet(r))+'</b></label>'; }).join("")+'</div>'+
+    '<div id="lfkorr-sel" style="font-size:12.5px;margin-bottom:8px"></div>'+
+    '<div class="field"><label>Zählt zusammen als (netto €)</label><input id="lfkorr-betrag" inputmode="decimal" value="'+(cur.betrag!=null&&cur.betrag!==""?Number(cur.betrag).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"")+'"></div>'+
     '<div class="field"><label>Grund (optional)</label><input id="lfkorr-grund" value="'+esc(cur.grund||"")+'" placeholder="z. B. Forderung aus Rechnung … doppelt enthalten"></div>'+
     '<div id="lfkorr-diff" class="muted" style="font-size:12px"></div>';
-  var inp=document.getElementById("lfkorr-betrag"), df=document.getElementById("lfkorr-diff");
-  var upd=function(){ var v=lfParseNum(inp.value); df.innerHTML=(v==null)?"":('Differenz zur Rechnungssumme: <b>'+eur(v-rawSum)+'</b>'); }; inp.oninput=upd; upd();
-  document.getElementById("lfkorr-del").style.display=(cur.betrag!=null&&cur.betrag!=="")?"":"none";
-  document.getElementById("lfkorr-del").onclick=function(){ delete kk[key]; save(); closeModal("lfkorr-bg"); renderProjectAuswertung(); toast("Korrektur entfernt – es zählen wieder die Rechnungsbeträge"); };
+  var inp=document.getElementById("lfkorr-betrag"), df=document.getElementById("lfkorr-diff"), selEl=document.getElementById("lfkorr-sel");
+  var selIds=function(){ return [].slice.call(document.querySelectorAll("#lfkorr-body .lfk-inv")).filter(function(c){ return c.checked; }).map(function(c){ return c.value; }); };
+  var selSum=function(){ var ids=selIds(); return invs.filter(function(r){ return ids.indexOf(r.id)>=0; }).reduce(function(s2,r){ return s2+invNet(r); },0); };
+  var upd=function(){ var ss=selSum(), n=selIds().length; selEl.innerHTML=n+' Rechnung'+(n===1?'':'en')+' gewählt · Rechnungssumme <b>'+eur(ss)+'</b>'; inp.placeholder=ss.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}); var v=lfParseNum(inp.value); df.innerHTML=(v==null)?"":('Differenz zur Rechnungssumme: <b>'+eur(v-ss)+'</b>'); };
+  inp.oninput=upd; document.querySelectorAll("#lfkorr-body .lfk-inv").forEach(function(c){ c.onchange=upd; }); upd();
+  var delBtn=document.getElementById("lfkorr-del"); delBtn.style.display=hitKey?"":"none";
+  delBtn.onclick=function(){ if(hitKey) delete kk[hitKey]; projLfReset(); save(); closeModal("lfkorr-bg"); renderProjectAuswertung(); toast("Korrektur entfernt – es zählen wieder die Rechnungsbeträge"); };
   document.getElementById("lfkorr-go").onclick=function(){
-    var v=lfParseNum(inp.value); if(v==null){ toast("Bitte einen Betrag eintragen"); return; }
+    var v=lfParseNum(inp.value), ids=selIds(), ss=selSum();
+    if(!ids.length){ toast("Bitte mindestens eine Rechnung wählen"); return; }
+    if(v==null){ toast("Bitte einen Betrag eintragen"); return; }
     if(v<0){ toast("Betrag darf nicht negativ sein"); return; }
-    kk[key]={betrag:v,grund:document.getElementById("lfkorr-grund").value.trim(),am:new Date().toISOString(),orig:Math.round(rawSum*100)/100};
-    save(); closeModal("lfkorr-bg"); renderProjectAuswertung(); toast(name+": angerechnet "+eur(v)+" statt "+eur(rawSum));
+    // Einträge, die sich mit der neuen Auswahl überschneiden, ersetzen
+    Object.keys(kk).forEach(function(key){ var ex=projLfEntryInvs(project,key,kk[key],invs).map(function(r){ return r.id; }); if(key===hitKey||ex.some(function(id){ return ids.indexOf(id)>=0; })) delete kk[key]; });
+    kk["k"+uid()]={betrag:v,grund:document.getElementById("lfkorr-grund").value.trim(),invIds:ids,name:name,am:new Date().toISOString(),orig:Math.round(ss*100)/100};
+    projLfReset(); save(); closeModal("lfkorr-bg"); renderProjectAuswertung(); toast("Angerechnet "+eur(v)+" statt "+eur(ss));
   };
   openModal("lfkorr-bg"); setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },50);
+}
+/* Position automatisch als bezahlt markieren, wenn alle zugeordneten Rechnungen bezahlt sind
+   (Datum = letzte Zahlung). Manuell gesetzte Haken bleiben unangetastet. */
+function syncPosPaid(project){
+  var k=pKosten(project), invs=projInvoicesFor(project), ch=false;
+  (k.positionen||[]).forEach(function(x){
+    if(x.paidManual) return;
+    var mine=invs.filter(function(r){ var st=k.rech[r.id]; return st&&st.posId===x.id; });
+    var all=mine.length&&mine.every(function(r){ return k.rech[r.id].paid; });
+    if(all){
+      var d=mine.map(function(r){ return String(k.rech[r.id].paidDate||"").slice(0,10); }).filter(Boolean).sort().pop()||"";
+      if(!x.paid){ x.paid=true; x.paidDate=d; x.paidAuto=true; ch=true; }
+      else if(x.paidAuto&&x.paidDate!==d){ x.paidDate=d; ch=true; }
+    } else if(x.paidAuto){ x.paid=false; x.paidDate=""; delete x.paidAuto; ch=true; }
+  });
+  return ch;
 }
 function renderProjectAuswertung(){
   var el=document.getElementById("pd-auswertung"); if(!el||!curProject) return;
   var project=curProject, nr=project.nummer;
   autoSeedKalk(project);
+  projLfReset();
+  try{ if(syncPosPaid(project)) save(); }catch(e){}
   var awp=(typeof awGet==="function")?awGet(nr):null;
   var ang=projectOfferNet(project), ekSoll=projectEK(project);
   var invs=projInvoicesFor(project); var rsum=invs.reduce(function(a,r){return a+projInvNet(project,r);},0);
@@ -8415,7 +8468,7 @@ function renderProjectAuswertung(){
         '<td class="right"><input class="aw-num" data-kind="soll" data-id="'+esc(x.id)+'" value="'+(x.soll!=null?Number(x.soll).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"")+'" style="width:76px;text-align:right;border:1px solid var(--line);border-radius:5px;padding:3px"></td>'+
         '<td class="right nowrap">'+(ist?eur(ist):"–")+'</td>'+
         ''+awDiffTd(diff,"right nowrap")+''+
-        '<td>'+chk("pos",x.id,x.paid)+'</td>'+
+        '<td class="nowrap">'+chk("pos",x.id,x.paid)+(x.paidAuto?'<span title="automatisch: alle zugeordneten Rechnungen bezahlt" style="margin-left:4px;font-size:9px;font-weight:700;color:#2d7a4f;border:1px solid #2d7a4f;border-radius:3px;padding:0 3px;vertical-align:middle">AUTO</span>':'')+'</td>'+
         '<td>'+dinp("posDate",x.id,x.paidDate)+'</td>'+
         '<td><button class="btn sm danger aw-del" data-del="pos" data-id="'+esc(x.id)+'">×</button></td></tr>';
     }).join("");
@@ -8436,15 +8489,15 @@ function renderProjectAuswertung(){
     var dupP=reDupMap(invs);
     var _gr={}, _go=[];
     invs.forEach(function(r){ var _k2=projLfKey(r); if(!_gr[_k2]){ _gr[_k2]={name:(r.senderName||r.senderEmail||"—"),list:[],sum:0}; _go.push(_k2); } _gr[_k2].list.push(r); _gr[_k2].sum+=invNet(r); });
-    var _lfk=(k.lfKorr||{});
     _go.sort(function(a,b){ return String(_gr[a].name).localeCompare(String(_gr[b].name),"de"); });
     var _sorted=[], _ghead={};
     _go.forEach(function(k2){ var g=_gr[k2];
       g.list.sort(function(a,b){ return String(a.invoiceDate||a.received||"").localeCompare(String(b.invoiceDate||b.received||"")); });
-      var _kr=_lfk[k2], _hasK=!!(_kr&&_kr.betrag!=null&&_kr.betrag!=="");
-      var _ksum=_hasK?('<s style="color:#999">'+eur(g.sum)+'</s> → <b style="color:#b4632e">angerechnet '+eur(Number(_kr.betrag)||0)+'</b>'+(_kr.grund?(' <span style="font-size:11px">('+esc(_kr.grund)+')</span>'):'')):('Σ '+eur(g.sum));
+      var _cred=g.list.reduce(function(s2,r){ return s2+projInvNet(project,r); },0), _hasK=Math.abs(_cred-g.sum)>0.005;
+      var _ent=null; g.list.some(function(r){ _ent=projLfEntryFor(project,r); return !!_ent; });
+      var _ksum=_hasK?('<s style="color:#999">'+eur(g.sum)+'</s> → <b style="color:#b4632e">angerechnet '+eur(_cred)+'</b>'+(_ent&&_ent.e.grund?(' <span style="font-size:11px">('+esc(_ent.e.grund)+')</span>'):'')):('Σ '+eur(g.sum));
       _ghead[g.list[0].id]='<tr style="background:#f4f1ec;border-top:2px solid var(--line)"><td colspan="6" style="padding:6px 8px;font-weight:700"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>'+esc(g.name)+' <span style="font-weight:400;color:var(--ink-soft,#777);font-size:11.5px">· '+g.list.length+' Rechnung'+(g.list.length>1?"en":"")+' · '+_ksum+'</span></span><span style="flex:1"></span>'+
-        '<button class="btn sm ghost aw-lfkorr" data-k="'+encodeURIComponent(k2)+'" data-name="'+esc(g.name)+'" data-sum="'+g.sum+'" title="Für dieses Projekt eine andere Summe für diesen Lieferanten anrechnen (z. B. doppelt berechnete Forderung)" style="font-weight:400;font-size:11px">'+(_hasK?'✎ Korrektur ändern':'✎ Summe anpassen')+'</button></div></td></tr>';
+        '<button class="btn sm ghost aw-lfkorr" data-k="'+encodeURIComponent(k2)+'" data-name="'+esc(g.name)+'" data-ids="'+esc(g.list.map(function(r){ return r.id; }).join("|"))+'" title="Für dieses Projekt eine andere Summe anrechnen (z. B. doppelt berechnete Forderung)" style="font-weight:400;font-size:11px">'+(_ent?'✎ Korrektur ändern':'✎ Summe anpassen')+'</button></div></td></tr>';
       g.list.forEach(function(r){ _sorted.push(r); });
     });
     html+='<table class="lines"><thead><tr><th>Rechnung</th><th class="right">Netto</th><th>Position</th><th>bezahlt</th><th>Datum</th><th></th></tr></thead><tbody>'+
@@ -8522,7 +8575,7 @@ function renderProjectAuswertung(){
   el.querySelectorAll(".aw-kid").forEach(function(tr){ tr.onclick=function(){ openProject(tr.dataset.pid); }; });
   var op=el.querySelector(".aw-openpar"); if(op) op.onclick=function(){ openProject(op.dataset.pid); };
   var ir=el.querySelector(".aw-ignorerech"); if(ir) ir.onclick=function(){ project.ignoreRech=ir.checked; save(); renderProjectAuswertung(); };
-  el.querySelectorAll(".aw-lfkorr").forEach(function(b){ b.onclick=function(){ awLfKorrDialog(project,decodeURIComponent(b.dataset.k),b.dataset.name,Number(b.dataset.sum)||0); }; });
+  el.querySelectorAll(".aw-lfkorr").forEach(function(b){ b.onclick=function(){ awLfKorrDialog(project,b.dataset.name,String(b.dataset.ids||"").split("|").filter(Boolean)); }; });
 }
 function awCloudLoad(cb){
   if(typeof SB==="undefined"||!SB){ if(cb)cb(); return; }
