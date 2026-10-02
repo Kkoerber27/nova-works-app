@@ -1061,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-10-02.1";
+var APP_VERSION="2026-10-02.2";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -6691,6 +6691,16 @@ function projLfFactor(p,key){
 }
 /* Netto einer Rechnung, wie sie in diesem Projekt angerechnet wird */
 function projInvNet(p,r){ var n=invNet(r); var kk=p&&p.kosten&&p.kosten.lfKorr; if(!kk||!Object.keys(kk).length) return n; return n*projLfFactor(p,projLfKey(r)); }
+/* Angerechnetes Netto einer Rechnung über alle Ansichten: bei Projektrechnungen mit Lieferanten-Korrektur
+   der anteilige Betrag, sonst der Rechnungsbetrag. */
+var _lfAnyAt=0, _lfAny=false;
+function lfAnyKorr(){ var now=Date.now(); if(now-_lfAnyAt<400) return _lfAny; _lfAnyAt=now; _lfAny=(DB.projects||[]).some(function(p){ return p.kosten&&p.kosten.lfKorr&&Object.keys(p.kosten.lfKorr).length; }); return _lfAny; }
+function projForInvoice(r){ var key=awKey(r.projektNr), n=awNorm(r.projektNr), exact=null, loose=null; (DB.projects||[]).forEach(function(p){ if(awKey(p.nummer)===key) exact=p; else if(!loose&&awNorm(p.nummer)===n) loose=p; }); return exact||loose; }
+function invCredNet(r){
+  var n=invNet(r); if(!r||r.status!=="zugewiesen"||r.assignType!=="project"||!r.projektNr||!lfAnyKorr()) return n;
+  var p=projForInvoice(r); return p?projInvNet(p,r):n;
+}
+function invCredHtml(r){ var c=invCredNet(r), n=invNet(r); if(Math.abs(c-n)<0.005) return eur(n); return '<span style="color:#b4632e" title="Im Projekt angerechnet (Lieferanten-Korrektur). Rechnungsbetrag: '+eur(n)+'">'+eur(c)+'</span><div style="font-size:10px;color:#999;font-weight:400"><s>'+eur(n)+'</s></div>'; }
 function lfParseNum(v){ var t=String(v==null?"":v).replace(/[€\s]/g,""); if(!t) return null; if(t.indexOf(",")>=0) t=t.replace(/\./g,"").replace(",","."); else if(/^\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,""); var n=parseFloat(t); return isNaN(n)?null:Math.round(n*100)/100; }
 function childProjects(nr){ var n=awNorm(nr); if(!n) return []; return (DB.projects||[]).filter(function(p){ return p.parentNr && awNorm(p.parentNr)===n && awNorm(p.nummer)!==n; }); }
 function projectSollSum(p){ var k=pKosten(p); return (k.positionen||[]).reduce(function(s,x){return s+(Number(x.soll)||0);},0); }
@@ -7137,8 +7147,10 @@ function lfGroups(){
     var k=lfKey(r);
     if(!m[k]) m[k]={key:k,name:(r.senderName||r.senderEmail||"Unbekannt").trim(),rows:[],netto:0,brutto:0};
     m[k].rows.push(r);
-    m[k].netto+=invNet(r);
-    m[k].brutto+=(Number(r.gross)||invNet(r));
+    m[k].netto+=invCredNet(r);
+    m[k].rech=(m[k].rech||0)+invNet(r);
+    var _n=invNet(r), _f=_n?(invCredNet(r)/_n):1;
+    m[k].brutto+=(Number(r.gross)||_n)*_f;
   });
   return Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return b.netto-a.netto;});
 }
@@ -7188,10 +7200,10 @@ function lfStatusHtml(r,forPdf){
   return '<span style="color:#c0392b;font-weight:700">offen</span>';
 }
 function lfProjLabel(r){ if(r.assignType==="project"&&r.projektNr){ var nm=projNameByNr(r.projektNr); return r.projektNr+(nm?(" "+nm):""); } if(r.assignType==="general") return "Allgemein · "+sparteLabel(r.generalCat||""); return "–"; }
-function lfSums(rows){ var s={n:rows.length,netto:0,brutto:0,bez:0,bezN:0,offen:0,offenN:0,unk:0,unkN:0}; rows.forEach(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; s.netto+=n; s.brutto+=b; var pi=invPaidInfo(r); if(pi.paid){ s.bez+=n; s.bezN++; } else { s.offen+=n; s.offenN++; } }); return s; }
+function lfSums(rows){ var s={n:rows.length,netto:0,rech:0,brutto:0,bez:0,bezN:0,offen:0,offenN:0,unk:0,unkN:0}; rows.forEach(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; s.netto+=invCredNet(r); s.rech+=n; s.brutto+=b; var pi=invPaidInfo(r); if(pi.paid){ s.bez+=n; s.bezN++; } else { s.offen+=n; s.offenN++; } }); return s; }
 function lfPdfHead(title,sub){ return '<div class="phead">'+((typeof logoDataUrl!=="undefined"&&logoDataUrl)?('<img src="'+logoDataUrl+'">'):'<div style="font-size:16px;font-weight:700;letter-spacing:.14em">NOVA WORKS</div>')+'<div class="ptitle"><div class="t">'+esc(title)+'</div><div class="s">'+esc(sub)+'</div></div></div>'; }
 function lfSumBox(s){ return '<div style="display:flex;gap:10px;margin:10px 0 14px">'+
-  [["Rechnungen",s.n+"",""],["Netto gesamt",eur(s.netto),"brutto "+eur(s.brutto)],["Bezahlt",eur(s.bez),s.bezN+" Rechn.","#2d7a4f"],["Offen laut System",eur(s.offen),s.offenN+" Rechn.","#c0392b"]].map(function(x){ return '<div style="flex:1;border-top:2px solid '+(x[3]||"#3d3d3d")+';padding-top:5px"><div style="font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#888">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:'+(x[3]||"#3d3d3d")+'">'+x[1]+'</div>'+(x[2]?('<div style="font-size:8px;color:#888">'+x[2]+'</div>'):'')+'</div>'; }).join("")+'</div>'; }
+  [["Rechnungen",s.n+"",""],["Netto gesamt",eur(s.netto),(Math.abs((s.rech||s.netto)-s.netto)>0.005?("angerechnet · Rechnungen "+eur(s.rech)+" · "):"")+"brutto "+eur(s.brutto)],["Bezahlt",eur(s.bez),s.bezN+" Rechn.","#2d7a4f"],["Offen laut System",eur(s.offen),s.offenN+" Rechn.","#c0392b"]].map(function(x){ return '<div style="flex:1;border-top:2px solid '+(x[3]||"#3d3d3d")+';padding-top:5px"><div style="font-size:8px;text-transform:uppercase;letter-spacing:.08em;color:#888">'+x[0]+'</div><div style="font-size:13px;font-weight:700;color:'+(x[3]||"#3d3d3d")+'">'+x[1]+'</div>'+(x[2]?('<div style="font-size:8px;color:#888">'+x[2]+'</div>'):'')+'</div>'; }).join("")+'</div>'; }
 /* PDF eines Lieferanten (bei gesetztem Zeitraum nur dieser) */
 function lfPDF(g){
   var vd=lfVon?parseDM(lfVon):null, bd=lfBis?parseDM(lfBis):null; if(bd) bd=new Date(bd.getFullYear(),bd.getMonth(),bd.getDate(),23,59,59);
@@ -7199,7 +7211,7 @@ function lfPDF(g){
     .sort(function(a,b){ var x=lfDate(a),y=lfDate(b); return (y?y.getTime():0)-(x?x.getTime():0); });
   var s=lfSums(rows), per=(lfVon||lfBis)?("Zeitraum "+(lfVon||"…")+" – "+(lfBis||"…")):"alle Rechnungen";
   var tbl='<table><thead><tr><th>Datum</th><th>Rechnungs-Nr.</th><th>Betreff</th><th>Projekt / Zuordnung</th><th style="text-align:right">Netto</th><th style="text-align:right">Brutto</th><th>Status laut System</th></tr></thead><tbody>'+
-    rows.map(function(r){ var n=invNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; return '<tr><td class="nw">'+lfFmtD(lfDate(r))+'</td><td class="nw">'+esc(r.invoiceNumber||"–")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,60))+'</td><td>'+esc(lfProjLabel(r))+'</td><td class="r">'+eur(n)+'</td><td class="r" style="color:#777">'+eur(b)+'</td><td class="nw">'+lfStatusHtml(r,true)+'</td></tr>'; }).join("")+
+    rows.map(function(r){ var n=invNet(r), c=invCredNet(r), b=(r.gross!=null&&r.gross!=="")?Number(r.gross):n; return '<tr><td class="nw">'+lfFmtD(lfDate(r))+'</td><td class="nw">'+esc(r.invoiceNumber||"–")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,60))+'</td><td>'+esc(lfProjLabel(r))+'</td><td class="r">'+eur(c)+(Math.abs(c-n)>0.005?('<div style="font-size:7.5px;color:#888">angerechnet · Rechnung '+eur(n)+'</div>'):'')+'</td><td class="r" style="color:#777">'+eur(b)+'</td><td class="nw">'+lfStatusHtml(r,true)+'</td></tr>'; }).join("")+
     '<tr style="border-top:2px solid #3d3d3d;font-weight:700"><td colspan="4" style="padding-top:6px">Summe · '+s.n+' Rechnungen</td><td class="r" style="padding-top:6px">'+eur(s.netto)+'</td><td class="r" style="padding-top:6px;color:#777">'+eur(s.brutto)+'</td><td style="padding-top:6px" class="nw"><span style="color:#2d7a4f">bezahlt '+eur(s.bez)+'</span><br><span style="color:#c0392b">offen '+eur(s.offen)+'</span></td></tr></tbody></table>';
   var body=lfPdfHead("Lieferanten-Auswertung",g.name+" · "+per+" · Stand "+fmtDate(today()))+lfSumBox(s)+tbl+
     '<div style="font-size:8px;color:#888;margin-top:8px">Status laut System: „bezahlt“ = Bezahlt-Markierung in der App (Rechnungen, Projekt-Kostenverwaltung oder Lexware-Abgleich), „offen“ = ohne Markierung. Alle Beträge netto, Brutto laut Beleg.</div>';
@@ -7240,23 +7252,23 @@ function lfDetailHtml(g){
   var vd=lfVon?parseDM(lfVon):null, bd=lfBis?parseDM(lfBis):null;
   if(bd) bd=new Date(bd.getFullYear(),bd.getMonth(),bd.getDate(),23,59,59);
   var zRows=g.rows.filter(function(r){ var d=lfDate(r); if(!d) return false; if(vd&&d<vd) return false; if(bd&&d>bd) return false; return true; });
-  var zN=zRows.reduce(function(s,r){return s+invNet(r);},0);
+  var zN=zRows.reduce(function(s,r){return s+invCredNet(r);},0);
   var mon={}, jahr={};
   g.rows.forEach(function(r){ var d=lfDate(r); if(!d) return;
     var mk=d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0"), jk=String(d.getFullYear());
-    (mon[mk]=mon[mk]||{n:0,s:0}); mon[mk].n++; mon[mk].s+=invNet(r);
-    (jahr[jk]=jahr[jk]||{n:0,s:0}); jahr[jk].n++; jahr[jk].s+=invNet(r); });
+    (mon[mk]=mon[mk]||{n:0,s:0}); mon[mk].n++; mon[mk].s+=invCredNet(r);
+    (jahr[jk]=jahr[jk]||{n:0,s:0}); jahr[jk].n++; jahr[jk].s+=invCredNet(r); });
   var MONL=["Jan","Feb","Mär","Apr","Mai","Jun","Jul","Aug","Sep","Okt","Nov","Dez"];
   var monHtml=Object.keys(mon).sort().reverse().map(function(mk){ return '<tr><td>'+MONL[+mk.slice(5)-1]+' '+mk.slice(0,4)+'</td><td class="right">'+mon[mk].n+'</td><td class="right">'+eur(mon[mk].s)+'</td></tr>'; }).join("");
   var jahrHtml=Object.keys(jahr).sort().reverse().map(function(jk){ return '<tr style="font-weight:700"><td>'+jk+'</td><td class="right">'+jahr[jk].n+'</td><td class="right">'+eur(jahr[jk].s)+'</td></tr>'; }).join("");
   var rows=g.rows.slice().sort(function(a,b){ var x=lfDate(a),y=lfDate(b); return (y?y.getTime():0)-(x?x.getTime():0); }).map(function(r){
     var d=lfDate(r);
     var ziel=(r.assignType==="project"&&r.projektNr)?("Projekt "+r.projektNr):(r.assignType==="general"?"Allgemein":"offen");
-    return '<tr><td class="nowrap">'+lfFmtD(d)+'</td><td class="nowrap">'+esc(r.invoiceNumber||"")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,46))+'</td><td class="nowrap">'+esc(ziel)+'</td><td class="right nowrap"><b>'+eur(invNet(r))+'</b></td><td class="nowrap">'+invPaidCell(r)+'</td></tr>'; }).join("");
+    return '<tr><td class="nowrap">'+lfFmtD(d)+'</td><td class="nowrap">'+esc(r.invoiceNumber||"")+'</td><td>'+esc(String(r.subject||r.attachment||"").slice(0,46))+'</td><td class="nowrap">'+esc(ziel)+'</td><td class="right nowrap"><b>'+invCredHtml(r)+'</b></td><td class="nowrap">'+invPaidCell(r)+'</td></tr>'; }).join("");
   var S=lfSums(g.rows);
   return '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><button class="btn sm" id="lf-back">← Alle Lieferanten</button><span style="flex:1"></span><button class="btn sm primary" id="lf-pdf" title="Rechnungen dieses Lieferanten mit Datum, Rechnungsnummer, Projekt, Summe und Zahlungsstatus als PDF (bei gesetztem Zeitraum nur dieser)">🖨 PDF-Export</button></div>'+
     '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:baseline;margin:12px 0 4px"><span style="font-size:17px;font-weight:700">'+esc(g.name)+'</span>'+
-    '<span class="muted">'+g.rows.length+' Rechnungen</span><span>Gesamt: <b>'+eur(g.netto)+'</b> netto</span><span class="muted">'+eur(g.brutto)+' brutto</span><span style="color:#2d7a4f">bezahlt '+eur(S.bez)+' ('+S.bezN+')</span><span style="color:#c0392b">offen laut System '+eur(S.offen)+' ('+S.offenN+')</span>'+'</div>'+
+    '<span class="muted">'+g.rows.length+' Rechnungen</span><span>Gesamt: <b>'+eur(g.netto)+'</b> netto'+(Math.abs((g.rech||g.netto)-g.netto)>0.005?(' <span style="color:#b4632e;font-size:12px">angerechnet · Rechnungen '+eur(g.rech)+'</span>'):'')+'</span><span class="muted">'+eur(g.brutto)+' brutto</span><span style="color:#2d7a4f">bezahlt '+eur(S.bez)+' ('+S.bezN+')</span><span style="color:#c0392b">offen laut System '+eur(S.offen)+' ('+S.offenN+')</span>'+'</div>'+
     '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0;padding:9px 12px;background:var(--gold-bg);border-radius:8px">'+
     '<b style="font-size:12px">Zeitraum:</b>'+
     '<input id="lf-von" value="'+esc(lfVon)+'" placeholder="📅 von" readonly style="width:104px;cursor:pointer;border:1px solid var(--line);border-radius:6px;padding:5px;background:#fff">'+
