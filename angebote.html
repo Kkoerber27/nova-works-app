@@ -1061,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-10-02.3";
+var APP_VERSION="2026-10-02.4";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5956,6 +5956,7 @@ function kaIst(p){
     projInvoicesFor(x).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; var v=projInvNet(x,r); out.sum+=v; out.n++;
       var st=k.rech[r.id], kat=(st&&st.posId)?posKat[st.posId]:null;
       if(kat==="personal") out.personal+=v; else if(kat==="transport") out.transport+=v; else if(kat==="miete"||kat==="einkauf") out.miete+=v; else if(kat) out.sonstiges+=v; else out.offen+=v; });
+    var _dm=projPosDeltaMap(x); Object.keys(_dm).forEach(function(id){ var v=_dm[id], kat=posKat[id]; out.sum+=v; if(kat==="personal") out.personal+=v; else if(kat==="transport") out.transport+=v; else if(kat==="miete"||kat==="einkauf") out.miete+=v; else out.sonstiges+=v; });
   });
   return out;
 }
@@ -6724,7 +6725,12 @@ function invCredHtml(r){ var c=invCredNet(r), n=invNet(r); if(Math.abs(c-n)<0.00
 function lfParseNum(v){ var t=String(v==null?"":v).replace(/[€\s]/g,""); if(!t) return null; if(t.indexOf(",")>=0) t=t.replace(/\./g,"").replace(",","."); else if(/^\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,""); var n=parseFloat(t); return isNaN(n)?null:Math.round(n*100)/100; }
 function childProjects(nr){ var n=awNorm(nr); if(!n) return []; return (DB.projects||[]).filter(function(p){ return p.parentNr && awNorm(p.parentNr)===n && awNorm(p.nummer)!==n; }); }
 function projectSollSum(p){ var k=pKosten(p); return (k.positionen||[]).reduce(function(s,x){return s+(Number(x.soll)||0);},0); }
-function projectIstSum(p){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?projInvNet(p,r):0); },0); }
+/* Ist einer Position direkt korrigiert (x.istKorr) → ersetzt die Summe der zugeordneten Rechnungen */
+function posInvRaw(p,posId){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId===posId)?projInvNet(p,r):0); },0); }
+function posHasKorr(x){ return x&&x.istKorr!=null&&x.istKorr!==""; }
+function projPosDeltaMap(p){ var out={}, k=p&&p.kosten; if(!k||!(k.positionen||[]).some(posHasKorr)) return out; k.positionen.forEach(function(x){ if(posHasKorr(x)) out[x.id]=(Number(x.istKorr)||0)-posInvRaw(p,x.id); }); return out; }
+function projPosDelta(p){ var m=projPosDeltaMap(p); return Object.keys(m).reduce(function(s,id){ return s+m[id]; },0); }
+function projectIstSum(p){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?projInvNet(p,r):0); },0)+projPosDelta(p); }
 function projectRSum(p){ return projInvoicesFor(p).reduce(function(a,r){return a+projInvNet(p,r);},0); }
 
 function syncGagenToKosten(project){
@@ -6748,6 +6754,7 @@ function projectCostByCatOwn(p){
   var c={personal:{soll:0,ist:0},transport:{soll:0,ist:0},miete:{soll:0,ist:0},sonstiges:{soll:0,ist:0}};
   (k.positionen||[]).forEach(function(x){ c[projectCatBucket(x.kat)].soll += (Number(x.soll)||0); });
   projInvoicesFor(p).forEach(function(r){ var st=k.rech[r.id]; if(st&&st.posId){ var pos=posById[st.posId]; if(pos) c[projectCatBucket(pos.kat)].ist += projInvNet(p,r); } });
+  var _dm=projPosDeltaMap(p); Object.keys(_dm).forEach(function(id){ var pos=posById[id]; if(pos) c[projectCatBucket(pos.kat)].ist += _dm[id]; });
   return c;
 }
 function projectResult(p){
@@ -6771,7 +6778,7 @@ function awCatRowsHtml(cats){
   rows+="<tr style=\"font-weight:700;border-top:1px solid #999\"><td>Summe Kosten</td><td class=\"r\">"+eur(soll)+"</td><td class=\"r\">"+eur(ist)+"</td><td class=\"r\">"+eur(soll-ist)+"</td></tr>";
   return rows;
 }
-function posIstFor(p,posId){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId===posId)?projInvNet(p,r):0); },0); }
+function posIstFor(p,posId){ var x=(pKosten(p).positionen||[]).find(function(q){ return q.id===posId; }); if(posHasKorr(x)) return Number(x.istKorr)||0; return posInvRaw(p,posId); }
 function projectPositions(project){
   var out=[];
   function collect(p){ var k=pKosten(p); (k.positionen||[]).forEach(function(x){ out.push({label:(x.label||"—"),kat:projectCatBucket(x.kat),soll:(Number(x.soll)||0),ist:posIstFor(p,x.id)}); }); }
@@ -7859,7 +7866,7 @@ function renderAuswertung(){
     return {p:p, abg:_abg, zu:_zu, soll:_soll, sollEff:_sollEff, pek:_pek, gagen:_gag, ang:((p.parentNr||_abg)?0:projectOfferNet(p)), conf:(p.ampel==="bestaetigt"?projectVolume(p):0), isConf:(p.ampel==="bestaetigt"), erl:(p.parentNr?0:pAusgang(p).reduce(function(a,x){return a+(Number(x.amount)||0);},0)), kos:projectIstSum(p), rsum:invs.reduce(function(a,r){return a+projInvNet(p,r);},0), rn:invs.length, invs:invs, invIds:_invIds, kosById:_kosById, parent:awNorm(p.parentNr||""), parentNr:(p.parentNr||"")};
   }).sort(function(a,b){ return String(b.p.nummer).localeCompare(String(a.p.nummer)); });
   var _byNr={}; rows.forEach(function(r){ var k=awNorm(r.p.nummer); if(!_byNr[k]||(_byNr[k].p.parentNr&&!r.p.parentNr)) _byNr[k]=r; });
-  rows.forEach(function(r){ if(r.parent && _byNr[r.parent] && _byNr[r.parent]!==r){ var par=_byNr[r.parent]; r.invs.forEach(function(inv){ if(par.invIds[inv.id]) return; par.invIds[inv.id]=1; par.rsum+=projInvNet(r.p,inv); par.rn++; par.kos+=(r.kosById[inv.id]||0); }); par.soll+=r.soll; par.sollEff+=r.sollEff; par.pek+=r.pek; par.gagen+=r.gagen; par.hasKids=true; r.rolled=true; } });
+  rows.forEach(function(r){ if(r.parent && _byNr[r.parent] && _byNr[r.parent]!==r){ var par=_byNr[r.parent]; r.invs.forEach(function(inv){ if(par.invIds[inv.id]) return; par.invIds[inv.id]=1; par.rsum+=projInvNet(r.p,inv); par.rn++; par.kos+=(r.kosById[inv.id]||0); }); par.kos+=projPosDelta(r.p); par.soll+=r.soll; par.sollEff+=r.sollEff; par.pek+=r.pek; par.gagen+=r.gagen; par.hasKids=true; r.rolled=true; } });
   var _ce=(localStorage.getItem("aw_crewek")==="1");
   /* Gruppierung: bestätigt / angeboten (offen) / abgesagt — Hilfsprojekte folgen ihrem Hauptprojekt */
   rows.forEach(function(r){ r.grp=r.abg?"abg":(r.isConf?"conf":"open"); });
@@ -7994,7 +8001,7 @@ function projectEK(p){ var offs=(p&&p.offers)||[]; if(!offs.length) return 0; va
 function accOffer(project){ var offs=(project.offers||[]); var acc=offs.filter(function(o){return o.status==="angenommen";}); return acc[0]||offs[0]||null; }
 /* Ist einer Position = Σ zugeordnete Rechnungen */
 function posInvoices(project,posId){ var k=pKosten(project); return projectInvoices(project.nummer).filter(function(r){ var s=k.rech[r.id]; return s&&s.posId===posId; }); }
-function posIst(project,posId){ return posInvoices(project,posId).reduce(function(s,r){return s+projInvNet(project,r);},0); }
+function posIst(project,posId){ var x=(pKosten(project).positionen||[]).find(function(q){ return q.id===posId; }); if(posHasKorr(x)) return Number(x.istKorr)||0; return posInvoices(project,posId).reduce(function(s,r){return s+projInvNet(project,r);},0); }
 /* --- Kalkulation aus Angebot übernehmen --- */
 function addOfferPositions(k,o,prefix){
   var add=0, pre=prefix?(prefix+" · "):"";
@@ -8434,7 +8441,7 @@ function renderProjectAuswertung(){
   var zuSum=pZusaetze(project).reduce(function(s,x){return s+(Number(x.amount)||0);},0);
   if(project.parentNr){ ang=0; erl=0; zuSum=0; }   // Hilfs-/Unterprojekt: Umsatz zählt beim Hauptprojekt
   var sollSum=positions.reduce(function(s,x){return s+(Number(x.soll)||0);},0);
-  var istSum=invs.reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?projInvNet(project,r):0); },0);
+  var istSum=invs.reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?projInvNet(project,r):0); },0)+projPosDelta(project);
   var absRecv=k.abschlaege.filter(function(a){return a.received;}).reduce(function(s,a){return s+awM(a.amount);},0);
   var kids=childProjects(nr);
   var kidSoll=0,kidIst=0,kidRSum=0;
@@ -8466,7 +8473,7 @@ function renderProjectAuswertung(){
       return '<tr><td><input class="aw-poslabel" data-id="'+esc(x.id)+'" value="'+esc(x.label||"")+'" placeholder="Bezeichnung der Position" style="width:100%;min-width:240px;border:1px solid var(--line);border-radius:5px;padding:3px"></td>'+
         '<td>'+catsel+'</td>'+
         '<td class="right"><input class="aw-num" data-kind="soll" data-id="'+esc(x.id)+'" value="'+(x.soll!=null?Number(x.soll).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"")+'" style="width:76px;text-align:right;border:1px solid var(--line);border-radius:5px;padding:3px"></td>'+
-        '<td class="right nowrap">'+(ist?eur(ist):"–")+'</td>'+
+        '<td class="right nowrap">'+(posHasKorr(x)?('<b style="color:#b4632e" title="Ist manuell korrigiert">'+eur(ist)+'</b><div style="font-size:10.5px;color:#999"><s>'+eur(posInvRaw(project,x.id))+'</s> Rechn.</div>'):(ist?eur(ist):"–"))+' <button class="aw-istkorr" data-id="'+esc(x.id)+'" title="Ist dieser Position korrigieren (z. B. doppelt berechnete Forderung)" style="border:0;background:none;cursor:pointer;color:#b4632e;font-size:12px;padding:0 2px">✎</button></td>'+
         ''+awDiffTd(diff,"right nowrap")+''+
         '<td class="nowrap">'+chk("pos",x.id,x.paid)+(x.paidAuto?'<span title="automatisch: alle zugeordneten Rechnungen bezahlt" style="margin-left:4px;font-size:9px;font-weight:700;color:#2d7a4f;border:1px solid #2d7a4f;border-radius:3px;padding:0 3px;vertical-align:middle">AUTO</span>':'')+'</td>'+
         '<td>'+dinp("posDate",x.id,x.paidDate)+'</td>'+
@@ -8575,6 +8582,10 @@ function renderProjectAuswertung(){
   el.querySelectorAll(".aw-kid").forEach(function(tr){ tr.onclick=function(){ openProject(tr.dataset.pid); }; });
   var op=el.querySelector(".aw-openpar"); if(op) op.onclick=function(){ openProject(op.dataset.pid); };
   var ir=el.querySelector(".aw-ignorerech"); if(ir) ir.onclick=function(){ project.ignoreRech=ir.checked; save(); renderProjectAuswertung(); };
+  el.querySelectorAll(".aw-istkorr").forEach(function(b){ b.onclick=function(){ var x=(k.positionen||[]).find(function(q){ return q.id===b.dataset.id; }); if(!x) return; var raw=posInvRaw(project,x.id);
+    var v=prompt("Ist für „"+(x.label||"Position")+"“ korrigieren (netto €).\nSumme der zugeordneten Rechnungen: "+eur(raw)+"\nLeer lassen = wieder die Rechnungssumme verwenden.", posHasKorr(x)?String(x.istKorr).replace(".",","):"");
+    if(v===null) return; var n=lfParseNum(v); if(n==null){ delete x.istKorr; delete x.istKorrAm; toast("Ist wieder aus den Rechnungen"); } else { x.istKorr=n; x.istKorrAm=new Date().toISOString(); toast("Ist korrigiert: "+eur(n)+" statt "+eur(raw)); }
+    save(); renderProjectAuswertung(); }; });
   el.querySelectorAll(".aw-lfkorr").forEach(function(b){ b.onclick=function(){ awLfKorrDialog(project,b.dataset.name,String(b.dataset.ids||"").split("|").filter(Boolean)); }; });
 }
 function awCloudLoad(cb){
