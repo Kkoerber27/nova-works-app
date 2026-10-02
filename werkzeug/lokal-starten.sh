@@ -75,6 +75,13 @@ ENDE
   PORT="$NEU"
 fi
 
+# Welcher Stand liegt hier eigentlich? Das beantwortet die haeufigste
+# Frage, bevor sie entsteht.
+STAND="unbekannt"
+if command -v git >/dev/null 2>&1 && [ -d "$HIER/../.git" ]; then
+  STAND="$(cd "$HIER/.." && git log --oneline -1 2>/dev/null | cut -c1-58)"
+fi
+
 cat <<ENDE
 
   Nova Works läuft gleich auf:
@@ -83,6 +90,7 @@ cat <<ENDE
       Backend   http://127.0.0.1:$PORT/admin/
 
   Verzeichnis  $(cd "$SEITE" && pwd)
+  Stand        $STAND
 
   Beim ersten Aufruf des Backends wird ein Passwort vergeben. Das gilt
   nur hier auf diesem Rechner - der Server bekommt später ein eigenes.
@@ -98,12 +106,15 @@ ENDE
 # niemand wusste, woran es liegt. Jetzt laeuft PHP im Hintergrund, das
 # Skript fragt die eigene Adresse ab und sagt, was es bekommt.
 
+# Der Router haengt an jede Antwort "nicht behalten". Ohne ihn zeigt der
+# Browser nach einem git pull weiter das alte Stylesheet, und man sucht
+# den Fehler im Code, der laengst behoben ist.
 php \
   -d upload_max_filesize=32M \
   -d post_max_size=160M \
   -d memory_limit=512M \
   -d max_execution_time=180 \
-  -S "127.0.0.1:$PORT" -t "$SEITE" &
+  -S "127.0.0.1:$PORT" -t "$SEITE" "$HIER/lokal-router.php" &
 PHP_PID=$!
 
 # Beim Beenden des Skripts (Strg+C) geht der Server mit.
@@ -131,6 +142,16 @@ echo "  Prüfung:"
 printf '    %-28s %s\n' "Startseite" "$STARTSEITE"
 printf '    %-28s %s\n' "Backend /admin/" "$BACKEND"
 printf '    %-28s %s\n' "Impressum" "$IMPRESSUM"
+
+# Liefert dieser Server wirklich das aus, was im Arbeitsverzeichnis liegt?
+if command -v curl >/dev/null 2>&1; then
+  if curl -s --max-time 4 "http://127.0.0.1:$PORT/assets/css/style.css" 2>/dev/null \
+     | grep -q 'justify-items: center'; then
+    printf '    %-28s %s\n' "Stylesheet" "aktuell"
+  else
+    printf '    %-28s %s\n' "Stylesheet" "ALT - git pull fehlt"
+  fi
+fi
 
 if [ "$STARTSEITE" = "200" ]; then
   echo

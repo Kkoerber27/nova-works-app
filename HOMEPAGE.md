@@ -59,7 +59,27 @@ ihn weglassen und später nachreichen.
 
 Das Skript findet seinen eigenen Ort, egal aus welchem Verzeichnis es
 aufgerufen wird, und gibt PHP die Grenzen mit, die auf dem Server aus der
-`.user.ini` kommen. Von Hand geht es auch:
+`.user.ini` kommen. Nach dem Start sagt es, was es vorfindet:
+
+```
+  Verzeichnis  /Users/kk/nova-works-app/site
+  Stand        b37dea1 Claim mittig unter der Wortmarke
+
+  Prüfung:
+    Startseite                   200
+    Backend /admin/              302
+    Impressum                    200
+    Stylesheet                   aktuell
+```
+
+**„Stylesheet: ALT – git pull fehlt"** heißt genau das. Das ist die
+häufigste Ursache für „die Änderung ist nicht da": Man sieht eine alte
+Fassung und sucht den Fehler im Code, der längst behoben ist.
+
+Dagegen hängt `werkzeug/lokal-router.php` an Stylesheet, Skript, Bilder
+und Schrift ein `Cache-Control: no-store`. Lokal behält der Browser damit
+nichts – auf dem Server gilt weiter das Gegenteil (ein Jahr, siehe
+`.htaccess`). Von Hand geht es auch:
 
 ```bash
 cd site && php -S 127.0.0.1:4174
