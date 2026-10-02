@@ -1061,7 +1061,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-10-01.2";
+var APP_VERSION="2026-10-02.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5953,7 +5953,7 @@ function kaIst(p){
   var kids=(DB.projects||[]).filter(function(x){ return x!==p&&x.parentNr&&awNorm(x.parentNr)===awNorm(p.nummer); });
   [p].concat(kids).forEach(function(x){
     var k=pKosten(x), posKat={}; (k.positionen||[]).forEach(function(pos){ posKat[pos.id]=pos.kat||"sonstiges"; });
-    projInvoicesFor(x).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; var v=invNet(r); out.sum+=v; out.n++;
+    projInvoicesFor(x).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; var v=projInvNet(x,r); out.sum+=v; out.n++;
       var st=k.rech[r.id], kat=(st&&st.posId)?posKat[st.posId]:null;
       if(kat==="personal") out.personal+=v; else if(kat==="transport") out.transport+=v; else if(kat==="miete"||kat==="einkauf") out.miete+=v; else if(kat) out.sonstiges+=v; else out.offen+=v; });
   });
@@ -6679,10 +6679,23 @@ function projectInvoices(nr){
   });
 }
 function projInvoicesFor(project){ return (project&&project.ignoreRech)?[]:projectInvoices((project&&project.nummer)||""); }
+/* Lieferanten-Korrektur je Projekt: k.lfKorr[lieferant] = {betrag, grund}. Ersetzt für dieses Projekt die
+   Summe der Rechnungen des Lieferanten (z. B. wenn eine Rechnung eine Forderung aus einer anderen erneut enthält).
+   Die Rechnungen selbst bleiben unverändert; angerechnet wird anteilig je Rechnung. */
+function projLfKey(r){ return String((r&&(r.senderName||r.senderEmail))||"—").trim().toLowerCase()||"—"; }
+function projLfKorr(p){ var k=pKosten(p); if(!k.lfKorr) k.lfKorr={}; return k.lfKorr; }
+function projLfRaw(p,key){ return projInvoicesFor(p).filter(function(r){ return projLfKey(r)===key; }).reduce(function(s,r){ return s+invNet(r); },0); }
+function projLfFactor(p,key){
+  var kk=p&&p.kosten&&p.kosten.lfKorr; if(!kk) return 1; var e=kk[key]; if(!e||e.betrag==null||e.betrag==="") return 1;
+  var raw=projLfRaw(p,key); return raw>0?(Number(e.betrag)||0)/raw:1;
+}
+/* Netto einer Rechnung, wie sie in diesem Projekt angerechnet wird */
+function projInvNet(p,r){ var n=invNet(r); var kk=p&&p.kosten&&p.kosten.lfKorr; if(!kk||!Object.keys(kk).length) return n; return n*projLfFactor(p,projLfKey(r)); }
+function lfParseNum(v){ var t=String(v==null?"":v).replace(/[€\s]/g,""); if(!t) return null; if(t.indexOf(",")>=0) t=t.replace(/\./g,"").replace(",","."); else if(/^\d{1,3}(\.\d{3})+$/.test(t)) t=t.replace(/\./g,""); var n=parseFloat(t); return isNaN(n)?null:Math.round(n*100)/100; }
 function childProjects(nr){ var n=awNorm(nr); if(!n) return []; return (DB.projects||[]).filter(function(p){ return p.parentNr && awNorm(p.parentNr)===n && awNorm(p.nummer)!==n; }); }
 function projectSollSum(p){ var k=pKosten(p); return (k.positionen||[]).reduce(function(s,x){return s+(Number(x.soll)||0);},0); }
-function projectIstSum(p){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?invNet(r):0); },0); }
-function projectRSum(p){ return projInvoicesFor(p).reduce(function(a,r){return a+invNet(r);},0); }
+function projectIstSum(p){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?projInvNet(p,r):0); },0); }
+function projectRSum(p){ return projInvoicesFor(p).reduce(function(a,r){return a+projInvNet(p,r);},0); }
 
 function syncGagenToKosten(project){
   if(!project) return;
@@ -6704,7 +6717,7 @@ function projectCostByCatOwn(p){
   var k=pKosten(p); var posById={}; (k.positionen||[]).forEach(function(x){ posById[x.id]=x; });
   var c={personal:{soll:0,ist:0},transport:{soll:0,ist:0},miete:{soll:0,ist:0},sonstiges:{soll:0,ist:0}};
   (k.positionen||[]).forEach(function(x){ c[projectCatBucket(x.kat)].soll += (Number(x.soll)||0); });
-  projInvoicesFor(p).forEach(function(r){ var st=k.rech[r.id]; if(st&&st.posId){ var pos=posById[st.posId]; if(pos) c[projectCatBucket(pos.kat)].ist += invNet(r); } });
+  projInvoicesFor(p).forEach(function(r){ var st=k.rech[r.id]; if(st&&st.posId){ var pos=posById[st.posId]; if(pos) c[projectCatBucket(pos.kat)].ist += projInvNet(p,r); } });
   return c;
 }
 function projectResult(p){
@@ -6728,7 +6741,7 @@ function awCatRowsHtml(cats){
   rows+="<tr style=\"font-weight:700;border-top:1px solid #999\"><td>Summe Kosten</td><td class=\"r\">"+eur(soll)+"</td><td class=\"r\">"+eur(ist)+"</td><td class=\"r\">"+eur(soll-ist)+"</td></tr>";
   return rows;
 }
-function posIstFor(p,posId){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId===posId)?invNet(r):0); },0); }
+function posIstFor(p,posId){ var k=pKosten(p); return projInvoicesFor(p).reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId===posId)?projInvNet(p,r):0); },0); }
 function projectPositions(project){
   var out=[];
   function collect(p){ var k=pKosten(p); (k.positionen||[]).forEach(function(x){ out.push({label:(x.label||"—"),kat:projectCatBucket(x.kat),soll:(Number(x.soll)||0),ist:posIstFor(p,x.id)}); }); }
@@ -7804,17 +7817,17 @@ function renderAuswertung(){
   if(!projs.length){ el.innerHTML='<div class="muted">Keine Projekte vorhanden.</div>'; return; }
   var rows=projs.map(function(p){
     var aw=awGet(p.nummer); var s=aw?awSummary(aw):null; var invs=projInvoicesFor(p);
-    var _k=pKosten(p), _invIds={}, _kosById={}; invs.forEach(function(r){ _invIds[r.id]=1; var st=_k.rech[r.id]; _kosById[r.id]=(st&&st.posId)?invNet(r):0; });
+    var _k=pKosten(p), _invIds={}, _kosById={}; invs.forEach(function(r){ _invIds[r.id]=1; var st=_k.rech[r.id]; _kosById[r.id]=(st&&st.posId)?projInvNet(p,r):0; });
     var _abg=(p.ampel==="abgesagt");
     var _zu=(p.parentNr||_abg)?0:pZusaetze(p).reduce(function(s,x){return s+(Number(x.amount)||0);},0);
     var _soll=projectSollSum(p);
     var _pek=_abg?0:projectPersonalEK(p);
     var _gag=_abg?0:projectGagenSum(p);
     var _sollEff=_abg?0:((_soll>0)?_soll:projectEK(p));
-    return {p:p, abg:_abg, zu:_zu, soll:_soll, sollEff:_sollEff, pek:_pek, gagen:_gag, ang:((p.parentNr||_abg)?0:projectOfferNet(p)), conf:(p.ampel==="bestaetigt"?projectVolume(p):0), isConf:(p.ampel==="bestaetigt"), erl:(p.parentNr?0:pAusgang(p).reduce(function(a,x){return a+(Number(x.amount)||0);},0)), kos:projectIstSum(p), rsum:invs.reduce(function(a,r){return a+invNet(r);},0), rn:invs.length, invs:invs, invIds:_invIds, kosById:_kosById, parent:awNorm(p.parentNr||""), parentNr:(p.parentNr||"")};
+    return {p:p, abg:_abg, zu:_zu, soll:_soll, sollEff:_sollEff, pek:_pek, gagen:_gag, ang:((p.parentNr||_abg)?0:projectOfferNet(p)), conf:(p.ampel==="bestaetigt"?projectVolume(p):0), isConf:(p.ampel==="bestaetigt"), erl:(p.parentNr?0:pAusgang(p).reduce(function(a,x){return a+(Number(x.amount)||0);},0)), kos:projectIstSum(p), rsum:invs.reduce(function(a,r){return a+projInvNet(p,r);},0), rn:invs.length, invs:invs, invIds:_invIds, kosById:_kosById, parent:awNorm(p.parentNr||""), parentNr:(p.parentNr||"")};
   }).sort(function(a,b){ return String(b.p.nummer).localeCompare(String(a.p.nummer)); });
   var _byNr={}; rows.forEach(function(r){ var k=awNorm(r.p.nummer); if(!_byNr[k]||(_byNr[k].p.parentNr&&!r.p.parentNr)) _byNr[k]=r; });
-  rows.forEach(function(r){ if(r.parent && _byNr[r.parent] && _byNr[r.parent]!==r){ var par=_byNr[r.parent]; r.invs.forEach(function(inv){ if(par.invIds[inv.id]) return; par.invIds[inv.id]=1; par.rsum+=invNet(inv); par.rn++; par.kos+=(r.kosById[inv.id]||0); }); par.soll+=r.soll; par.sollEff+=r.sollEff; par.pek+=r.pek; par.gagen+=r.gagen; par.hasKids=true; r.rolled=true; } });
+  rows.forEach(function(r){ if(r.parent && _byNr[r.parent] && _byNr[r.parent]!==r){ var par=_byNr[r.parent]; r.invs.forEach(function(inv){ if(par.invIds[inv.id]) return; par.invIds[inv.id]=1; par.rsum+=projInvNet(r.p,inv); par.rn++; par.kos+=(r.kosById[inv.id]||0); }); par.soll+=r.soll; par.sollEff+=r.sollEff; par.pek+=r.pek; par.gagen+=r.gagen; par.hasKids=true; r.rolled=true; } });
   var _ce=(localStorage.getItem("aw_crewek")==="1");
   /* Gruppierung: bestätigt / angeboten (offen) / abgesagt — Hilfsprojekte folgen ihrem Hauptprojekt */
   rows.forEach(function(r){ r.grp=r.abg?"abg":(r.isConf?"conf":"open"); });
@@ -7877,7 +7890,7 @@ function renderAuswertung(){
 function awRechModal(project){
   var items=[];
   var seen={};
-  var add=function(p,isChild){ projInvoicesFor(p).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; items.push({r:r,p:p,child:isChild,netto:invNet(r)}); }); };
+  var add=function(p,isChild){ projInvoicesFor(p).forEach(function(r){ if(seen[r.id]) return; seen[r.id]=1; items.push({r:r,p:p,child:isChild,netto:projInvNet(p,r)}); }); };
   var kids=(DB.projects||[]).filter(function(p){ return p!==project&&p.parentNr&&awNorm(p.parentNr)===awNorm(project.nummer); });
   add(project,false); kids.forEach(function(c){ add(c,true); });
   items.sort(function(a,b){ return b.netto-a.netto; });
@@ -7949,7 +7962,7 @@ function projectEK(p){ var offs=(p&&p.offers)||[]; if(!offs.length) return 0; va
 function accOffer(project){ var offs=(project.offers||[]); var acc=offs.filter(function(o){return o.status==="angenommen";}); return acc[0]||offs[0]||null; }
 /* Ist einer Position = Σ zugeordnete Rechnungen */
 function posInvoices(project,posId){ var k=pKosten(project); return projectInvoices(project.nummer).filter(function(r){ var s=k.rech[r.id]; return s&&s.posId===posId; }); }
-function posIst(project,posId){ return posInvoices(project,posId).reduce(function(s,r){return s+invNet(r);},0); }
+function posIst(project,posId){ return posInvoices(project,posId).reduce(function(s,r){return s+projInvNet(project,r);},0); }
 /* --- Kalkulation aus Angebot übernehmen --- */
 function addOfferPositions(k,o,prefix){
   var add=0, pre=prefix?(prefix+" · "):"";
@@ -8322,20 +8335,41 @@ function renderZusaetze(){
   var el=document.getElementById("pd-zusaetze"); if(!el||!curProject) return;
   el.innerHTML=zusaetzeHtml(curProject); wireZusaetze(curProject, el);
 }
+function awLfKorrDialog(project,key,name,rawSum){
+  var kk=projLfKorr(project), cur=kk[key]||{};
+  var bg=document.getElementById("lfkorr-bg");
+  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="lfkorr-bg"; bg.innerHTML='<div class="modal" style="max-width:460px"><div class="modal-head"><h3>Lieferanten-Summe anpassen</h3><button class="x" data-close="lfkorr-bg">×</button></div><div class="modal-body" id="lfkorr-body"></div><div class="modal-foot"><button class="btn danger" id="lfkorr-del" style="margin-right:auto">Korrektur entfernen</button><button class="btn" data-close="lfkorr-bg">Abbrechen</button><button class="btn primary" id="lfkorr-go">Übernehmen</button></div></div>'; document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("lfkorr-bg"); }; bg.querySelectorAll("[data-close]").forEach(function(x){ x.onclick=function(){ closeModal("lfkorr-bg"); }; }); }
+  document.getElementById("lfkorr-body").innerHTML='<div style="font-size:13px;margin-bottom:10px"><b>'+esc(name)+'</b> · Projekt '+esc((project.nummer||"")+" "+(project.name||""))+'</div>'+
+    '<div class="muted" style="font-size:12px;margin-bottom:10px">Summe der zugeordneten Rechnungen: <b>'+eur(rawSum)+'</b> netto. Hier eintragen, was für dieses Projekt tatsächlich als Kosten zählt. Die Rechnungen selbst bleiben unverändert.</div>'+
+    '<div class="field"><label>Angerechnete Summe netto (€)</label><input id="lfkorr-betrag" inputmode="decimal" value="'+(cur.betrag!=null&&cur.betrag!==""?Number(cur.betrag).toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}):"")+'" placeholder="'+esc(rawSum.toLocaleString("de-DE",{minimumFractionDigits:2,maximumFractionDigits:2}))+'"></div>'+
+    '<div class="field"><label>Grund (optional)</label><input id="lfkorr-grund" value="'+esc(cur.grund||"")+'" placeholder="z. B. Forderung aus Rechnung … doppelt enthalten"></div>'+
+    '<div id="lfkorr-diff" class="muted" style="font-size:12px"></div>';
+  var inp=document.getElementById("lfkorr-betrag"), df=document.getElementById("lfkorr-diff");
+  var upd=function(){ var v=lfParseNum(inp.value); df.innerHTML=(v==null)?"":('Differenz zur Rechnungssumme: <b>'+eur(v-rawSum)+'</b>'); }; inp.oninput=upd; upd();
+  document.getElementById("lfkorr-del").style.display=(cur.betrag!=null&&cur.betrag!=="")?"":"none";
+  document.getElementById("lfkorr-del").onclick=function(){ delete kk[key]; save(); closeModal("lfkorr-bg"); renderProjectAuswertung(); toast("Korrektur entfernt – es zählen wieder die Rechnungsbeträge"); };
+  document.getElementById("lfkorr-go").onclick=function(){
+    var v=lfParseNum(inp.value); if(v==null){ toast("Bitte einen Betrag eintragen"); return; }
+    if(v<0){ toast("Betrag darf nicht negativ sein"); return; }
+    kk[key]={betrag:v,grund:document.getElementById("lfkorr-grund").value.trim(),am:new Date().toISOString(),orig:Math.round(rawSum*100)/100};
+    save(); closeModal("lfkorr-bg"); renderProjectAuswertung(); toast(name+": angerechnet "+eur(v)+" statt "+eur(rawSum));
+  };
+  openModal("lfkorr-bg"); setTimeout(function(){ try{ inp.focus(); inp.select(); }catch(e){} },50);
+}
 function renderProjectAuswertung(){
   var el=document.getElementById("pd-auswertung"); if(!el||!curProject) return;
   var project=curProject, nr=project.nummer;
   autoSeedKalk(project);
   var awp=(typeof awGet==="function")?awGet(nr):null;
   var ang=projectOfferNet(project), ekSoll=projectEK(project);
-  var invs=projInvoicesFor(project); var rsum=invs.reduce(function(a,r){return a+invNet(r);},0);
+  var invs=projInvoicesFor(project); var rsum=invs.reduce(function(a,r){return a+projInvNet(project,r);},0);
   var k=pKosten(project);
   var positions=k.positionen;
   var erl = pAusgang(project).reduce(function(s,a){return s+(Number(a.amount)||0);},0);   // Erlöse (Ist) = Summe aller Ausgangsrechnungen (nicht mehr aus orbon)
   var zuSum=pZusaetze(project).reduce(function(s,x){return s+(Number(x.amount)||0);},0);
   if(project.parentNr){ ang=0; erl=0; zuSum=0; }   // Hilfs-/Unterprojekt: Umsatz zählt beim Hauptprojekt
   var sollSum=positions.reduce(function(s,x){return s+(Number(x.soll)||0);},0);
-  var istSum=invs.reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?invNet(r):0); },0);
+  var istSum=invs.reduce(function(s,r){ var st=k.rech[r.id]; return s+((st&&st.posId)?projInvNet(project,r):0); },0);
   var absRecv=k.abschlaege.filter(function(a){return a.received;}).reduce(function(s,a){return s+awM(a.amount);},0);
   var kids=childProjects(nr);
   var kidSoll=0,kidIst=0,kidRSum=0;
@@ -8389,12 +8423,16 @@ function renderProjectAuswertung(){
     var optHtml=function(sel){ var s='<option value="">– nicht zugeordnet –</option>'; AW_CATS.forEach(function(c){ var list=positions.filter(function(x){return x.kat===c.k;}); if(list.length){ s+='<optgroup label="'+esc(c.l)+'">'; list.forEach(function(x){ s+='<option value="'+esc(x.id)+'"'+(x.id===sel?' selected':'')+'>'+esc((x.label||"—").slice(0,40))+'</option>'; }); s+='</optgroup>'; } }); return s; };
     var dupP=reDupMap(invs);
     var _gr={}, _go=[];
-    invs.forEach(function(r){ var _k2=String(r.senderName||r.senderEmail||"—").trim().toLowerCase()||"—"; if(!_gr[_k2]){ _gr[_k2]={name:(r.senderName||r.senderEmail||"—"),list:[],sum:0}; _go.push(_k2); } _gr[_k2].list.push(r); _gr[_k2].sum+=invNet(r); });
+    invs.forEach(function(r){ var _k2=projLfKey(r); if(!_gr[_k2]){ _gr[_k2]={name:(r.senderName||r.senderEmail||"—"),list:[],sum:0}; _go.push(_k2); } _gr[_k2].list.push(r); _gr[_k2].sum+=invNet(r); });
+    var _lfk=(k.lfKorr||{});
     _go.sort(function(a,b){ return String(_gr[a].name).localeCompare(String(_gr[b].name),"de"); });
     var _sorted=[], _ghead={};
     _go.forEach(function(k2){ var g=_gr[k2];
       g.list.sort(function(a,b){ return String(a.invoiceDate||a.received||"").localeCompare(String(b.invoiceDate||b.received||"")); });
-      _ghead[g.list[0].id]='<tr style="background:#f4f1ec;border-top:2px solid var(--line)"><td colspan="6" style="padding:6px 8px;font-weight:700">'+esc(g.name)+' <span style="font-weight:400;color:var(--ink-soft,#777);font-size:11.5px">· '+g.list.length+' Rechnung'+(g.list.length>1?"en":"")+' · Σ '+eur(g.sum)+'</span></td></tr>';
+      var _kr=_lfk[k2], _hasK=!!(_kr&&_kr.betrag!=null&&_kr.betrag!=="");
+      var _ksum=_hasK?('<s style="color:#999">'+eur(g.sum)+'</s> → <b style="color:#b4632e">angerechnet '+eur(Number(_kr.betrag)||0)+'</b>'+(_kr.grund?(' <span style="font-size:11px">('+esc(_kr.grund)+')</span>'):'')):('Σ '+eur(g.sum));
+      _ghead[g.list[0].id]='<tr style="background:#f4f1ec;border-top:2px solid var(--line)"><td colspan="6" style="padding:6px 8px;font-weight:700"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span>'+esc(g.name)+' <span style="font-weight:400;color:var(--ink-soft,#777);font-size:11.5px">· '+g.list.length+' Rechnung'+(g.list.length>1?"en":"")+' · '+_ksum+'</span></span><span style="flex:1"></span>'+
+        '<button class="btn sm ghost aw-lfkorr" data-k="'+encodeURIComponent(k2)+'" data-name="'+esc(g.name)+'" data-sum="'+g.sum+'" title="Für dieses Projekt eine andere Summe für diesen Lieferanten anrechnen (z. B. doppelt berechnete Forderung)" style="font-weight:400;font-size:11px">'+(_hasK?'✎ Korrektur ändern':'✎ Summe anpassen')+'</button></div></td></tr>';
       g.list.forEach(function(r){ _sorted.push(r); });
     });
     html+='<table class="lines"><thead><tr><th>Rechnung</th><th class="right">Netto</th><th>Position</th><th>bezahlt</th><th>Datum</th><th></th></tr></thead><tbody>'+
@@ -8402,7 +8440,7 @@ function renderProjectAuswertung(){
         var st=k.rech[r.id]||{}; var link=r.webLink?('<a href="'+esc(r.webLink)+'" target="_blank" rel="noopener" title="Mail">✉︎</a>'):'';
         var dupB=dupP[r.id]?'<span title="Diese Rechnung ist doppelt auf das Projekt zugewiesen – bitte eine der beiden entfernen (✕)" style="display:inline-block;background:#c0392b;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;margin-right:6px">⚠ doppelt</span>':'';
         return (_ghead[r.id]||"")+'<tr'+(dupP[r.id]?' style="background:#fdf0f0"':'')+'><td>'+dupB+esc(r.senderName||r.senderEmail||"—")+'<div class="muted" style="font-size:11px">'+esc(String(r.subject||"").slice(0,42))+'</div></td>'+
-          '<td class="right nowrap"><b>'+eur(invNet(r))+'</b></td>'+
+          '<td class="right nowrap">'+(Math.abs(projInvNet(project,r)-invNet(r))>0.005?('<b style="color:#b4632e">'+eur(projInvNet(project,r))+'</b><div style="font-size:10.5px;color:#999"><s>'+eur(invNet(r))+'</s></div>'):('<b>'+eur(invNet(r))+'</b>'))+'</td>'+
           '<td><select class="aw-assign" data-inv="'+encodeURIComponent(r.id)+'" style="max-width:180px;font-size:12px;padding:3px;border:1px solid var(--line);border-radius:5px">'+optHtml(st.posId||"")+'</select></td>'+
           '<td>'+chk("inv",encodeURIComponent(r.id),st.paid)+(st.paidVia==="lexware"?'<span title="automatisch aus Lexware übernommen" style="margin-left:4px;font-size:9px;font-weight:700;color:#2d7a4f;border:1px solid #2d7a4f;border-radius:3px;padding:0 3px;vertical-align:middle">LEX</span>':'')+'</td>'+
           '<td>'+dinp("invDate",encodeURIComponent(r.id),st.paidDate||"")+'</td>'+
@@ -8472,6 +8510,7 @@ function renderProjectAuswertung(){
   el.querySelectorAll(".aw-kid").forEach(function(tr){ tr.onclick=function(){ openProject(tr.dataset.pid); }; });
   var op=el.querySelector(".aw-openpar"); if(op) op.onclick=function(){ openProject(op.dataset.pid); };
   var ir=el.querySelector(".aw-ignorerech"); if(ir) ir.onclick=function(){ project.ignoreRech=ir.checked; save(); renderProjectAuswertung(); };
+  el.querySelectorAll(".aw-lfkorr").forEach(function(b){ b.onclick=function(){ awLfKorrDialog(project,decodeURIComponent(b.dataset.k),b.dataset.name,Number(b.dataset.sum)||0); }; });
 }
 function awCloudLoad(cb){
   if(typeof SB==="undefined"||!SB){ if(cb)cb(); return; }
