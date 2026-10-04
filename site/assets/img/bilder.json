@@ -368,6 +368,35 @@
             }
         ]
     },
+    "industrie--business": {
+        "quelle": {
+            "breite": 4032,
+            "hoehe": 3024,
+            "typ": "jpeg"
+        },
+        "fassungen": [
+            {
+                "breite": 640,
+                "hoehe": 480
+            },
+            {
+                "breite": 960,
+                "hoehe": 720
+            },
+            {
+                "breite": 1280,
+                "hoehe": 960
+            },
+            {
+                "breite": 1920,
+                "hoehe": 1440
+            },
+            {
+                "breite": 2560,
+                "hoehe": 1920
+            }
+        ]
+    },
     "live": {
         "quelle": {
             "breite": 8529,
