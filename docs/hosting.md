@@ -73,8 +73,8 @@ gebraucht werden sie nur, um Bildfassungen neu zu erzeugen.
 
 ### 3. Hochladen
 
-Den **Inhalt** des Archivs ins Wurzelverzeichnis laden (meist `/` oder
-`/htdocs`) – nicht den Ordner selbst, und keinen Ordner darum. Das ist der
+Den **Inhalt** des Archivs ins Wurzelverzeichnis laden – bei nova-works.de
+ist das **`/NovaWorks`**, der Ordner mit der alten `wp-config.php` – nicht den Ordner selbst, und keinen Ordner darum. Das ist der
 häufigste Fehler: Die Seite liegt dann eine Ebene zu tief.
 
 **`.htaccess` und `.user.ini` beginnen mit einem Punkt.** Viele
@@ -145,7 +145,12 @@ Domain gehört. Fehlt sie, landet jede Anfrage im Spam oder wird abgewiesen.
 - **Zusätzlicher Schutz für `/admin`**: Strato kann Verzeichnisse per
   `.htpasswd` schützen. Das ist eine zweite Hürde vor dem Login und
   kostet nichts.
-- Die alten WordPress-Dateien löschen, wenn alles läuft.
+- Die alten WordPress-Dateien löschen, wenn alles läuft: `wp-admin/`,
+  `wp-content/`, `wp-includes/`, alle `wp-*.php`, `xmlrpc.php`,
+  `license.txt`, `readme.html`. **Der Ordner `angebote/` bleibt stehen** –
+  er gehört nicht zu WordPress und nicht zu dieser Seite. Die `.htaccess`
+  nimmt ihn deshalb von den strengen Sicherheits-Headern aus und lässt dort
+  auch `index.html` als Startdatei zu.
 
 ### Zwei Werte in `kontakt.php`
 
