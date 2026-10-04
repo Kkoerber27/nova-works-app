@@ -619,16 +619,31 @@ Druck, Fahrzeugbeschriftung und alles, wo das Logo groß genug ist.
 
 ## Offene Punkte
 
-- **Datenschutzerklärung.** Zwei Stellen sind noch rot markiert: der Hoster
-  (hängt an der Entscheidung Strato oder Netlify) und die Profile in den
-  sozialen Netzwerken. Unabhängig davon: Der Text sollte vor dem Livegang
-  jemand mit juristischem Blick durchgehen – wer dafür haftet, sollte ihn
-  freigeben.
-- **`corporate.jpg` fehlt.** Die mittlere Karte unter „Services" zeigt
-  deshalb einen leeren Rahmen. Gesucht ist ein Foto aus dem Bereich
-  Industrie und Business.
-- **`Header1.jpeg` (6,6 MB)** liegt noch im Wurzelverzeichnis des Repos und
-  wird öffentlich ausgeliefert. Kann raus, sobald das jemand bestätigt.
+**Online seit dem 4. Oktober 2026** auf Strato, Webspace-Ordner
+`/NovaWorks`. Abnahme vom Mac aus geprüft: Seiten 200, Sperren 403,
+WordPress-Adressen 410, Weiterleitungen 301, keine PHP-Fehler, Header
+gesetzt, Backend-Passwort vergeben. Sicherung der alten WordPress-Seite
+(Dateien und Datenbank) liegt beim Auftraggeber.
+
+Noch zu tun, in dieser Reihenfolge:
+
+- **Von Hand prüfen:** Kontaktformular einmal abschicken (kommt die Mail
+  bei info@ an?), Links zu LinkedIn und Instagram in der
+  Datenschutzerklärung, `/angebote/` wie vorher, Ansicht auf dem Handy.
+- **Nach ein paar stabilen Tagen:** HSTS in der `.htaccess` einschalten,
+  die WordPress-Dateien löschen (**`angebote/` bleibt**), `/admin`
+  zusätzlich per `.htpasswd` schützen. Ablauf in `docs/hosting.md`,
+  Schritt 9.
+- **Datenschutzerklärung juristisch gegenlesen lassen.** Sie enthält keine
+  roten Lücken mehr, ist aber nicht von jemandem freigegeben, der dafür
+  haftet. Besonders: die Formulierung zur gemeinsamen Verantwortlichkeit
+  (Art. 26 DSGVO) bei LinkedIn und Instagram.
+- ~~Hoster und soziale Netzwerke in der Datenschutzerklärung.~~ STRATO AG
+  mit AVV; LinkedIn und Instagram mit Anbieter, Anschrift und
+  US-Übermittlung.
+- ~~`corporate.jpg` fehlt.~~ Über das Backend hochgeladen als
+  `industrie--business`, 4032 × 3024, passt genau in den 4:3-Rahmen.
+- ~~`Header1.jpeg` im Wurzelverzeichnis.~~ Entfernt.
 - **Die Projektbeschreibungen** stammen von mir und beschreiben, was auf den
   Fotos zu sehen ist und was aus öffentlichen Quellen hervorgeht. Bitte
   gegenlesen – besonders, welche Gewerke Nova Works auf welcher Produktion
