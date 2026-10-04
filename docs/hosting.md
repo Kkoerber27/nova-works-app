@@ -146,8 +146,6 @@ Domain gehört. Fehlt sie, landet jede Anfrage im Spam oder wird abgewiesen.
   `.htpasswd` schützen. Das ist eine zweite Hürde vor dem Login und
   kostet nichts.
 - Die alten WordPress-Dateien löschen, wenn alles läuft.
-- `Header1.jpeg` im Wurzelverzeichnis des Repositorys wird nicht mehr
-  gebraucht – das Original liegt in `site/inhalt/originale/header.jpg`.
 
 ### Zwei Werte in `kontakt.php`
 

@@ -360,16 +360,84 @@ require __DIR__ . '/vorlage/kopf.php';
         oder sonstige Inhalte fremder Anbieter eingebunden.</p>
 
         <h2>6. Unsere Auftritte in sozialen Netzwerken</h2>
-        <p class="offen offen--block">
-          <strong>Vor dem Livegang klären:</strong> Unterhält die NovaWorks GmbH
-          Profile in sozialen Netzwerken (etwa Instagram, LinkedIn oder Facebook)?
-          Wenn ja, gehört an diese Stelle ein Abschnitt zu diesen Auftritten mit
-          Angabe der jeweiligen Netzwerke und deren Datenschutzhinweisen. Wenn
-          nein, entfällt dieser Abschnitt ersatzlos. Der bisherige Text nannte
-          Auftritte bei Facebook, Instagram, XING und LinkedIn – ob die für das
-          neue Unternehmen zutreffen, ist nicht belegt und deshalb hier nicht
-          übernommen.
+        <p>Wir unterhalten Profile in sozialen Netzwerken, um dort über unsere
+        Arbeit zu informieren und mit Interessenten, Kunden und Partnern in
+        Kontakt zu treten. Rufen Sie eines dieser Profile auf, verlassen Sie
+        diese Website; es gelten dann die Datenschutzbestimmungen des jeweiligen
+        Netzwerks.</p>
+
+        <p>Auf dieser Website sind <strong>keine Schaltflächen und keine Inhalte
+        sozialer Netzwerke eingebunden</strong>. Zu den Netzwerken bestehen
+        allenfalls gewöhnliche Verweise. Eine Verbindung zu deren Servern wird
+        daher erst aufgebaut, wenn Sie einen solchen Verweis selbst anklicken –
+        nicht schon beim Aufruf dieser Seite.</p>
+
+        <p>Die Verarbeitung erfolgt auf Grundlage unseres berechtigten Interesses
+        an einer wirksamen Information und Kommunikation (Art. 6 Abs. 1 lit. f
+        DSGVO). Geht der Verarbeitung durch das jeweilige Netzwerk eine
+        Einwilligung voraus, die Sie dort erteilt haben, richtet sich die
+        Rechtmäßigkeit nach Art. 6 Abs. 1 lit. a DSGVO.</p>
+
+        <h3>LinkedIn</h3>
+        <p>Unser Profil erreichen Sie unter
+        <a href="https://www.linkedin.com/company/nova-works-gmbh" target="_blank" rel="noopener">
+        linkedin.com/company/nova-works-gmbh</a>. Anbieter ist die</p>
+        <p class="legal__anbieter">
+          <strong>LinkedIn Ireland Unlimited Company</strong><br>
+          Wilton Plaza, Wilton Place<br>
+          Dublin 2<br>
+          Irland
         </p>
+        <p>Einzelheiten zur Verarbeitung entnehmen Sie der Datenschutzerklärung
+        von LinkedIn:
+        <a href="https://www.linkedin.com/legal/privacy-policy" target="_blank" rel="noopener">
+        www.linkedin.com/legal/privacy-policy</a>. Dem Einsatz von Cookies zur
+        Analyse des Nutzungsverhaltens und zu Werbezwecken können Sie dort
+        widersprechen:
+        <a href="https://www.linkedin.com/psettings/guest-controls/retargeting-opt-out" target="_blank" rel="noopener">
+        www.linkedin.com/psettings/guest-controls/retargeting-opt-out</a>.</p>
+
+        <h3>Instagram</h3>
+        <p>Unser Profil erreichen Sie unter
+        <a href="https://www.instagram.com/novaworks_gmbh/" target="_blank" rel="noopener">
+        instagram.com/novaworks_gmbh</a>. Anbieter ist die</p>
+        <p class="legal__anbieter">
+          <strong>Meta Platforms Ireland Limited</strong><br>
+          Merrion Road<br>
+          Dublin 4, D04 X2K5<br>
+          Irland
+        </p>
+        <p>Einzelheiten zur Verarbeitung entnehmen Sie der Datenschutzerklärung
+        von Instagram:
+        <a href="https://privacycenter.instagram.com/policy/" target="_blank" rel="noopener">
+        privacycenter.instagram.com/policy/</a>.</p>
+
+        <h3>Gemeinsame Verantwortlichkeit</h3>
+        <p>Besuchen Sie eines unserer Profile, verarbeitet der jeweilige Anbieter
+        dabei personenbezogene Daten – unter anderem, um uns zusammengefasste
+        Statistiken über die Nutzung des Profils bereitzustellen. Welche Daten
+        dabei im Einzelnen anfallen und wie lange sie gespeichert werden, teilen
+        die Anbieter nicht vollständig mit; darauf haben wir keinen Einfluss.
+        Soweit wir für diese Verarbeitung gemeinsam mit dem Anbieter
+        verantwortlich sind, gelten die vom Anbieter hierfür vorgesehenen
+        Zusatzvereinbarungen nach Art. 26 DSGVO.</p>
+
+        <p>Ihre Rechte als betroffene Person – Auskunft, Berichtigung, Löschung,
+        Einschränkung der Verarbeitung, Widerspruch und Datenübertragbarkeit –
+        können Sie sowohl uns gegenüber als auch gegenüber dem jeweiligen
+        Anbieter geltend machen. Wirksam durchsetzen lassen sich diese Rechte in
+        Bezug auf die dort gespeicherten Daten jedoch regelmäßig nur gegenüber
+        dem Anbieter, weil nur er Zugriff darauf hat.</p>
+
+        <h3>Übermittlung in die USA</h3>
+        <p>Beide Anbieter geben an, personenbezogene Daten auch in die
+        Vereinigten Staaten zu übermitteln. Grundlage dieser Übermittlung ist der
+        Angemessenheitsbeschluss der Europäischen Kommission vom 10. Juli 2023
+        zum EU-US Data Privacy Framework; die US-amerikanischen Muttergesellschaften
+        beider Anbieter sind nach diesem Rahmenwerk zertifiziert. Die aktuelle
+        Liste der zertifizierten Unternehmen können Sie einsehen unter
+        <a href="https://www.dataprivacyframework.gov/list" target="_blank" rel="noopener">
+        www.dataprivacyframework.gov/list</a>.</p>
       </div>
       </div>
     </div>
