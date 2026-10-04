@@ -148,6 +148,30 @@ melde('PRUEFEN', 'Passwort direkt nach dem Hochladen setzen', '/admin',
       'Solange keines gesetzt ist, kann das jeder tun, der die Adresse '
     . 'kennt. Das ist der erste Schritt nach dem Upload.');
 
+/* Passt die Inhaltsdatei zum Schema des Backends? Was in der Datei steht
+   und im Schema fehlt, loescht das erste Speichern dieses Abschnitts -
+   ohne Rueckfrage, denn das Formular hat es nie gezeigt. Einmal ist das
+   schon passiert, darum steht die Frage jetzt in der Abnahme. */
+$festpunkt = __DIR__ . '/../pruefung/festpunkt.php';
+if (is_file($festpunkt)) {
+    $roh = @shell_exec(escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg($festpunkt) . ' 2>/dev/null');
+    $befund = json_decode((string) $roh, true);
+    if (!is_array($befund)) {
+        melde('PRUEFEN', 'Inhalt und Schema vergleichbar', 'nicht ermittelbar',
+              'Das Pruefskript pruefung/festpunkt.php lief nicht durch.');
+    } else {
+        $schief = [];
+        foreach ($befund as $name => $b) if (empty($b['festpunkt'])) $schief[] = $name;
+        melde($schief ? 'FEHLT' : 'OK', 'Inhaltsdatei passt zum Schema',
+              $schief ? implode(', ', $schief) : '',
+              $schief
+                ? 'In diesen Abschnitten stehen Angaben, die das Backend nicht '
+                . 'kennt. Wer sie dort speichert, loescht sie. Entweder ins Schema '
+                . 'aufnehmen oder unter \'unberuehrt\' eintragen.'
+                : '');
+    }
+}
+
 /* ---------------------------------------------------------------- Adressen */
 echo "\n  Adressen\n";
 

@@ -38,7 +38,7 @@ ob_start(); ?>
 <meta property="og:description" content="<?= h($i['meta']['og']['beschreibung']) ?>">
 <meta property="og:url" content="<?= h($i['meta']['og']['url']) ?>">
 <meta name="twitter:card" content="summary_large_image">
-<?php if ($i['meta']['organisation']): ?>
+<?php if (!empty($i['meta']['organisation'])): ?>
 <script type="application/ld+json">
 <?= json_encode($i['meta']['organisation'],
       JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>
@@ -153,7 +153,7 @@ require __DIR__ . '/kopf.php';
             <button class="ref__bild" type="button" data-lupe-auf>
 <?= bild($rahmenbild, [
       'klasse' => 'ref__foto', 'sizes' => $breitenProjekt,
-      'stil'   => $p['ausschnitt'] ? 'object-position:' . $p['ausschnitt'] : '']) ?>
+      'stil'   => !empty($p['ausschnitt']) ? 'object-position:' . $p['ausschnitt'] : '']) ?>
               <span class="ref__zeichen" aria-hidden="true"></span>
               <span class="visually-hidden">Bilder zu „<?= h($p['titel']) ?>“ ansehen</span>
             </button>

@@ -11,8 +11,9 @@
    Der Lauf verändert echte Dateien. Alles, was er anfasst, wird vorher
    weggelegt und am Ende zurückgestellt - sonst stünde nach der Prüfung
    ein Prüfpasswort auf der Seite. */
-import { seite, SEITE, WURZEL } from '../hilfe.mjs';
+import { seite, SEITE, WURZEL, phpBefehl } from '../hilfe.mjs';
 import { readFileSync, writeFileSync, existsSync, rmSync, mkdirSync, cpSync, statSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { join } from 'node:path';
 
 export const NAME = 'Backend';
@@ -120,6 +121,74 @@ export default async function ({ ort, browser, ok }) {
     ok(nachher.namen.every((n) => !n.includes('__I')),
        'und bekommt echte Nummern statt des Platzhalters',
        nachher.namen.find((n) => n.includes('__I')) || 'alle ersetzt');
+
+    /* Nach dem Laden muessen die Namen noch stehen, wo sie standen.
+
+       Hier sass der schlimmste Fehler dieses Projekts: Beim Laden zaehlt
+       jede Liste ihre Reihen neu durch, und eine innere Liste ersetzte
+       dabei "die erste Zahl im Namen" - das war aber die Nummer des
+       Projekts, nicht die des Bildes. Jede Bilderliste schrieb also die
+       Projektnummer um. Sichtbar war davon nichts; erst beim Speichern
+       landeten alle Projekte auf den Plaetzen 0 bis 2 und ueberschrieben
+       sich gegenseitig. Zehn Projekte wurden zu drei halben. */
+    await p.goto(ort + '/admin/abschnitt.php?a=referenzen');
+    const pfade = await p.evaluate(() => {
+      const aussen = document.querySelector('[data-liste][data-tiefe="0"]');
+      const reihen = [...aussen.querySelector('[data-reihen]').children]
+        .filter((k) => k.hasAttribute('data-reihe'));
+      const falsch = [];
+      let geprueft = 0;
+      reihen.forEach((reihe, nr) => {
+        reihe.querySelectorAll('[name]').forEach((f) => {
+          geprueft++;
+          if (f.name.lastIndexOf('d[projekte][' + nr + '][', 0) !== 0) falsch.push(f.name);
+        });
+      });
+      return { geprueft, falsch, reihen: reihen.length };
+    });
+    ok(pfade.falsch.length === 0,
+       'jedes Feld traegt nach dem Laden noch die Nummer seines Projekts',
+       pfade.falsch.length ? `${pfade.falsch.length} verrutscht, z.B. ${pfade.falsch[0]}`
+                           : `${pfade.geprueft} Namen in ${pfade.reihen} Projekten`);
+
+    /* Und der Beweis am Ergebnis: einmal speichern, ohne etwas zu
+       aendern, darf die Inhaltsdatei nicht anfassen. */
+    const vorSpeichern = readFileSync(INHALT, 'utf8');
+    await p.goto(ort + '/admin/abschnitt.php?a=referenzen');
+    await p.click('#formular button[type=submit]');
+    await p.waitForTimeout(600);
+    ok(/gespeichert/.test(await p.textContent('body')),
+       'ein Speichern ohne Aenderung wird bestaetigt');
+
+    const nachSpeichern = readFileSync(INHALT, 'utf8');
+    const za = JSON.parse(vorSpeichern), zb = JSON.parse(nachSpeichern);
+    const zaehl = (d) => d.referenzen.projekte.map(
+      (x) => [x.bilder?.length || 0, x.worum?.length || 0, x.unser?.length || 0].join('/'));
+    ok(JSON.stringify(zaehl(za)) === JSON.stringify(zaehl(zb)),
+       'und laesst jedem Projekt seine Bilder und Absaetze',
+       zaehl(zb).join(' '));
+    /* Und kein Text darf das Projekt gewechselt haben. Verglichen wird
+       ohne Ruecksicht auf Leerraum: Einzeilige Felder laufen beim Speichern
+       durch zeile_saeubern(), das mehrere Leerzeichen zu einem macht und
+       ein geschuetztes Leerzeichen zu einem gewoehnlichen. Das ist
+       gewollt und waere hier nur ein falscher Alarm. */
+    const ohneLeerraum = (x) => JSON.stringify(x).replace(/\s+/g, ' ');
+    ok(ohneLeerraum(za.referenzen) === ohneLeerraum(zb.referenzen),
+       'und keinem Projekt den Text eines anderen',
+       `${JSON.stringify(zb.referenzen).length} Zeichen`);
+
+    /* Dieselbe Frage fuer alle neun Abschnitte, ohne Browser: Was in der
+       Inhaltsdatei steht, muss das Schema auch kennen - sonst loescht das
+       erste Speichern des Abschnitts es lautlos. So verschwanden die
+       strukturierten Daten meta.organisation. */
+    const befund = JSON.parse(
+      execFileSync(phpBefehl(), [join(WURZEL, 'pruefung/festpunkt.php')],
+                   { encoding: 'utf8' }));
+    for (const [abschnitt, b] of Object.entries(befund)) {
+      ok(b.festpunkt,
+         `Speichern ohne Aenderung laesst "${abschnitt}" unberuehrt`,
+         b.festpunkt ? '' : `verliert ${b.verloren.join(', ') || '-'}`);
+    }
 
     /* --- Speichern und auf der Website wiederfinden --- */
     const MARKE = 'PRUEFMARKE-' + Date.now();

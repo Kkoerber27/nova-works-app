@@ -22,7 +22,21 @@ $inhalt  = inhalt_laden();
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     merkmal_pruefen();
 
-    $inhalt[$name] = felder_lesen($schema['felder'], $_POST['d'] ?? []);
+    $neu = felder_lesen($schema['felder'], $_POST['d'] ?? []);
+
+    /* felder_lesen() baut den Abschnitt allein aus dem Schema auf - was
+       das Formular nicht zeigt, ist danach weg. Das ist so gewollt: Nur
+       bekannte Felder duerfen aus einem Formular in die Inhaltsdatei. Fuer
+       Schluessel, welche die Seite braucht und niemand bearbeitet, nennt
+       das Schema sie unter 'unberuehrt'; die werden aus dem bisherigen
+       Stand uebernommen, ohne das Formular zu befragen. */
+    foreach ($schema['unberuehrt'] ?? [] as $k) {
+        if (is_array($inhalt[$name] ?? null) && array_key_exists($k, $inhalt[$name])) {
+            $neu[$k] = $inhalt[$name][$k];
+        }
+    }
+
+    $inhalt[$name] = $neu;
     $ergebnis = inhalt_speichern($inhalt, $name);
 
     if ($ergebnis['ok']) {
@@ -100,7 +114,8 @@ function zeichne(array $f, string $pfad, $wert, int $tiefe = 0): void {
 
     case 'textliste':
         $zeilen = is_array($w) ? $w : [];
-        echo '<div class="feld" data-liste data-tiefe="', $tiefe, '">',
+        echo '<div class="feld" data-liste data-tiefe="', $tiefe,
+             '" data-pfad="', e($pf), '">',
              '<span class="feld__name">', e($f['bezeichnung']), '</span>', $hin,
              '<div data-reihen>';
         foreach ($zeilen as $nr => $z) textzeile($pf, $nr, $z, $f);
@@ -119,7 +134,8 @@ function zeichne(array $f, string $pfad, $wert, int $tiefe = 0): void {
     case 'liste':
         $zeilen = is_array($w) ? $w : [];
         $max    = $f['max'] ?? 0;
-        echo '<div class="feld" data-liste data-tiefe="', $tiefe, '"',
+        echo '<div class="feld" data-liste data-tiefe="', $tiefe,
+             '" data-pfad="', e($pf), '"',
              $max ? ' data-max="' . (int) $max . '"' : '', '>',
              '<span class="feld__name">', e($f['bezeichnung']),
              $max ? ' <span style="font-weight:400;color:var(--schrift-3)">(höchstens ' . (int) $max . ')</span>' : '',
@@ -210,9 +226,14 @@ kopf($schema['name'], '', true);
    nach dem Löschen Lücken, und PHP machte daraus ein Feld mit Schlüsseln
    statt einer Liste.
 
-   Die Vorlage für eine neue Zeile steht als <template> im Markup. Der
-   Platzhalter __I0__ / __I1__ trägt die Verschachtelungstiefe, damit eine
-   Liste in einer Liste nicht die Nummern der äußeren überschreibt.        */
+   Jede Liste trägt in data-pfad ihren eigenen Namensanfang, etwa
+   "d[referenzen][projekte][7][bilder]". Umnummeriert wird ausschliesslich
+   die Klammer, die direkt hinter diesem Anfang steht. Das ist der Kern:
+   Eine frühere Fassung ersetzte "die erste Zahl im Namen". Für die
+   äussere Liste stimmte das, für eine innere war die erste Zahl aber die
+   Nummer des äusseren Eintrags - jede Bilderliste schrieb damit beim
+   Laden der Seite die Projektnummer um. Beim Speichern landeten alle
+   Projekte auf denselben Plätzen und überschrieben sich gegenseitig.    */
 (function () {
   'use strict';
 
@@ -223,23 +244,35 @@ kopf($schema['name'], '', true);
       function (k) { return k.hasAttribute('data-reihe'); });
   }
 
+  /* Tauscht in einem Namen genau die Klammer hinter dem Pfad der Liste
+     aus und lässt alles davor und dahinter unberührt. Gehört der Name
+     nicht zu dieser Liste, bleibt er, wie er ist. */
+  function umhaengen(name, pfad, neuerPfad) {
+    if (!pfad || name.lastIndexOf(pfad + '[', 0) !== 0) return name;
+    return neuerPfad + name.slice(pfad.length).replace(/^\[[^\]]*\]/, '');
+  }
+
   function neuZaehlen(liste) {
-    var tiefe = liste.getAttribute('data-tiefe') || '0';
-    /* Die Klammer dieser Liste: entweder eine Nummer oder der Platzhalter
-       der eigenen Tiefe. In einer Zeichenkette braucht der Rückstrich
-       genau eine Verdopplung - mit zweien traf das Muster einen echten
-       Rückstrich im Namen, den es nie gibt, und der Platzhalter blieb
-       stehen. Beim Speichern wäre daraus ein Eintrag namens "__I0__"
-       geworden statt einer Liste. */
-    var muster = new RegExp('\\[(\\d+|__I' + tiefe + '__)\\]');
+    var pfad = liste.getAttribute('data-pfad') || '';
     reihenVon(liste).forEach(function (reihe, nr) {
       var zaehler = reihe.querySelector('[data-nr]');
       if (zaehler) zaehler.textContent = String(nr + 1).padStart(2, '0');
 
+      var neuerPfad = pfad + '[' + nr + ']';
+
       reihe.querySelectorAll('[name]').forEach(function (feld) {
-        /* Nur die erste passende Klammer ersetzen - die gehört dieser
-           Liste. Alles dahinter gehört einer inneren. */
-        feld.name = feld.name.replace(muster, '[' + nr + ']');
+        feld.name = umhaengen(feld.name, pfad, neuerPfad);
+      });
+
+      /* Verschachtelte Listen tragen die alte Nummer des äusseren
+         Eintrags in ihrem eigenen Pfad. Ohne diese Zeile zählt eine
+         innere Liste später gegen einen Pfad, den es nicht mehr gibt -
+         und rührt dann keinen einzigen Namen mehr an. Die Vorlagen in
+         <template> bleiben aussen vor: Ihr Inhalt steht nicht im
+         Dokument und wird von querySelectorAll nicht gefunden. */
+      reihe.querySelectorAll('[data-liste][data-pfad]').forEach(function (u) {
+        u.setAttribute('data-pfad',
+          umhaengen(u.getAttribute('data-pfad'), pfad, neuerPfad));
       });
     });
     var knopf = liste.querySelector('[data-zufuegen]');

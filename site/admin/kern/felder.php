@@ -26,6 +26,13 @@ function abschnitte(): array {
     'meta' => [
         'name'        => 'Meta & SEO',
         'beschreibung'=> 'Seitentitel, Beschreibung, Sprache',
+        /* Die Organisationsangaben erscheinen nicht im Formular: Sie sind
+           kein Text, sondern die strukturierten Daten fuer Suchmaschinen
+           (JSON-LD), die startseite.php unveraendert in den Kopf schreibt.
+           Ohne diesen Eintrag faenden sie sich nicht im Schema wieder und
+           waeren beim ersten Speichern dieses Abschnitts geloescht -
+           samt Anschrift, Telefonnummer und Gruendungsjahr. */
+        'unberuehrt'  => ['organisation'],
         'felder'      => [
             ['art' => 'text', 'name' => 'titel', 'bezeichnung' => 'Seitentitel',
              'hinweis' => 'Steht im Browser-Reiter und als Überschrift im Suchergebnis. '

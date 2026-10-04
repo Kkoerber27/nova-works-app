@@ -148,6 +148,53 @@ Die Versionsnummer hinter `style.css` und `main.js` muss **nicht mehr** von
 Hand hochgezählt werden – `index.php` setzt sie aus dem Änderungsdatum der
 Dateien. Genau das wurde vorher regelmäßig vergessen.
 
+### Zwei Regeln für das Backend
+
+Beide stehen hier, weil beide einmal verletzt wurden und einmal echten
+Schaden angerichtet haben.
+
+**1. Jede Liste rechnet nur mit ihrem eigenen Pfad.** Die Feldnamen im
+Formular tragen ihren Platz im Namen: `d[projekte][7][bilder][2][bild]`.
+Nach jedem Hinzufügen, Löschen oder Verschieben zählt JavaScript die
+Nummern neu durch. Eine frühere Fassung ersetzte dabei *die erste Zahl im
+Namen* – für die äußere Liste richtig, für eine innere falsch: Die erste
+Zahl war dort die Nummer des Projekts, nicht die des Bildes. Jede
+Bilderliste schrieb beim Laden der Seite also die Projektnummer um. Zu
+sehen war davon nichts. Erst beim Speichern landeten alle zehn Projekte
+auf den Plätzen 0 bis 2 und überschrieben sich gegenseitig: **aus zehn
+Projekten wurden drei halbe.**
+
+Jede Liste trägt deshalb jetzt in `data-pfad` ihren eigenen Namensanfang,
+und umnummeriert wird ausschließlich die Klammer, die direkt dahinter
+steht. Geprüft wird das zweifach: dass nach dem Laden jedes Feld noch die
+Nummer seines Projekts trägt, und dass ein Speichern ohne Änderung die
+Inhaltsdatei nicht anfasst.
+
+**2. Was in `inhalt.json` steht, muss das Schema kennen.** `felder_lesen()`
+baut jeden Abschnitt allein aus dem Schema in `kern/felder.php` auf. Das
+ist Absicht – nur bekannte Felder dürfen aus einem Formular in die
+Inhaltsdatei. Die Kehrseite: Ein Schlüssel, der in der Datei steht und im
+Schema fehlt, ist nach dem ersten Speichern dieses Abschnitts weg. Lautlos,
+denn das Formular hat ihn nie gezeigt.
+
+Genau so stand es um `meta.organisation` – die strukturierten Daten für
+Suchmaschinen, die `startseite.php` als JSON-LD in den Kopf schreibt. Ein
+Klick auf „Meta & SEO speichern" hätte Anschrift, Telefonnummer und
+Gründungsjahr gelöscht. Für solche Schlüssel nennt das Schema sie jetzt
+unter `'unberuehrt'`; sie werden beim Speichern aus dem bisherigen Stand
+übernommen, ohne das Formular zu befragen.
+
+`pruefung/festpunkt.php` spielt für alle neun Abschnitte ein Speichern ohne
+Änderung durch und meldet, was dabei verloren gehen würde:
+
+```bash
+php pruefung/festpunkt.php --lesbar
+```
+
+Dieselbe Frage stellt die Abnahme vor dem Livegang. **Wer ein Feld in
+`inhalt.json` ergänzt, nimmt es ins Schema auf oder trägt es unter
+`'unberuehrt'` ein – sonst löscht es der nächste Klick auf Speichern.**
+
 ### Wie die Startseite entsteht
 
 ```

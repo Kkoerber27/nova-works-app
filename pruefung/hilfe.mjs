@@ -38,7 +38,7 @@ export async function chromium() {
    wartet warteAufOrt(). Feste Portnummern haben sich gerächt, sobald
    zwei Läufe gleichzeitig liefen.                                       */
 
-function phpBefehl() {
+export function phpBefehl() {
   /* php in der PATH-Variable, sonst die üblichen Orte. Ein fest
      eingetragener Pfad stimmte hier schon einmal nicht mehr. */
   for (const ort of ['php', '/usr/bin/php', '/usr/local/bin/php']) {
