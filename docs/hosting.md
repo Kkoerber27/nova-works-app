@@ -19,23 +19,135 @@ Beides ist vorbereitet. Nichts davon muss jetzt entschieden werden.
 
 ## Weg 1: Strato
 
-So ist die Seite aktuell gebaut. `.htaccess` und `kontakt.php` liegen fertig
-in `site/`.
+So ist die Seite gebaut. Die Reihenfolge unten ist nicht beliebig – jeder
+Schritt setzt den vorigen voraus.
 
-1. Im Strato-Kundenlogin unter **Hosting → FTP** einen Zugang anlegen oder den
-   bestehenden nutzen.
-2. **Vorher sichern:** den kompletten Inhalt des Webspace-Wurzelverzeichnisses
-   herunterladen und zusätzlich ein Datenbank-Backup ziehen. Solange beides
-   liegt, ist der Schritt umkehrbar.
-3. Den **Inhalt** von `site/` in das Wurzelverzeichnis laden (meist `/` oder
-   `/htdocs`). Nicht den Ordner `site` selbst hochladen, sondern das, was
-   darin liegt.
-4. Die alten WordPress-Dateien (`wp-admin/`, `wp-content/`, `wp-includes/`,
-   `wp-*.php`) erst löschen, wenn die neue Seite läuft und geprüft ist.
+### 0. Abnahme
 
-`.htaccess` beginnt mit einem Punkt und wird von vielen FTP-Programmen als
-versteckte Datei ausgeblendet. In FileZilla unter *Server → Versteckte Dateien
-anzeigen* aktivieren, sonst fehlt sie oben – und damit alle Weiterleitungen.
+```bash
+php werkzeug/vor-dem-livegang.php
+```
+
+Geht alles durch, was stimmen muss: Rechtstexte ohne rote Lücken, alle
+Pflichtangaben im Impressum, die Punkt-Dateien, jedes eingebundene Bild,
+Empfänger und Absender des Formulars, die Adressen in `sitemap.xml` und
+den Meta-Angaben. Beendet sich mit 1, sobald etwas fehlt.
+
+**`FEHLT` heißt: nicht hochladen.** `PRUEFEN` heißt: kein Fehler, aber
+jemand muss es wissen.
+
+### 1. Sichern – vorher, nicht nachher
+
+Das ist der einzige Schritt, der sich nicht nachholen lässt.
+
+1. Im Strato-Kundenlogin unter **Hosting → FTP** einen Zugang anlegen oder
+   den bestehenden nutzen.
+2. Den **kompletten Inhalt** des Webspace-Wurzelverzeichnisses
+   herunterladen. In FileZilla vorher *Server → Versteckte Dateien
+   anzeigen* einschalten, sonst fehlt die alte `.htaccess`.
+3. Zusätzlich ein **Datenbank-Backup** der WordPress-Installation ziehen
+   (Strato-Kundenlogin → Datenbanken → Export).
+
+Solange beides liegt, ist der Umstieg umkehrbar.
+
+### 2. Paket bauen
+
+```bash
+./werkzeug/paket-bauen.sh
+```
+
+Legt eine ZIP-Datei an, deren **Inhalt** eins zu eins ins
+Wurzelverzeichnis gehört. Das Skript läuft die Abnahme aus Schritt 0 von
+selbst und baut nichts, solange etwas fehlt.
+
+Nicht enthalten:
+
+| Was | Warum |
+|---|---|
+| `inhalt/zugang.php` | Prüfsumme des lokalen Passworts. Auf dem Server wird ein eigenes vergeben. |
+| `inhalt/sicherungen/` | lokale Sicherungen; auf dem Server entstehen eigene |
+| `inhalt/originale/` | 74 MB Kamerafotos, die nie ausgeliefert werden. `--alles` nimmt sie mit. |
+
+Die Originale lassen sich jederzeit nachreichen. Ohne sie läuft die Seite;
+gebraucht werden sie nur, um Bildfassungen neu zu erzeugen.
+
+### 3. Hochladen
+
+Den **Inhalt** des Archivs ins Wurzelverzeichnis laden (meist `/` oder
+`/htdocs`) – nicht den Ordner selbst, und keinen Ordner darum. Das ist der
+häufigste Fehler: Die Seite liegt dann eine Ebene zu tief.
+
+**`.htaccess` und `.user.ini` beginnen mit einem Punkt.** Viele
+FTP-Programme blenden solche Dateien aus. Ohne sie fehlen alle
+Weiterleitungen, die Upload-Grenze von 32 MB und der Schutz der Ordner
+`inhalt/`, `vorlage/` und `admin/kern/`. Das Paket-Skript listet nach dem
+Bauen auf, welche Punkt-Dateien drin sind – diese fünf müssen ankommen:
+
+```
+.htaccess   .user.ini   admin/kern/.htaccess   inhalt/.htaccess   vorlage/.htaccess
+```
+
+Die alten WordPress-Dateien (`wp-admin/`, `wp-content/`, `wp-includes/`,
+`wp-*.php`) **erst löschen, wenn die neue Seite läuft und geprüft ist.**
+
+### 4. Rechte setzen
+
+Der Ordner `inhalt/` muss beschreibbar sein (**755**), sonst kann das
+Backend nichts speichern. In FileZilla: Rechtsklick → Dateiberechtigungen.
+
+### 5. Prüfen, ob der Server mitspielt
+
+`werkzeug/pruefe-php.php` ins Wurzelverzeichnis legen und aufrufen:
+
+```
+https://nova-works.de/pruefe-php.php
+```
+
+Prüft PHP-Fassung, GD mit WebP, EXIF, Upload-Grenze, Arbeitsspeicher und
+die Schreibrechte – also genau das, woran das Backend sonst scheitert,
+ohne dass man den Grund sieht.
+
+**Danach wieder löschen.** Die Datei verrät jedem, der die Adresse kennt,
+welche PHP-Fassung und welche Grenzen dort gelten.
+
+### 6. Passwort setzen – sofort
+
+```
+https://nova-works.de/admin/
+```
+
+Beim ersten Aufruf ist keines vergeben. **Solange das so ist, kann jeder
+eines setzen, der die Adresse kennt.** Das ist der erste Schritt nach dem
+Upload, nicht der letzte.
+
+### 7. Durchklicken
+
+- Startseite, alle zehn Projekte, Großansicht der Bilder
+- Impressum, Datenschutz, AGB über die Fußzeile
+- Eine Adresse, die es nicht gibt (`/gibtsnicht`) → die 404-Seite muss
+  mit Gestaltung erscheinen, nicht nackt
+- `/impressum.html` → muss auf `/impressum.php` weiterleiten
+- Das Kontaktformular **einmal wirklich abschicken** und nachsehen, ob die
+  Mail ankommt
+
+### 8. E-Mail
+
+`kontakt.php` verschickt mit Absender `website@nova-works.de`. Diese
+Adresse **muss bei Strato als Postfach oder Weiterleitung existieren** –
+sie wird nie ausgelesen, aber Mailserver prüfen, ob der Absender zur
+Domain gehört. Fehlt sie, landet jede Anfrage im Spam oder wird abgewiesen.
+
+### 9. Danach
+
+- **HSTS einschalten**, sobald HTTPS sicher läuft: die auskommentierte
+  Zeile `Strict-Transport-Security` in `.htaccess`. Vorher nicht – wer sie
+  zu früh setzt, sperrt sich bei einem HTTPS-Problem selbst aus.
+- **Zusätzlicher Schutz für `/admin`**: Strato kann Verzeichnisse per
+  `.htpasswd` schützen. Das ist eine zweite Hürde vor dem Login und
+  kostet nichts.
+- Die alten WordPress-Dateien löschen, wenn alles läuft.
+- `Header1.jpeg` im Wurzelverzeichnis des Repositorys wird nicht mehr
+  gebraucht – das Original liegt in `site/inhalt/originale/header.jpg`.
 
 ### Zwei Werte in `kontakt.php`
 
@@ -45,46 +157,9 @@ $absender   = 'website@nova-works.de';
 ```
 
 `$absender` **muss** eine Adresse der eigenen Domain sein, sonst stufen
-Mailserver die Nachricht als Spam ein. Die Adresse muss in Strato als Postfach
-oder Weiterleitung existieren – sie wird nie ausgelesen, nur zum Versenden
-benutzt.
-
----
-
-### Vorher prüfen, ob das PHP taugt
-
-`werkzeug/pruefe-php.php` ins Wurzelverzeichnis des Webspace legen und im
-Browser aufrufen:
-
-```
-https://nova-works.de/pruefe-php.php
-```
-
-Es prüft PHP-Fassung, GD mit WebP, EXIF, die Upload-Grenze, den
-Arbeitsspeicher und die Schreibrechte der Ordner – also genau das, woran
-das Backend sonst scheitert, ohne dass man den Grund sieht.
-
-**Danach wieder löschen.** Die Datei verrät jedem, der die Adresse kennt,
-welche PHP-Fassung und welche Grenzen dort gelten.
-
-### Das Backend
-
-Nach dem Hochladen <https://nova-works.de/admin/> aufrufen und **sofort
-ein Passwort vergeben**. Solange keines gesetzt ist, kann das jeder tun,
-der die Adresse kennt.
-
-Zwei Dinge müssen dafür stimmen:
-
-- Der Ordner `inhalt/` muss beschreibbar sein (Rechte 755).
-- `.htaccess` und `.user.ini` beginnen mit einem Punkt. Viele
-  FTP-Programme blenden solche Dateien aus – in FileZilla unter *Server →
-  Versteckte Dateien anzeigen* einschalten. Ohne sie greifen weder die
-  Weiterleitungen noch die 32-MB-Uploadgrenze noch der Schutz von
-  `inhalt/` und `vorlage/`.
-
-Der Ordner `inhalt/originale/` ist 74 MB groß und wird nie ausgeliefert.
-Die Seite läuft ohne ihn; gebraucht wird er nur, um Bildfassungen neu zu
-erzeugen. Beim ersten Hochladen kann er also wegbleiben.
+Mailserver die Nachricht als Spam ein. Die Adresse muss in Strato als
+Postfach oder Weiterleitung existieren – sie wird nie ausgelesen, nur zum
+Versenden benutzt.
 
 ---
 
