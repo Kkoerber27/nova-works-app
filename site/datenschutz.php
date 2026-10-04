@@ -92,9 +92,19 @@ require __DIR__ . '/vorlage/kopf.php';
 
         <h2>2. Hosting</h2>
         <p>Die Inhalte dieser Website werden bei einem externen Dienstleister
-        gehostet. Die personenbezogenen Daten, die beim Aufruf der Website
-        anfallen, werden auf dessen Servern verarbeitet. Es handelt sich dabei vor
-        allem um die im Abschnitt „Server-Log-Dateien“ genannten Daten.</p>
+        gehostet. Anbieter ist die</p>
+        <p class="legal__anbieter">
+          <strong>STRATO AG</strong><br>
+          Pascalstraße 10<br>
+          10587 Berlin<br>
+          Deutschland
+        </p>
+        <p>Die personenbezogenen Daten, die beim Aufruf der Website anfallen,
+        werden auf deren Servern verarbeitet. Es handelt sich dabei vor allem um
+        die im Abschnitt „Server-Log-Dateien“ genannten Daten. Einzelheiten
+        entnehmen Sie der Datenschutzerklärung der STRATO AG:
+        <a href="https://www.strato.de/datenschutz/" target="_blank" rel="noopener">
+        www.strato.de/datenschutz/</a>.</p>
         <p>Das Hosting erfolgt zum Zwecke der Vertragserfüllung gegenüber unseren
         potenziellen und bestehenden Kunden (Art. 6 Abs. 1 lit. b DSGVO) sowie im
         Interesse einer sicheren, schnellen und effizienten Bereitstellung unseres
@@ -102,15 +112,8 @@ require __DIR__ . '/vorlage/kopf.php';
         lit. f DSGVO).</p>
         <p>Unser Hoster verarbeitet Ihre Daten nur insoweit, wie dies zur
         Erfüllung seiner Leistungspflichten erforderlich ist, und folgt dabei
-        unseren Weisungen. Wir haben mit ihm einen Vertrag über
+        unseren Weisungen. Wir haben mit der STRATO AG einen Vertrag über
         Auftragsverarbeitung gemäß Art. 28 DSGVO geschlossen.</p>
-        <p class="offen offen--block">
-          <strong>Vor dem Livegang eintragen:</strong> Name und Anschrift des
-          Hosting-Anbieters sowie der Hinweis auf den geschlossenen Vertrag zur
-          Auftragsverarbeitung. Solange die Entscheidung zwischen den Anbietern
-          offen ist, kann diese Angabe nicht stimmen – ohne sie darf die Seite
-          nicht online gehen.
-        </p>
 
         <h2>3. Allgemeine Hinweise und Pflichtinformationen</h2>
 

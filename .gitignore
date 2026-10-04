@@ -10,3 +10,6 @@ site/inhalt/sicherungen/
 
 # Zwischendatei des Inhalt-Extraktors
 site/inhalt/inhalt.json.vorher
+
+# Upload-Pakete entstehen beim Bauen und gehoeren nicht ins Repository.
+nova-works-*.zip

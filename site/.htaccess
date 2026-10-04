@@ -19,7 +19,7 @@ DirectoryIndex index.php
 # Hochladen vergessen wurde - Punkt-Dateien blenden viele FTP-Programme aus.
 <IfModule mod_rewrite.c>
   RewriteEngine On
-  RewriteRule ^(inhalt|vorlage)/ - [F,L]
+  RewriteRule ^(inhalt|vorlage|admin/kern)/ - [F,L]
 </IfModule>
 
 <IfModule mod_rewrite.c>
