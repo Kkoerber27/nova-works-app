@@ -4,7 +4,12 @@
 # =========================================================================
 
 Options -Indexes
-DirectoryIndex index.php
+
+# index.html und index.htm stehen als Rueckfall dahinter. Diese Datei gilt
+# auch fuer alle Unterordner - und im Webspace liegt mit angebote/ ein
+# Ordner, der nicht zu dieser Seite gehoert. Stuende hier nur index.php,
+# lieferte dort ein Ordner mit index.html nichts mehr aus.
+DirectoryIndex index.php index.html index.htm
 
 # Die Startseite ist seit dem Umbau auf das Backend index.php. Wer noch
 # einen Verweis auf index.html hat - aus einer Mail, einem Lesezeichen
@@ -64,16 +69,25 @@ ErrorDocument 404 /404.php
 # =========================================================================
 #  Sicherheits-Header
 # =========================================================================
+# Ordner im Webspace, die nicht zu dieser Seite gehoeren. Die strengen
+# Header unten gelten fuer sie nicht: Die Content-Security-Policy erlaubt
+# nur Quellen dieser Seite und wuerde dort jede fremde Schrift, jedes
+# eingebettete Skript und unter Umstaenden die PDF-Anzeige im Browser
+# abschalten.
+<IfModule mod_setenvif.c>
+  SetEnvIf Request_URI "^/angebote(/|$)" FREMDER_ORDNER
+</IfModule>
+
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
-  Header always set X-Frame-Options "SAMEORIGIN"
-  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()"
+  Header always set X-Frame-Options "SAMEORIGIN" env=!FREMDER_ORDNER
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), interest-cohort=()" env=!FREMDER_ORDNER
 
   # Die Seite laedt nichts von fremden Servern - Schriften liegen lokal.
   # Deshalb kann die Richtlinie so eng sein. Wird spaeter etwas eingebunden
   # (Karte, Video, Analytics), muss die Quelle hier ergaenzt werden.
-  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+  Header always set Content-Security-Policy "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; font-src 'self'; form-action 'self'; frame-ancestors 'self'; base-uri 'self'; object-src 'none'" env=!FREMDER_ORDNER
 
   # HSTS erst einschalten, wenn HTTPS sicher laeuft - sonst sperrt man sich aus.
   # Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
