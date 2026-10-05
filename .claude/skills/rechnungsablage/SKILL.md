@@ -1,47 +1,73 @@
 ---
 name: rechnungsablage
-description: Legt offene Rechnungen aus Lexware Office als PDF im passenden Projektordner unter Rechnungen/Out in SharePoint ab. Nutzen, wenn nach Rechnungsablage, offenen Rechnungen, Lexware-Rechnungen oder dem Ablegen von Rechnungs-PDFs gefragt wird, und für den regelmäßigen Ablauf alle 10–15 Minuten.
+description: Legt offene Rechnungen aus Lexware Office als PDF im passenden Projektordner unter Rechnungen/Out im synchronisierten OneDrive ab (von dort synchronisiert OneDrive nach SharePoint). Nutzen, wenn nach Rechnungsablage, offenen Rechnungen, Lexware-Rechnungen oder dem Ablegen von Rechnungs-PDFs gefragt wird, und für den regelmäßigen Ablauf alle 10–15 Minuten.
 ---
 
 # Rechnungsablage
 
 Offene Rechnungen aus Lexware Office landen als PDF im Projektordner. Eine Runde
-besteht aus vier Schritten pro Rechnung.
+besteht aus fünf Schritten pro Rechnung.
 
 ## Ablauf
 
 1. **`lex_list_open_invoices`** — liefert alle offenen Rechnungen, die noch nicht
    abgelegt sind, samt gefundener Projektnummer.
-2. Für jede Rechnung mit eindeutiger `projektnummer`:
-   **`lex_download_invoice_pdf`** mit der `id` → gibt `pfad` und `dateiname` zurück.
-3. **Zielordner suchen** mit `sharepoint_folder_search` nach `Out`, und aus den
-   Treffern alle behalten, deren `webUrl` das Muster
-   `Documents/Angebote/<projektnummer>_…/Rechnungen/Out` erfüllt.
-   Fehlt der Ordner, mit `sharepoint_create_folder` unterhalb von `Rechnungen` anlegen.
+
+2. **Zielordner bestimmen.** Die Projektordner liegen lokal im synchronisierten
+   OneDrive:
+
+   ```
+   $PROJEKT_ABLAGE_ROOT                                  (falls gesetzt)
+   ~/Library/CloudStorage/OneDrive-NovaWorksGmbH/Angebote (sonst)
+     └── <projektnummer>_<Projektname>/Rechnungen/Out
+   ```
+
+   Passende Ordner über das Muster `<projektnummer>_*` suchen. Fehlt
+   `Rechnungen/Out` in einem sonst passenden Projektordner, bleibt die Rechnung
+   liegen — einen Projektordner legt diese Automatik nicht an.
 
    Bleibt **mehr als einer** übrig, zuerst in **Feste Zuordnungen** (unten)
-   nachsehen. Steht die Projektnummer dort, gilt der dort genannte Ordner, und
-   Schritt 3 ist damit erledigt.
+   nachsehen. Steht die Projektnummer dort, gilt der dort genannte Ordner.
 
    Steht sie dort nicht, **`lex_match_project_folder`** mit der `invoice_id` und
-   den gefundenen `webUrl`s aufrufen. Es vergleicht die übrigen Wörter des
+   den gefundenen Pfaden aufrufen. Es vergleicht die übrigen Wörter des
    Rechnungstextes mit den Ordnernamen. Nur wenn `treffer` gesetzt ist, wird
    abgelegt; bei `null` bleibt die Rechnung liegen. Nicht selbst den ersten
    Kandidaten nehmen.
-4. **Erst nachsehen, ob sie schon da ist.** Mit `sharepoint_search` nach der
-   Rechnungsnummer suchen. Liegt bereits eine Datei zu dieser Nummer im Zielordner,
-   **nicht hochladen** — stattdessen `lex_mark_filed` mit deren `webUrl` und
+
+3. **Erst nachsehen, ob sie schon da ist.** Im Zielordner nach der
+   Rechnungsnummer sehen. Liegt dort bereits eine Datei zu dieser Nummer,
+   **nicht herunterladen** — stattdessen `lex_mark_filed` mit deren Pfad und
    `quelle: "vorhanden"` aufrufen und im Bericht erwähnen.
 
-   Das Protokoll kennt nur, was diese Automatik selbst getan hat. Von Hand abgelegte
-   Rechnungen sind ihm unbekannt, und ohne diese Prüfung würde sie beim ersten Lauf
-   allesamt überschreiben.
+   Das Protokoll kennt nur, was diese Automatik selbst getan hat. Von Hand
+   abgelegte Rechnungen sind ihm unbekannt, und ohne diese Prüfung würde sie
+   beim ersten Lauf allesamt überschreiben.
 
-5. **Hochladen** mit `sharepoint_upload_file`, danach **`lex_mark_filed`** mit der
-   `webUrl` der hochgeladenen Datei als `ablageort`.
+4. **`lex_download_invoice_pdf`** mit der `id` **und `target_dir` = dem
+   Zielordner**. Das PDF entsteht damit direkt an seinem Platz; OneDrive
+   synchronisiert es nach SharePoint.
 
-`lex_mark_filed` erst nach erfolgreichem Upload aufrufen — sonst gilt eine Rechnung
-als abgelegt, die nirgends liegt.
+   Der Dateiname ist deterministisch (`RE_<Nummer>_<Datum>_<Kunde>.pdf`), eine
+   zweimal abgelegte Rechnung überschreibt sich also selbst, statt sich zu
+   verdoppeln.
+
+5. **`lex_mark_filed`** mit `ablageort` = dem vollen Pfad aus der Antwort
+   (`pfad`), damit die nächste Runde sie überspringt.
+
+`lex_mark_filed` erst aufrufen, wenn die Datei wirklich im Zielordner liegt —
+sonst gilt eine Rechnung als abgelegt, die nirgends liegt.
+
+## Warum nicht über SharePoint hochladen
+
+Weil `sharepoint_upload_file` die Datei als Base64-Text entgegennimmt. Ein PDF
+von 140 kB sind rund 190.000 Zeichen, die durch das Modell laufen müssten. Das
+ist nicht nur langsam, sondern unzuverlässig — und ein einzelnes verrutschtes
+Zeichen fällt nicht auf: Die Datei läge im Projektordner und wäre unlesbar.
+
+Der Umweg über die lokale OneDrive-Spiegelung vermeidet das: Die Bytes gehen von
+Lexware direkt auf die Platte, und was sie von dort nach SharePoint trägt, ist
+die Synchronisation von Microsoft — nicht ein Sprachmodell.
 
 ## Feste Zuordnungen
 
@@ -70,6 +96,12 @@ Diese Fälle bleiben liegen und werden am Ende gesammelt gemeldet, statt geraten
   mehrere gleich gut passen. Der `hinweis` sagt, welcher Fall vorliegt.
 - **Eine Datei gleichen Namens liegt schon dort** und stammt erkennbar aus einer
   anderen Rechnung.
+- **Der Projektordner oder sein `Rechnungen/Out` fehlt** — dann ist entweder die
+  Nummer falsch oder der Ordner noch nicht angelegt. Beides ist nichts, was diese
+  Automatik entscheiden sollte.
+- **OneDrive synchronisiert gerade nicht.** Liegt die Datei nach dem Herunterladen
+  zwar lokal, meldet OneDrive aber einen Fehler, ist sie trotzdem abgelegt — die
+  Synchronisation holt das nach. Nicht erneut herunterladen.
 - **Die Projektnummer stammt aus den Positionen** (`projektnummer_quelle:
   "positionen"`) und der Betrag ist erheblich. Der Kopf schweigt dann, und ein
   Positionstext wie „laut Angebot 26-0014" kann sich auch auf eine Vorleistung
