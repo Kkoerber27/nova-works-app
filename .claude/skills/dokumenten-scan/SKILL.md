@@ -1,6 +1,6 @@
 ---
 name: dokumenten-scan
-description: Erkennt, was für ein Dokument hereingekommen ist — Scan, Foto, Screenshot oder PDF — und übergibt es an den passenden Ablauf. Kennt die Typen "Autostrom privat", Ausgangsrechnung und Scheinwerfer-Meldung. Nutzen, wenn Dateien ohne Erklärung hochgeladen werden, wenn gefragt wird was mit einer Unterlage zu tun ist, oder wenn ein Dokumententyp erkannt, zugeordnet oder ergänzt werden soll.
+description: Erkennt, was für ein Dokument hereingekommen ist — Scan, Foto, Screenshot oder PDF — und übergibt es an den passenden Ablauf. Kennt die Typen "Autostrom privat", Ersatzbeleg, Ausgangsrechnung und Scheinwerfer-Meldung. Nutzen, wenn Dateien ohne Erklärung hochgeladen werden, wenn gefragt wird was mit einer Unterlage zu tun ist, oder wenn ein Dokumententyp erkannt, zugeordnet oder ergänzt werden soll.
 ---
 
 # Dokumenten-Scan
@@ -29,6 +29,22 @@ Privat geladener Strom, den die Firma dem Inhaber erstattet. Auch kurz
 - **Umfang:** eine Datei je Rechnung.
 - **Weiter mit:** Skill `rechnungsablage`.
 
+### Ersatzbeleg
+
+Eine Ausgabe, zu der kein Originalbeleg vorliegt — meist ein Kreditkartenumsatz
+ohne Kassenzettel. Steuerlich ein Eigenbeleg.
+
+- **Woran erkennbar:** ein Kartenumsatz ohne Nachweis, oder ein Foto von einem
+  Ladesäulendisplay, Parkautomaten oder Kassendisplay statt eines Belegs. Auch
+  an der Frage erkennbar: „für diesen Umsatz habe ich keinen Beleg".
+- **Umfang:** ein Beleg je fehlendem Umsatz, dazu je nach Fall ein Foto als
+  Nachweis.
+- **Weiter mit:** Skill `ersatzbeleg`.
+
+Vorher immer prüfen, ob es doch eine echte Rechnung gibt — bei Ladestrom- und
+Tankanbietern liegt sie fast immer in der App. Nur eine Rechnung erhält den
+Vorsteuerabzug; aus einem Eigenbeleg gibt es keinen.
+
 ### Scheinwerfer-Meldung
 
 - **Woran erkennbar:** Foto eines Scheinwerfers mit drei Angaben dazu —
@@ -45,6 +61,8 @@ eine Datei und hält sie für den ganzen Vorgang.
 - **Scheinwerfer-Meldung:** ebenso — eine Meldung ist kein Protokoll.
 - **Ausgangsrechnung:** hier gilt das Gegenteil, jede Datei steht für sich.
   Mehrere PDFs sind mehrere Rechnungen, nicht eine in Teilen.
+- **Ersatzbeleg:** ebenfalls eins zu eins — ein Beleg je fehlendem Umsatz.
+  Mehrere fehlende Umsätze ergeben mehrere Belege, nicht einen gesammelten.
 
 ## Autostrom privat: sammeln, dann abrechnen
 

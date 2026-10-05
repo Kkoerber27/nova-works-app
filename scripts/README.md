@@ -554,3 +554,55 @@ export LADESTROM_EMPFAENGER_ORT="…"
 Datum, kWh und Betrag. Sessions ohne Euro-Betrag und — wenn `ort` mitgegeben
 wird — fremde Ladeorte fallen ebenfalls weg. Was verworfen wurde, steht im
 Ergebnis, damit es nachvollziehbar bleibt.
+
+## Ersatzbeleg (Eigenbeleg)
+
+Erzeugt für eine Ausgabe ohne Originalbeleg ein Eigenbeleg-PDF — typischer Fall
+ist ein Kreditkartenumsatz, zu dem der Kassenzettel fehlt. Den Ablauf beschreibt
+die Skill `ersatzbeleg`; dieses Skript prüft die Angaben und setzt das PDF.
+
+```bash
+./scripts/eigenbeleg.sh --json @beleg.json
+```
+
+Ein Foto (Ladesäulendisplay, Parkautomat) kann unter `nachweise` mitgegeben
+werden und kommt als Anlage auf die Folgeseiten.
+
+### Einrichten
+
+Dieselben zwei Pakete wie bei der Ladestrom-Abrechnung. Ist deren Umgebung schon
+eingerichtet, wird sie mitbenutzt und es ist nichts zu tun. Sonst:
+
+```bash
+python3 -m venv scripts/eigenbeleg/.venv
+scripts/eigenbeleg/.venv/bin/pip install reportlab pillow
+```
+
+Angaben in `~/.nova-works/env`. Die Firmendaten weichen auf die des
+Ladestrom-Empfängers aus, wer die dort schon gesetzt hat, braucht nur den
+Zielordner:
+
+```bash
+export EIGENBELEG_BASIS="$HOME/Eigenbelege"
+export EIGENBELEG_FIRMA_NAME="…"        # sonst LADESTROM_EMPFAENGER_NAME
+export EIGENBELEG_FIRMA_STRASSE="…"     # sonst LADESTROM_EMPFAENGER_STRASSE
+export EIGENBELEG_FIRMA_ORT="…"         # sonst LADESTROM_EMPFAENGER_ORT
+export EIGENBELEG_UNTERZEICHNER="…"     # sonst LADESTROM_ABSENDER_NAME
+```
+
+### Kein Vorsteuerabzug
+
+Ein Eigenbeleg ist als Betriebsausgabe anerkannt, aber keine Rechnung im Sinne
+des §14 UStG — ein Vorsteuerabzug ist daraus nicht möglich. Das steht als
+Hinweis auf dem PDF, damit der Beleg in der Buchhaltung nicht als Rechnung
+behandelt wird. Deshalb lohnt vor jedem Eigenbeleg der Versuch, doch eine echte
+Rechnung zu bekommen; bei Ladestrom- und Tankanbietern liegt sie meist in der
+App des Anbieters.
+
+### Was das Skript ablehnt
+
+Fehlende Pflichtangaben (Empfänger, Art, Datum, Betrag, Grund), Beträge von null
+oder darunter, Datumsangaben, die kein `TT.MM.JJJJ` oder kein gültiger Tag sind,
+und Nachweise, deren Datei nicht existiert. Die Belegnummer (`EB-JJJJMMTT-n`)
+zählt innerhalb eines Tages anhand der Dateien im Zielordner weiter — es gibt
+keinen Zählerstand, der mit dem Ordner auseinanderlaufen kann.
