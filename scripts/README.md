@@ -606,3 +606,57 @@ oder darunter, Datumsangaben, die kein `TT.MM.JJJJ` oder kein gültiger Tag sind
 und Nachweise, deren Datei nicht existiert. Die Belegnummer (`EB-JJJJMMTT-n`)
 zählt innerhalb eines Tages anhand der Dateien im Zielordner weiter — es gibt
 keinen Zählerstand, der mit dem Ordner auseinanderlaufen kann.
+
+## Wenn ein Job scheitert
+
+Im September lief die Rechnungsablage zehn Tage lang ins Leere: Der Ordner, auf
+den der LaunchAgent zeigte, stand auf einem Branch ohne `scripts/`. 348 Mal
+dieselbe Zeile ins Protokoll, und niemand hat es bemerkt — Protokolle liest man
+erst, wenn man schon weiß, dass etwas kaputt ist.
+
+Dagegen gibt es jetzt zwei Dinge, denn ein Ausfall hat zwei Gestalten.
+
+### Der Job läuft und scheitert
+
+`scripts/lib/meldung.sh` hängt sich ans Ende der Jobskripte und zählt mit, wie
+sie ausgehen — über einen `trap`, damit kein Abbruchweg vergessen wird. Nach
+drei Fehlschlägen hintereinander kommt eine Meldung, danach höchstens noch eine
+pro Tag, und eine Entwarnung, sobald es wieder läuft. Nicht jeder einzelne
+Fehlschlag: Das wäre dasselbe Rauschen in lauter.
+
+Außerdem enden die Jobs jetzt mit einem Fehlercode, wenn sie scheitern. Vorher
+gab die Rechnungsablage auch im Fehlerfall eine 0 zurück — nach außen sah ein
+gescheiterter Lauf aus wie ein gelungener.
+
+### Der Job läuft gar nicht
+
+Das war der Fall im September, und davon merkt ein Skript nichts, das selbst
+nicht startet. Deshalb `scripts/wachhund.sh`: Er prüft stündlich, wann jeder Job
+zuletzt erfolgreich war, und schlägt an, wenn einer zu lange schweigt.
+
+```bash
+./scripts/install-wachhund.sh    # stündlich einrichten
+./scripts/wachhund.sh --zeigen   # Stand ansehen, ohne zu melden
+```
+
+Fristen stehen in `NOVA_WACHHUND_JOBS`, Voreinstellung
+`rechnungsablage:2 nas-backup:36 protokoll:36` (Stunden). Großzügig gewählt —
+lieber einmal zu spät melden als bei jedem Neustart.
+
+### Wohin die Meldung geht
+
+Ins Alarmprotokoll `~/.nova-works/alarm.log` immer. Darüber hinaus:
+
+```bash
+export NOVA_ALERT_CMD="$HOME/.nova-works/melden.sh"
+```
+
+Das Programm bekommt `"<Betreff>" "<Text>"` übergeben — dahinter gehört, was Sie
+wirklich sehen: Pushover, ntfy, eine Mail. **Ohne das bleibt es bei einer
+Mitteilung auf dem Bildschirm, und die sieht an einem Rechner im Schrank
+niemand.** Eine Benachrichtigung ist nur so viel wert wie ihr Weg; dieser eine
+Schritt entscheidet, ob das Ganze etwas taugt.
+
+Weitere Stellschrauben: `NOVA_ALERT_AB` (Fehlschläge bis zur Meldung,
+Voreinstellung 3) und `NOVA_ALERT_WIEDERHOLUNG_H` (Ruhezeit zwischen zwei
+Meldungen zum selben Fehler, Voreinstellung 24).

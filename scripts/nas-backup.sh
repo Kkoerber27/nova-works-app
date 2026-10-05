@@ -14,6 +14,18 @@ ENV_FILE="${NOVA_ENV_FILE:-$HOME/.nova-works/env}"
 mkdir -p "$(dirname "$LOG")"
 log() { echo "[$(date "+%Y-%m-%d %H:%M:%S")] $*" >>"$LOG"; }
 
+# Meldewege. Fehlt die Datei, läuft der Job trotzdem — ohne Meldung ist
+# schlechter als mit, aber besser als gar kein Lauf.
+_MELDUNG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/meldung.sh"
+if [ -r "$_MELDUNG" ]; then
+  # shellcheck source=/dev/null
+  . "$_MELDUNG"
+else
+  log "HINWEIS $_MELDUNG fehlt — dieser Lauf meldet Fehler nicht weiter."
+  meldung_ueberwachen() { :; }
+fi
+meldung_ueberwachen nas-backup
+
 export PATH="$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 # Werte, die beim Aufruf schon gesetzt waren, gewinnen gegen die Datei. Sonst

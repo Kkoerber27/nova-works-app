@@ -22,6 +22,18 @@ mkdir -p "$(dirname "$LOG")"
 stamp() { date "+%Y-%m-%d %H:%M:%S"; }
 log() { echo "[$(stamp)] $*" >>"$LOG"; }
 
+# Meldewege. Fehlt die Datei, läuft der Job trotzdem — ohne Meldung ist
+# schlechter als mit, aber besser als gar kein Lauf.
+_MELDUNG="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/meldung.sh"
+if [ -r "$_MELDUNG" ]; then
+  # shellcheck source=/dev/null
+  . "$_MELDUNG"
+else
+  log "HINWEIS $_MELDUNG fehlt — dieser Lauf meldet Fehler nicht weiter."
+  meldung_ueberwachen() { :; }
+fi
+meldung_ueberwachen protokoll
+
 # Damit die Datei nicht unbegrenzt wächst: die letzten 2000 Zeilen behalten.
 kuerzen() {
   [ -f "$LOG" ] || return 0
