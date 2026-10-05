@@ -19,11 +19,15 @@ besteht aus vier Schritten pro Rechnung.
    `Documents/Angebote/<projektnummer>_…/Rechnungen/Out` erfüllt.
    Fehlt der Ordner, mit `sharepoint_create_folder` unterhalb von `Rechnungen` anlegen.
 
-   Bleibt **mehr als einer** übrig — bei `26-0007` sind es vier —, dann
-   **`lex_match_project_folder`** mit der `invoice_id` und den gefundenen `webUrl`s
-   aufrufen. Es vergleicht die übrigen Wörter des Rechnungstextes mit den
-   Ordnernamen. Nur wenn `treffer` gesetzt ist, wird abgelegt; bei `null` bleibt die
-   Rechnung liegen. Nicht selbst den ersten Kandidaten nehmen.
+   Bleibt **mehr als einer** übrig, zuerst in **Feste Zuordnungen** (unten)
+   nachsehen. Steht die Projektnummer dort, gilt der dort genannte Ordner, und
+   Schritt 3 ist damit erledigt.
+
+   Steht sie dort nicht, **`lex_match_project_folder`** mit der `invoice_id` und
+   den gefundenen `webUrl`s aufrufen. Es vergleicht die übrigen Wörter des
+   Rechnungstextes mit den Ordnernamen. Nur wenn `treffer` gesetzt ist, wird
+   abgelegt; bei `null` bleibt die Rechnung liegen. Nicht selbst den ersten
+   Kandidaten nehmen.
 4. **Erst nachsehen, ob sie schon da ist.** Mit `sharepoint_search` nach der
    Rechnungsnummer suchen. Liegt bereits eine Datei zu dieser Nummer im Zielordner,
    **nicht hochladen** — stattdessen `lex_mark_filed` mit deren `webUrl` und
@@ -38,6 +42,22 @@ besteht aus vier Schritten pro Rechnung.
 
 `lex_mark_filed` erst nach erfolgreichem Upload aufrufen — sonst gilt eine Rechnung
 als abgelegt, die nirgends liegt.
+
+## Feste Zuordnungen
+
+Wo mehrere Ordner zu einer Projektnummer gehören, der Rechnungstext aber nie
+zwischen ihnen entscheidet, hilft kein Vergleichen — dann ist es eine
+Festlegung des Inhabers. Diese hier gelten ohne weitere Prüfung:
+
+| Projektnummer | Ordner | Festgelegt am |
+|---|---|---|
+| `26-0007` | `26-0007_80er Live` (ohne Zusatz) | 05.10.2026 |
+
+Zu `26-0007` gibt es vier Ordner — `80er Live`, `80er Live Frankfurt`,
+`80er Live Hamburg`, `80er Live Schalke`. **Alle** Rechnungen und Dokumente mit
+dieser Nummer gehören in den ohne Zusatz; die drei Städte-Ordner bekommen aus
+der Rechnungsablage nichts. `lex_match_project_folder` wird für `26-0007` gar
+nicht erst aufgerufen.
 
 ## Wann nicht abgelegt wird
 
