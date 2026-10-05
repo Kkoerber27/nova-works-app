@@ -669,5 +669,5 @@ node pruefung/lauf.mjs              # alles
 node pruefung/lauf.mjs projekte     # nur passende Dateien
 ```
 
-Zwölf Dateien, zurzeit 431 Prüfungen. Was jede abdeckt, steht in
+Dreizehn Dateien, zurzeit 503 Prüfungen. Was jede abdeckt, steht in
 `pruefung/README.md`.
