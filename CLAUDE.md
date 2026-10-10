@@ -25,3 +25,7 @@ Im Angebots-Editor (`angebote.html`, Block `/* ===== KALKULATIONS-ASSISTENT`): P
 ## Projektablage
 
 Karte „Projektablage“ im Projekt (`angebote.html`, Block „PROJEKTABLAGE“): Dateien werden in Teilen als `docchunk-<id>-<n>` plus Auftrag `docjob-<id>` in `app_state` hochgeladen; `scripts/projektablage.mjs` (LaunchAgent auf dem Mac, siehe `scripts/README.md`) legt sie in `OneDrive/Angebote/<Nummer>_<Name>/<Unterordner>` ab und meldet Status/Pfad zurück. Die Unterordnernamen (`ABLAGE_ZIELE` in der App, `ZIELE` im Skript) entsprechen der bestehenden Projektstruktur und dürfen nur gemeinsam geändert werden – `Rechnungen/Out` nutzt auch die Rechnungsablage.
+
+## Visitenkarten-Scan
+
+Block „VISITENKARTEN-SCAN“ in `angebote.html`: Foto per Kamera (`capture="environment"`), Auslesen über die Edge Function `supabase/functions/card-scan` (Fallback: tesseract.js im Browser + `csParseText`), dann wird das normale Kunden- bzw. Crew-Formular vorbefüllt (`csApply`); bestehende Einträge werden nur in leeren Feldern ergänzt.

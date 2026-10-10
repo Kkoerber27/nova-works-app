@@ -468,6 +468,7 @@
     <div class="page-head">
       <div><h1>Adressen</h1><div class="sub" id="adr-count"></div></div>
       <div class="toolbar">
+        <button class="btn" id="btn-card-scan" title="Visitenkarte mit der Kamera fotografieren und als Kunde oder Crew anlegen">📷 Visitenkarte scannen</button>
         <button class="btn" id="btn-adr-vcf" title="Alle Adressen als Visitenkarten (.vcf) teilen – per AirDrop aufs iPhone oder als Datei">📇 Kontakte exportieren</button>
         <button class="btn" id="btn-import-adr">⤓ Importieren</button>
         <input type="file" id="adr-file" accept=".json,application/json" multiple style="display:none">
@@ -497,6 +498,7 @@
         <button class="btn" id="btn-crew-vcf" title="Alle (bzw. die gefilterten) Mitarbeiter als Visitenkarten (.vcf) teilen – per AirDrop aufs iPhone oder als Datei">📇 Kontakte exportieren</button>
         <button class="btn" id="btn-crew-import">⤓ Crewplanung importieren</button>
         <input type="file" id="crew-import-file" accept=".json,application/json" style="display:none">
+        <button class="btn" id="btn-card-scan-crew" title="Visitenkarte mit der Kamera fotografieren und als Crew oder Kunde anlegen">📷 Visitenkarte</button>
         <button class="btn primary" id="btn-new-member">+ Neuer Mitarbeiter</button>
       </div>
     </div>
@@ -1063,7 +1065,7 @@ function val(id){ return document.getElementById(id).value; }
 function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("show"); setTimeout(()=>t.classList.remove("show"),1800); }
 
 /* ---------- Versionsstand (bei jeder Änderung hochzählen; wird auf Login und in der Kopfzeile gezeigt) ---------- */
-var APP_VERSION="2026-10-08.2";
+var APP_VERSION="2026-10-10.1";
 document.querySelectorAll(".app-version").forEach(function(e){ e.textContent="Stand "+APP_VERSION; });
 /* ---------- nav ---------- */
 document.querySelectorAll(".nav button").forEach(b=>b.onclick=()=>showView(b.dataset.view));
@@ -5953,6 +5955,166 @@ function renderProjektablage(noFetch){
   if(!noFetch) ablageRefresh(p); ablageStartPolling();
 }
 /* =========================================================================
+   VISITENKARTEN-SCAN – Karte mit der Handy-Kamera fotografieren, Kontaktdaten
+   auslesen und als Kunde (Adressen) oder Crew (Techniker) anlegen bzw. ergänzen.
+   Auslesen per Edge Function „card-scan“ (KI, siehe supabase/functions/card-scan);
+   ist sie nicht erreichbar, Texterkennung im Browser (tesseract.js) + Regeln.
+   ========================================================================= */
+var _cs={imgs:[],data:null,raw:"",via:"",target:"kunde",busy:false,err:""};
+var CS_FIELDS=[["firma","Firma"],["abteilung","Abteilung"],["anrede","Anrede"],["vorname","Vorname"],["nachname","Nachname"],["position","Position"],["telefon","Telefon"],["mobil","Mobil"],["fax","Fax"],["email","E-Mail"],["web","Web"],["strasse","Straße"],["plz","PLZ"],["ort","Ort"],["land","Land"],["ustid","USt-IdNr."],["sonstiges","Sonstiges"]];
+function openCardScan(defTarget){
+  _cs={imgs:[],data:null,raw:"",via:"",target:defTarget||"kunde",busy:false,err:""};
+  var bg=document.getElementById("cardscan-bg");
+  if(!bg){ bg=document.createElement("div"); bg.className="modal-bg"; bg.id="cardscan-bg";
+    bg.innerHTML='<div class="modal" style="max-width:560px"><div class="modal-head"><h3>Visitenkarte scannen</h3><button class="x" data-close="cardscan-bg">×</button></div><div class="modal-body" id="cardscan-body" style="max-height:78vh;overflow:auto"></div></div>';
+    document.body.appendChild(bg); bg.onclick=function(e){ if(e.target===bg) closeModal("cardscan-bg"); }; bg.querySelector("[data-close]").onclick=function(){ closeModal("cardscan-bg"); }; }
+  csRender(); openModal("cardscan-bg");
+}
+function csName(d){ return ((d.vorname||"")+" "+(d.nachname||"")).trim(); }
+function csDup(d,target){
+  var em=String(d.email||"").toLowerCase().trim();
+  if(target==="crew"){ var nk=crewNameKey(csName(d)); return (DB.crew||[]).find(function(c){ return (nk&&crewNameKey(c.name)===nk)||(em&&String(c.email||"").toLowerCase().trim()===em); })||null; }
+  var fk=awKey(d.firma);
+  return (DB.customers||[]).find(function(c){ return (em&&String(c.email||"").toLowerCase().trim()===em)||(fk&&fk.length>=3&&awKey(c.firma)===fk); })||null;
+}
+function csRender(){
+  var el=document.getElementById("cardscan-body"); if(!el) return;
+  var d=_cs.data, h='';
+  h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">'+
+    '<label class="btn primary" style="cursor:pointer;flex:1;min-width:150px;justify-content:center;font-size:15px;padding:12px">📷 '+(_cs.imgs.length?'Rückseite fotografieren':'Karte fotografieren')+'<input type="file" id="cs-cam" accept="image/*" capture="environment" style="display:none"></label>'+
+    '<label class="btn" style="cursor:pointer;flex:1;min-width:150px;justify-content:center;padding:12px">🖼 Bild wählen<input type="file" id="cs-pick" accept="image/*" style="display:none"></label></div>';
+  if(_cs.imgs.length) h+='<div style="display:flex;gap:8px;margin-bottom:10px">'+_cs.imgs.map(function(u,i){ return '<div style="position:relative"><img src="'+u+'" style="max-height:110px;max-width:100%;border-radius:6px;border:1px solid var(--line)"><button class="cs-del" data-i="'+i+'" title="Bild entfernen" style="position:absolute;top:2px;right:2px;border:0;border-radius:50%;width:22px;height:22px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer">×</button></div>'; }).join("")+'</div>';
+  else h+='<div class="muted" style="font-size:12.5px;margin-bottom:10px">Karte flach und gut beleuchtet fotografieren, möglichst formatfüllend. Die Kamera fragt beim ersten Mal nach Zugriff – bitte erlauben.</div>';
+  if(_cs.busy) h+='<div style="padding:10px;background:var(--gold-bg,#f6efe2);border-radius:8px;font-size:13px">⏳ <span id="cs-status">'+esc(_cs.busy===true?"Karte wird ausgelesen …":_cs.busy)+'</span></div>';
+  if(_cs.err) h+='<div style="padding:10px;background:#fdf0f0;border-radius:8px;font-size:12.5px;color:#c0392b;margin-bottom:8px">'+esc(_cs.err)+'</div>';
+  if(d&&!_cs.busy){
+    h+='<div style="font-weight:600;font-size:13px;margin:6px 0">Speichern als</div><div style="display:flex;gap:8px;margin-bottom:6px">'+
+      [["kunde","🏢 Kunde","Adressen"],["crew","🎛 Crew","Techniker"]].map(function(o){ var on=_cs.target===o[0]; return '<button class="btn cs-tg" data-t="'+o[0]+'" style="flex:1;display:block;text-align:center;padding:10px;'+(on?'border:2px solid var(--gold,#a8874f);background:var(--gold-bg,#f6efe2);font-weight:700':'')+'">'+o[1]+'<span style="display:block;font-size:11px;font-weight:400" class="muted">'+o[2]+'</span></button>'; }).join("")+'</div>';
+    if(d.art&&d.art!=="unklar") h+='<div class="muted" style="font-size:11.5px;margin-bottom:8px">Vorschlag: '+(d.art==="crew"?"Crew":"Kunde")+(d.art_grund?(' – '+esc(d.art_grund)):'')+'</div>';
+    var dup=csDup(d,_cs.target);
+    if(dup) h+='<div style="padding:8px 10px;border:1px solid #e3c9b4;background:#fdf6ee;border-radius:8px;font-size:12.5px;margin-bottom:8px">Gibt es schon: <b>'+esc(_cs.target==="crew"?dup.name:dup.firma)+'</b>'+(dup.ort?(' · '+esc(dup.ort)):'')+'</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap">'+(dup?'<button class="btn primary" id="cs-merge" style="flex:1;padding:11px">Bestehenden ergänzen</button><button class="btn" id="cs-new" style="flex:1;padding:11px">Trotzdem neu anlegen</button>':'<button class="btn primary" id="cs-new" style="flex:1;padding:11px">Weiter: '+(_cs.target==="crew"?'Crew-Mitglied':'Kunde')+' anlegen</button>')+'</div>'+
+      '<div class="muted" style="font-size:11px;margin-top:6px">Danach öffnet sich das Formular mit den Daten – dort prüfen und speichern.</div>';
+    h+='<div style="height:12px"></div>';
+    var rows=CS_FIELDS.filter(function(f){ return d[f[0]]; });
+    h+='<div style="font-size:11px;color:#777;margin:4px 0 6px">'+(_cs.via==="ki"?'Ausgelesen mit KI':'Ausgelesen mit Texterkennung im Browser – bitte genau prüfen')+'</div>';
+    h+=rows.length?('<table class="lines" style="font-size:12.5px;margin-bottom:10px"><tbody>'+rows.map(function(f){ return '<tr><td class="muted" style="width:90px">'+f[1]+'</td><td>'+esc(d[f[0]])+'</td></tr>'; }).join("")+'</tbody></table>'):'<div class="muted" style="margin-bottom:10px">Keine Angaben erkannt – bitte neu fotografieren.</div>';
+    if(_cs.raw) h+='<details style="margin-bottom:10px;font-size:12px"><summary class="muted" style="cursor:pointer">Erkannter Text</summary><pre style="white-space:pre-wrap;font-size:11px;background:#f7f5f0;padding:6px;border-radius:6px">'+esc(_cs.raw)+'</pre></details>';
+  }
+  el.innerHTML=h;
+  var onFile=function(inp){ inp.onchange=function(){ var f=inp.files&&inp.files[0]; inp.value=""; if(f) csAddFile(f); }; };
+  onFile(document.getElementById("cs-cam")); onFile(document.getElementById("cs-pick"));
+  el.querySelectorAll(".cs-del").forEach(function(b){ b.onclick=function(){ _cs.imgs.splice(+b.dataset.i,1); if(_cs.imgs.length) csRead(); else { _cs.data=null; _cs.raw=""; csRender(); } }; });
+  el.querySelectorAll(".cs-tg").forEach(function(b){ b.onclick=function(){ _cs.target=b.dataset.t; csRender(); }; });
+  var nw=document.getElementById("cs-new"); if(nw) nw.onclick=function(){ csApply(null); };
+  var mg=document.getElementById("cs-merge"); if(mg) mg.onclick=function(){ csApply(csDup(_cs.data,_cs.target)); };
+}
+async function csAddFile(file){
+  try{ var du=await shrinkImageFile(file); if(_cs.imgs.length>=2) _cs.imgs.shift(); _cs.imgs.push(du); csRead(); }
+  catch(e){ _cs.err="Bild nicht lesbar: "+(e.message||e); csRender(); }
+}
+async function csRead(){
+  _cs.busy=true; _cs.err=""; csRender();
+  var d=null;
+  try{ d=await csReadKI(); _cs.via="ki"; _cs.raw=""; }
+  catch(e){
+    var msg=String(e&&e.message||e);
+    if(!/nicht eingerichtet|nicht erreichbar|Cloud-Version|nicht angemeldet/.test(msg)){ _cs.busy=false; _cs.err="Auslesen fehlgeschlagen: "+msg; csRender(); return; }
+    try{ d=await csReadOCR(); _cs.via="ocr"; }
+    catch(e2){ _cs.busy=false; _cs.err="Auslesen fehlgeschlagen: "+(e2.message||e2); csRender(); return; }
+  }
+  _cs.data=d; _cs.busy=false;
+  if(d.art==="crew"||d.art==="kunde") _cs.target=d.art;
+  csRender();
+}
+async function csReadKI(){
+  if(typeof SB==="undefined"||!SB) throw new Error("nur in der Cloud-Version");
+  var sess=await SB.auth.getSession(); if(!sess.data||!sess.data.session) throw new Error("nicht angemeldet");
+  var res;
+  try{ res=await fetch(SB_URL+"/functions/v1/card-scan",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+sess.data.session.access_token,"apikey":SB_KEY},body:JSON.stringify({images:_cs.imgs.map(function(u){ return {d:u.split(",")[1],mt:"image/jpeg"}; })})}); }
+  catch(_e){ throw new Error("Dienst nicht erreichbar"); }
+  if(res.status===404) throw new Error("Edge Function „card-scan“ ist noch nicht eingerichtet");
+  var out=await res.json().catch(function(){ return {}; });
+  if(!res.ok||out.error) throw new Error(out.error||("HTTP "+res.status));
+  return out.data||{};
+}
+function csLoadTesseract(){
+  return new Promise(function(res,rej){
+    if(window.Tesseract) return res(window.Tesseract);
+    var s=document.createElement("script"); s.src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js";
+    s.onload=function(){ window.Tesseract?res(window.Tesseract):rej(new Error("Texterkennung nicht verfügbar")); }; s.onerror=function(){ rej(new Error("Texterkennung konnte nicht geladen werden (Internet?)")); };
+    document.head.appendChild(s);
+  });
+}
+async function csReadOCR(){
+  var T=await csLoadTesseract(), texts=[];
+  for(var i=0;i<_cs.imgs.length;i++){
+    var r=await T.recognize(_cs.imgs[i],"deu+eng",{logger:function(m){ if(m&&m.status){ var st=document.getElementById("cs-status"); if(st) st.textContent="Texterkennung: "+(m.status==="recognizing text"?("liest "+Math.round((m.progress||0)*100)+" %"):"lädt …"); } }});
+    texts.push((r&&r.data&&r.data.text)||"");
+  }
+  _cs.raw=texts.join("\n").trim();
+  return csParseText(_cs.raw);
+}
+/* Regeln für die Texterkennung im Browser (ohne KI) */
+function csParseText(text){
+  var d={}; CS_FIELDS.forEach(function(f){ d[f[0]]=""; }); d.art="unklar"; d.art_grund="";
+  /* Zeilen mit mehreren Angaben („Tel. … · Mobil …“, „mail – web“) an Trennzeichen aufteilen */
+  var lines=[]; String(text||"").split(/\r?\n/).forEach(function(l){ String(l).split(/\s+[-–·•|]\s+|\s{3,}|\s*[|•·]\s*/).forEach(function(x){ x=x.replace(/[_]+/g," ").replace(/\s+/g," ").trim(); if(x.length>1) lines.push(x); }); });
+  var used={};
+  var em=String(text).match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/); if(em) d.email=em[0];
+  var ust=String(text).match(/\b(DE|AT|ATU|CH|CHE)[\s-]?\d[\d\s.]{7,12}\d/); if(ust) d.ustid=ust[0].replace(/\s/g,"");
+  lines.forEach(function(l,i){
+    var low=l.toLowerCase();
+    if(d.email&&l.indexOf(d.email)>=0){ used[i]=1; }
+    if(!d.web){ var w=l.match(/\b(?:https?:\/\/)?(?:www\.)[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:\/\S*)?/i)||(l.indexOf("@")<0&&l.match(/\b[a-z0-9-]+\.(?:de|com|net|org|eu|at|ch|info|events?|tv|media)\b(?:\/\S*)?/i)); if(w){ d.web=w[0].replace(/^https?:\/\//i,""); used[i]=1; } }
+    var num=l.match(/(\+?\(?\d[\d\s\/().-]{5,}\d)/);
+    if(num&&!/^\d{5}\s/.test(l)&&num[1].replace(/\D/g,"").length>=6&&!/(DE|AT|CH)\s?\d{8,}/.test(l)){
+      var n=num[1].trim(), digits=n.replace(/\D/g,"");
+      if(/fax|\bf\s*[:.]/i.test(low)){ if(!d.fax) d.fax=n; }
+      else if(/mobil|handy|mobile|cell|\bm\s*[:.]/i.test(low)||/^(49|0049|0)1[5-7]/.test(digits)){ if(!d.mobil) d.mobil=n; }
+      else if(!d.telefon) d.telefon=n;
+      used[i]=1;
+    }
+    var pl=l.match(/\b(?:(D|A|CH)[\s-])?(\d{4,5})\s+([A-ZÄÖÜ][A-Za-zÄÖÜäöüß .\/-]{2,})$/);
+    if(pl&&!d.plz){ d.plz=pl[2]; d.ort=pl[3].trim(); d.land=pl[1]==="A"?"Österreich":pl[1]==="CH"?"Schweiz":(pl[2].length===4?"":"Deutschland"); used[i]=1;
+      if(i>0&&!d.strasse&&/\d/.test(lines[i-1])&&!/@|www|\+|tel|fax|mobil/i.test(lines[i-1])){ d.strasse=lines[i-1]; used[i-1]=1; } }
+  });
+  lines.forEach(function(l,i){ if(used[i]) return; if(!d.strasse&&/(stra(ss|ß)e|str\.|weg|allee|platz|ring|gasse|damm|ufer|chaussee|steig|pfad|markt)\s*\d+\s*[a-z]?\b/i.test(l)){ d.strasse=l; used[i]=1; } });
+  lines.forEach(function(l,i){ if(used[i]) return; if(!d.firma&&/\b(gmbh|ag|kg|ug|e\.\s?k\.|gbr|ohg|ltd|inc|mbh|e\.\s?v\.|& co|gmbh & co)\b/i.test(l)){ d.firma=l; used[i]=1; } });
+  var POS=/(leit|manag|techni|operator|geschäftsf|geschaeftsf|ceo|cto|inhaber|owner|director|direktor|projekt|produktion|assist|referent|vertrieb|sales|head|engineer|designer|meister|rigger|stagehand|booking|marketing|event|koordinat|consultant|berater|partner)/i;
+  lines.forEach(function(l,i){ if(used[i]) return; if(!d.position&&POS.test(l)&&!/\d/.test(l)&&l.split(" ").length<=6){ d.position=l; used[i]=1; } });
+  lines.forEach(function(l,i){ if(used[i]||d.nachname) return; var w=l.replace(/^(herr|frau|dr\.?|prof\.?|dipl\.?-?\w*\.?)\s+/i,"").split(" ").filter(Boolean);
+    if(w.length>=2&&w.length<=3&&!/\d|@/.test(l)&&w.every(function(x){ return /^[A-ZÄÖÜ][a-zäöüß'-]+\.?$/.test(x)||/^[A-ZÄÖÜ]\.$/.test(x); })){ d.vorname=w.slice(0,-1).join(" "); d.nachname=w[w.length-1]; used[i]=1; if(/^frau\b/i.test(l)) d.anrede="Frau"; if(/^herr\b/i.test(l)) d.anrede="Herr"; } });
+  if(!d.firma){ var left=lines.filter(function(l,i){ return !used[i]&&!/\d|@/.test(l); }); if(left.length) d.firma=left[0]; }
+  var crewish=/techni|operator|rigger|stagehand|engineer|crew|freelanc|licht|ton|video|led/i.test(d.position+" "+d.firma);
+  d.art=crewish&&!/\b(gmbh|ag|kg|ug|agentur)\b/i.test(d.firma)?"crew":(d.firma?"kunde":"unklar");
+  return d;
+}
+/* Daten in das normale Formular übernehmen – neu oder in einen bestehenden Eintrag (nur leere Felder) */
+function csApply(existing){
+  var d=_cs.data||{}, merge=!!existing;
+  var put=function(id,v){ var el=document.getElementById(id); if(!el||!v) return; if(merge&&String(el.value||"").trim()) return; el.value=v; };
+  closeModal("cardscan-bg");
+  if(_cs.target==="crew"){
+    openCrewMember(existing?existing.id:null);
+    put("cm-name",csName(d)); put("cm-tel",d.mobil||d.telefon); put("cm-email",d.email); put("cm-firma",d.firma);
+    put("cm-strasse",d.strasse); put("cm-plz",d.plz); put("cm-ort",d.ort); put("cm-land",d.land);
+    var extra=[d.mobil&&d.telefon?("Tel. "+d.telefon):"",d.fax?("Fax "+d.fax):"",d.web?("Web "+d.web):"",d.sonstiges].filter(Boolean).join(" · ");
+    if(extra){ var nz=document.getElementById("cm-notiz"); if(nz) nz.value=(nz.value?(nz.value+"\n"):"")+extra; }
+    if(d.position&&typeof renderMemberFunks==="function"){ var cur=[].map.call(document.querySelectorAll("#cm-funks .cm-fk"),function(x){ return x.value.trim(); }).filter(Boolean); if(cur.indexOf(d.position)<0) renderMemberFunks(cur.concat([d.position])); }
+    toast("Daten aus der Visitenkarte übernommen – prüfen und speichern");
+  } else {
+    openCust(existing?existing.id:null,"page");
+    put("c-firma",d.firma||csName(d)); put("c-zusatz",d.abteilung||d.position); put("c-strasse",d.strasse); put("c-plz",d.plz); put("c-ort",d.ort);
+    if(d.land) put("c-land",d.land);
+    put("c-vorname",d.vorname); put("c-nachname",d.nachname); put("c-email",d.email);
+    put("c-tel",[d.telefon,d.mobil?((d.telefon?"Mobil ":"")+d.mobil):""].filter(Boolean).join(" / ")); put("c-ustid",d.ustid); put("c-web",d.web);
+    var sm=document.getElementById("c-salutmode"); if(sm&&d.anrede&&(!merge||sm.value==="neutral")) sm.value=d.anrede==="Frau"?"frau":"herr";
+    if(typeof custSalutToggle==="function") custSalutToggle();
+    toast("Daten aus der Visitenkarte übernommen – prüfen und speichern");
+  }
+}
+/* =========================================================================
    VISITENKARTEN (vCard / .vcf) – Crew und Adressen als Kontakte für
    iPhone/Mac exportieren. Teilen-Dialog (AirDrop, Nachrichten, Mail) über
    die Web-Share-API, sonst Download der .vcf-Datei. Mehrere Kontakte in
@@ -8910,6 +9072,8 @@ function renderCustomers(){
   rows.querySelectorAll(".adr-vcf-row").forEach(b=>b.onclick=e=>{ e.stopPropagation(); const c=DB.customers.find(x=>x.id===b.dataset.id); if(c) vcShareCust(c); });
 }
 document.getElementById("btn-new-cust").onclick=()=>openCust(null,"page");
+document.getElementById("btn-card-scan").onclick=()=>openCardScan("kunde");
+(function(){ var b=document.getElementById("btn-card-scan-crew"); if(b) b.onclick=function(){ openCardScan("crew"); }; })();
 
 function salutationForEN(c){
   if(!c) return "Dear Sir or Madam";
